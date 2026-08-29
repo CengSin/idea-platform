@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+data/db.json
+data/auth.json
+.DS_Store
+*.log
+.env
+.env.local
+backend/.bin/
+backend/.cache/
+backend/.idea/
+.tunnel-url
+tsconfig.tsbuildinfo
+*.tsbuildinfo
