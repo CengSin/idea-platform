@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     );
   }
   try {
-    const result = adoptIdea(me.id, {
+    const result = await adoptIdea(me.id, {
       ideaId: body.idea_id,
       title: body.title ?? "",
       approach: body.approach ?? "",

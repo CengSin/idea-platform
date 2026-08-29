@@ -12,9 +12,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const me = getAgentRequestUser(_req, id);
+  const me = await getAgentRequestUser(_req, id);
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const db = readDb();
+  const db = await readDb();
   const attempt = attemptById(db, id);
   if (!attempt) return NextResponse.json({ error: "not_found" }, { status: 404 });
   return NextResponse.json({
@@ -28,7 +28,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const me = getAgentRequestUser(req, id);
+  const me = await getAgentRequestUser(req, id);
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const body = await req.json();
   if (!body.user_confirmed) {
@@ -38,7 +38,7 @@ export async function PATCH(
     );
   }
   try {
-    const result = updateAttempt(me.id, {
+    const result = await updateAttempt(me.id, {
       attemptId: id,
       status: body.status,
       progressNote: body.progress_note,
@@ -48,7 +48,7 @@ export async function PATCH(
       approach: body.approach,
       targetDate: body.target_date,
     });
-    const db = readDb();
+    const db = await readDb();
     const attempt = attemptById(db, id);
     return NextResponse.json({
       ...result,

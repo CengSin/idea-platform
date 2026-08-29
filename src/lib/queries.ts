@@ -10,7 +10,7 @@ import {
 
 export async function getSnapshot() {
   const me = await requireCurrentUser();
-  const db = readDb();
+  const db = await readDb();
   return {
     db,
     me,
@@ -20,7 +20,7 @@ export async function getSnapshot() {
 
 export async function getIdeaBundle(id: string) {
   const me = await requireCurrentUser();
-  const db = readDb();
+  const db = await readDb();
   const idea = ideaById(db, id);
   if (!idea) return null;
   const attempts = db.attempts
@@ -60,7 +60,7 @@ export async function getIdeaBundle(id: string) {
 
 export async function getAttemptBundle(id: string) {
   const me = await requireCurrentUser();
-  const db = readDb();
+  const db = await readDb();
   const attempt = attemptById(db, id);
   if (!attempt) return null;
   return {
@@ -76,7 +76,7 @@ export async function getAttemptBundle(id: string) {
 
 export async function getWorkBundle(id: string) {
   await requireCurrentUser();
-  const db = readDb();
+  const db = await readDb();
   const work = workById(db, id);
   if (!work) return null;
   return {
