@@ -51,6 +51,9 @@ func Open(cfg config.Config) (*Store, error) {
 		&domain.Event{},
 		&domain.Notification{},
 		&domain.Follow{},
+		&domain.Account{},
+		&domain.Session{},
+		&domain.AgentToken{},
 	); err != nil {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}

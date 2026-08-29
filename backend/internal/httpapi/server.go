@@ -56,8 +56,34 @@ func New(cfg config.Config, svc *service.Service) *gin.Engine {
 		v1.HEAD("/files/*key", s.getFile)
 
 		v1.POST("/content/clear", s.clearContent)
+
+		admin := v1.Group("/admin")
+		admin.Use(s.requireAdmin())
+		admin.GET("/export", s.exportData)
+		admin.PUT("/import", s.importData)
 	}
 	return r
+}
+
+func (s *Server) requireAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		expected := strings.TrimSpace(s.Cfg.AdminToken)
+		if expected == "" {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ADMIN_TOKEN is not configured"})
+			c.Abort()
+			return
+		}
+		got := strings.TrimSpace(strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer "))
+		if got == "" {
+			got = strings.TrimSpace(c.Query("token"))
+		}
+		if got != expected {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
 }
 
 func requestLog() gin.HandlerFunc {

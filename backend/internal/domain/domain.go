@@ -77,22 +77,25 @@ type Idea struct {
 func (Idea) TableName() string { return "ideas" }
 
 type Attempt struct {
-	ID              string   `json:"id" gorm:"primaryKey;size:64"`
-	IdeaID          string   `json:"ideaId" gorm:"size:64;index"`
-	OwnerID         string   `json:"ownerId" gorm:"size:64;index"`
-	Title           string   `json:"title" gorm:"size:256"`
-	Approach        string   `json:"approach" gorm:"type:text"`
-	Status          string   `json:"status" gorm:"size:32;index"`
-	ProgressNote    string   `json:"progressNote" gorm:"type:text"`
-	Visibility      string   `json:"visibility" gorm:"size:32"`
-	Blockers        []string `json:"blockers" gorm:"serializer:json;type:json"`
-	StartedAt       string   `json:"startedAt" gorm:"size:40"`
-	LastActiveAt    string   `json:"lastActiveAt" gorm:"size:40"`
-	CreatedAt       string   `json:"createdAt" gorm:"column:created_at;size:40;autoCreateTime:false"`
-	TargetDate      string   `json:"targetDate,omitempty" gorm:"size:32"`
-	WorkIDs         []string `json:"workIds" gorm:"serializer:json;type:json"`
-	Graph           *Point   `json:"graph,omitempty" gorm:"serializer:json;type:json"`
-	FeaturedOnGraph bool     `json:"featuredOnGraph"`
+	ID                 string   `json:"id" gorm:"primaryKey;size:64"`
+	IdeaID             string   `json:"ideaId" gorm:"size:64;index"`
+	OwnerID            string   `json:"ownerId" gorm:"size:64;index"`
+	Title              string   `json:"title" gorm:"size:256"`
+	Approach           string   `json:"approach" gorm:"type:text"`
+	ProjectDescription string   `json:"projectDescription,omitempty" gorm:"type:text"`
+	ProjectPurpose     string   `json:"projectPurpose,omitempty" gorm:"type:text"`
+	ExecutionPrompt    string   `json:"executionPrompt,omitempty" gorm:"type:text"`
+	Status             string   `json:"status" gorm:"size:32;index"`
+	ProgressNote       string   `json:"progressNote" gorm:"type:text"`
+	Visibility         string   `json:"visibility" gorm:"size:32"`
+	Blockers           []string `json:"blockers" gorm:"serializer:json;type:json"`
+	StartedAt          string   `json:"startedAt" gorm:"size:40"`
+	LastActiveAt       string   `json:"lastActiveAt" gorm:"size:40"`
+	CreatedAt          string   `json:"createdAt" gorm:"column:created_at;size:40;autoCreateTime:false"`
+	TargetDate         string   `json:"targetDate,omitempty" gorm:"size:32"`
+	WorkIDs            []string `json:"workIds" gorm:"serializer:json;type:json"`
+	Graph              *Point   `json:"graph,omitempty" gorm:"serializer:json;type:json"`
+	FeaturedOnGraph    bool     `json:"featuredOnGraph"`
 }
 
 func (Attempt) TableName() string { return "attempts" }
@@ -140,13 +143,49 @@ func (Event) TableName() string { return "events" }
 
 type Notification struct {
 	ID     string `json:"id" gorm:"primaryKey;size:64"`
-	UserID string `json:"-" gorm:"size:64;index"`
+	UserID string `json:"userId,omitempty" gorm:"size:64;index"`
 	At     string `json:"at" gorm:"size:40"`
 	Title  string `json:"title" gorm:"size:256"`
 	Body   string `json:"body" gorm:"type:text"`
 	Read   bool   `json:"read" gorm:"column:is_read"`
 	Href   string `json:"href" gorm:"size:256"`
 	Kind   string `json:"kind" gorm:"size:32"`
+}
+
+type Account struct {
+	UserID       string `json:"userId" gorm:"primaryKey;size:64"`
+	Email        string `json:"email" gorm:"size:255;uniqueIndex"`
+	DisplayName  string `json:"displayName" gorm:"size:128"`
+	PasswordSalt string `json:"passwordSalt" gorm:"size:128"`
+	PasswordHash string `json:"passwordHash" gorm:"size:256"`
+	CreatedAt    string `json:"createdAt" gorm:"column:created_at;size:40;autoCreateTime:false"`
+}
+
+func (Account) TableName() string { return "accounts" }
+
+type Session struct {
+	TokenHash string `json:"tokenHash" gorm:"primaryKey;size:64"`
+	UserID    string `json:"userId" gorm:"size:64;index"`
+	ExpiresAt string `json:"expiresAt" gorm:"size:40"`
+}
+
+func (Session) TableName() string { return "sessions" }
+
+type AgentToken struct {
+	TokenHash string `json:"tokenHash" gorm:"primaryKey;size:64"`
+	UserID    string `json:"userId" gorm:"size:64;index"`
+	AttemptID string `json:"attemptId" gorm:"size:64;index"`
+	CreatedAt string `json:"createdAt" gorm:"size:40"`
+	ExpiresAt string `json:"expiresAt" gorm:"size:40"`
+}
+
+func (AgentToken) TableName() string { return "agent_tokens" }
+
+type AuthDump struct {
+	Version     int          `json:"version"`
+	Accounts    []Account    `json:"accounts"`
+	Sessions    []Session    `json:"sessions"`
+	AgentTokens []AgentToken `json:"agentTokens"`
 }
 
 func (Notification) TableName() string { return "notifications" }
