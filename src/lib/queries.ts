@@ -1,5 +1,5 @@
 import { readDb } from "./db";
-import { requireCurrentUser } from "./auth";
+import { getAccountPublic, requireCurrentUser } from "./auth";
 import {
   attemptById,
   ideaById,
@@ -10,7 +10,7 @@ import {
 
 export async function getSnapshot() {
   const me = await requireCurrentUser();
-  const db = readDb();
+  const db = await readDb();
   return {
     db,
     me,
@@ -20,7 +20,7 @@ export async function getSnapshot() {
 
 export async function getIdeaBundle(id: string) {
   const me = await requireCurrentUser();
-  const db = readDb();
+  const db = await readDb();
   const idea = ideaById(db, id);
   if (!idea) return null;
   const attempts = db.attempts
@@ -60,7 +60,7 @@ export async function getIdeaBundle(id: string) {
 
 export async function getAttemptBundle(id: string) {
   const me = await requireCurrentUser();
-  const db = readDb();
+  const db = await readDb();
   const attempt = attemptById(db, id);
   if (!attempt) return null;
   return {
@@ -74,9 +74,42 @@ export async function getAttemptBundle(id: string) {
   };
 }
 
+export async function getProfile() {
+  const me = await requireCurrentUser();
+  const account = await getAccountPublic(me.id);
+  const db = await readDb();
+  const myAttemptIds = new Set(
+    db.attempts.filter((attempt) => attempt.ownerId === me.id).map((attempt) => attempt.id),
+  );
+  const ideas = db.ideas
+    .filter((idea) => idea.author.userId === me.id && idea.status !== "draft")
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  const attempts = db.attempts
+    .filter((attempt) => attempt.ownerId === me.id && attempt.status !== "abandoned")
+    .sort((a, b) => (a.lastActiveAt < b.lastActiveAt ? 1 : -1));
+  const works = db.works
+    .filter(
+      (work) =>
+        work.status === "published" &&
+        (myAttemptIds.has(work.attemptId) ||
+          work.credits.some((credit) => credit.userId === me.id)),
+    )
+    .sort((a, b) => ((a.publishedAt ?? "") < (b.publishedAt ?? "") ? 1 : -1));
+  const profile = db.users.find((user) => user.id === me.id) ?? me;
+  return {
+    me: profile,
+    email: account?.email ?? "",
+    joinedAt: account?.createdAt ?? profile.createdAt,
+    ideas,
+    attempts,
+    works,
+    projectLinks: profile.projectLinks ?? [],
+  };
+}
+
 export async function getWorkBundle(id: string) {
   await requireCurrentUser();
-  const db = readDb();
+  const db = await readDb();
   const work = workById(db, id);
   if (!work) return null;
   return {

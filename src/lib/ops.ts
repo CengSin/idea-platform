@@ -8,7 +8,7 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-export function publishIdea(userId: string, input: {
+export async function publishIdea(userId: string, input: {
   title: string;
   summary: string;
   problem: string;
@@ -24,7 +24,7 @@ export function publishIdea(userId: string, input: {
 }) {
   const id = `idea_${nanoid(8)}`;
   const createdAt = nowIso();
-  mutateDb((db) => {
+  await mutateDb((db) => {
     const me = db.users.find((u) => u.id === userId)!;
     db.ideas.push({
       id,
@@ -64,7 +64,7 @@ export function publishIdea(userId: string, input: {
   return { idea_id: id, url: `/ideas/${id}`, review_status: "published" };
 }
 
-export function adoptIdea(userId: string, input: {
+export async function adoptIdea(userId: string, input: {
   ideaId: string;
   title: string;
   approach: string;
@@ -76,7 +76,7 @@ export function adoptIdea(userId: string, input: {
 }) {
   const id = `att_${nanoid(8)}`;
   const createdAt = nowIso();
-  mutateDb((db) => {
+  await mutateDb((db) => {
     const idea = db.ideas.find((i) => i.id === input.ideaId);
     if (!idea) throw new Error("Idea 不存在");
     const me = db.users.find((u) => u.id === userId)!;
@@ -140,7 +140,7 @@ export function adoptIdea(userId: string, input: {
   return { attempt_id: id, stage: input.asWatch ? "considering" : "understanding" };
 }
 
-export function updateAttempt(userId: string, input: {
+export async function updateAttempt(userId: string, input: {
   attemptId: string;
   status?: AttemptStatus;
   progressNote?: string;
@@ -151,7 +151,7 @@ export function updateAttempt(userId: string, input: {
   targetDate?: string;
 }) {
   const at = nowIso();
-  mutateDb((db) => {
+  await mutateDb((db) => {
     const attempt = db.attempts.find((a) => a.id === input.attemptId);
     if (!attempt) throw new Error("承接不存在");
     if (attempt.ownerId !== userId) throw new Error("只能更新自己的承接");
@@ -179,8 +179,8 @@ export function updateAttempt(userId: string, input: {
   return { updated_at: at };
 }
 
-export function followIdea(userId: string, ideaId: string, follow: boolean) {
-  mutateDb((db) => {
+export async function followIdea(userId: string, ideaId: string, follow: boolean) {
+  await mutateDb((db) => {
     db.follows = db.follows.filter(
       (f) => !(f.userId === userId && f.ideaId === ideaId),
     );
@@ -188,7 +188,7 @@ export function followIdea(userId: string, ideaId: string, follow: boolean) {
   });
 }
 
-export function publishWork(userId: string, input: {
+export async function publishWork(userId: string, input: {
   attemptId: string;
   title: string;
   summary: string;
@@ -200,7 +200,7 @@ export function publishWork(userId: string, input: {
 }) {
   const id = `work_${nanoid(8)}`;
   const at = nowIso();
-  mutateDb((db) => {
+  await mutateDb((db) => {
     const attempt = db.attempts.find((a) => a.id === input.attemptId);
     if (!attempt) throw new Error("承接不存在");
     if (attempt.ownerId !== userId) throw new Error("只能从自己的承接发布作品");
@@ -255,14 +255,54 @@ export function publishWork(userId: string, input: {
   return { work_id: id, url: `/works/${id}` };
 }
 
-export function markNotificationsRead() {
-  mutateDb((db) => {
+export async function addProjectLink(
+  userId: string,
+  input: { title: string; url: string; note?: string },
+) {
+  const title = input.title.trim();
+  if (!title) throw new Error("请填写项目名称。");
+  if (title.length > 80) throw new Error("项目名称过长。");
+  let parsed: URL;
+  try {
+    parsed = new URL(input.url.trim());
+  } catch {
+    throw new Error("请输入有效的项目链接。");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("链接需以 http 或 https 开头。");
+  }
+  const url = parsed.toString();
+  const note = input.note?.trim() || undefined;
+  const id = `plink_${nanoid(8)}`;
+  const createdAt = nowIso();
+  await mutateDb((db) => {
+    const me = db.users.find((u) => u.id === userId);
+    if (!me) throw new Error("用户不存在");
+    me.projectLinks ??= [];
+    if (me.projectLinks.some((link) => link.url === url)) {
+      throw new Error("该项目链接已经添加过。");
+    }
+    me.projectLinks.unshift({ id, title, url, note, createdAt });
+  });
+  return { id };
+}
+
+export async function removeProjectLink(userId: string, linkId: string) {
+  await mutateDb((db) => {
+    const me = db.users.find((u) => u.id === userId);
+    if (!me) throw new Error("用户不存在");
+    me.projectLinks = (me.projectLinks ?? []).filter((link) => link.id !== linkId);
+  });
+}
+
+export async function markNotificationsRead() {
+  await mutateDb((db) => {
     db.notifications.forEach((n) => {
       n.read = true;
     });
   });
 }
 
-export function clearContent() {
-  resetDb();
+export async function clearContent() {
+  await resetDb();
 }

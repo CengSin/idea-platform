@@ -2,6 +2,7 @@ import { PageFrame } from "@/components/chrome/PageFrame";
 import { ClearContent } from "@/components/chrome/ClearContent";
 import { Chip } from "@/components/ui/Chip";
 import { getSnapshot } from "@/lib/queries";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,9 @@ export default async function SettingsPage() {
               <Chip key={s}>{s}</Chip>
             ))}
           </div>
+          <Link href="/profile" className="mt-4 inline-block text-[13px] text-idea hover:underline">
+            打开个人资料
+          </Link>
         </section>
 
         <section className="mt-8 max-w-xl">

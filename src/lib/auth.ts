@@ -1,16 +1,15 @@
 import "server-only";
 
 import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { mutateDb, readDb } from "./db";
+import { readJsonFile, withStoreLock, writeJsonFile } from "./json-store";
 import type { User } from "./types";
 
 export const SESSION_COOKIE = "idea_session";
 const SESSION_DAYS = 30;
-const authPath = path.join(process.cwd(), "data", "auth.json");
+const AUTH_FILE = "auth.json";
 
 type Account = {
   userId: string;
@@ -42,6 +41,15 @@ type AuthDb = {
   agentTokens: AgentToken[];
 };
 
+function emptyAuthDb(): AuthDb {
+  return {
+    version: 1,
+    accounts: [],
+    sessions: [],
+    agentTokens: [],
+  };
+}
+
 function passwordHash(password: string, salt: string) {
   return crypto.scryptSync(password, salt, 64).toString("hex");
 }
@@ -64,29 +72,32 @@ function createAccount(
   };
 }
 
-function readAuthDb(): AuthDb {
+async function readAuthDb(): Promise<AuthDb> {
   try {
-    const parsed = JSON.parse(fs.readFileSync(authPath, "utf8")) as AuthDb;
-    if (parsed.version === 1) {
+    const parsed = await readJsonFile<AuthDb>(AUTH_FILE);
+    if (parsed?.version === 1) {
       parsed.agentTokens ??= [];
       return parsed;
     }
   } catch {
-    // Initialize the local demo account below.
+    // Initialize an empty auth database below.
   }
-  const db: AuthDb = {
-    version: 1,
-    accounts: [],
-    sessions: [],
-    agentTokens: [],
-  };
-  writeAuthDb(db);
+  const db = emptyAuthDb();
+  await writeAuthDb(db);
   return db;
 }
 
-function writeAuthDb(db: AuthDb) {
-  fs.mkdirSync(path.dirname(authPath), { recursive: true });
-  fs.writeFileSync(authPath, JSON.stringify(db, null, 2));
+async function writeAuthDb(db: AuthDb) {
+  await writeJsonFile(AUTH_FILE, db);
+}
+
+async function mutateAuthDb(mutator: (db: AuthDb) => void): Promise<AuthDb> {
+  return withStoreLock(async () => {
+    const db = await readAuthDb();
+    mutator(db);
+    await writeAuthDb(db);
+    return db;
+  });
 }
 
 function safeEqual(a: string, b: string) {
@@ -99,8 +110,8 @@ function initials(displayName: string) {
   return Array.from(displayName.trim()).slice(0, 2).join("").toUpperCase();
 }
 
-function ensureProfile(account: Account): User {
-  const existing = readDb().users.find((user) => user.id === account.userId);
+async function ensureProfile(account: Account): Promise<User> {
+  const existing = (await readDb()).users.find((user) => user.id === account.userId);
   if (existing) return existing;
   const profile: User = {
     id: account.userId,
@@ -111,99 +122,102 @@ function ensureProfile(account: Account): User {
     skills: [],
     visibility: "public",
     createdAt: account.createdAt,
+    projectLinks: [],
   };
-  mutateDb((db) => db.users.push(profile));
+  await mutateDb((db) => db.users.push(profile));
   return profile;
 }
 
-export function authenticate(email: string, password: string) {
-  const db = readAuthDb();
+export async function authenticate(email: string, password: string) {
+  const db = await readAuthDb();
   const account = db.accounts.find(
     (item) => item.email === email.trim().toLowerCase(),
   );
   if (!account) return null;
   const candidate = passwordHash(password, account.passwordSalt);
   if (!safeEqual(candidate, account.passwordHash)) return null;
-  ensureProfile(account);
+  await ensureProfile(account);
   return account;
 }
 
-export function registerAccount(input: {
+export async function registerAccount(input: {
   email: string;
   password: string;
   displayName: string;
 }) {
-  const db = readAuthDb();
   const email = input.email.trim().toLowerCase();
-  if (db.accounts.some((item) => item.email === email)) {
-    throw new Error("该邮箱已注册，请直接登录。");
-  }
-  const account = createAccount(
-    `user_${crypto.randomBytes(6).toString("hex")}`,
-    email,
-    input.displayName,
-    input.password,
-  );
-  db.accounts.push(account);
-  writeAuthDb(db);
-  ensureProfile(account);
+  let account: Account | undefined;
+  await mutateAuthDb((db) => {
+    if (db.accounts.some((item) => item.email === email)) {
+      throw new Error("该邮箱已注册，请直接登录。");
+    }
+    account = createAccount(
+      `user_${crypto.randomBytes(6).toString("hex")}`,
+      email,
+      input.displayName,
+      input.password,
+    );
+    db.accounts.push(account);
+  });
+  if (!account) throw new Error("注册失败，请稍后重试。");
+  await ensureProfile(account);
   return account;
 }
 
-export function createSession(userId: string) {
-  const db = readAuthDb();
+export async function createSession(userId: string) {
   const token = crypto.randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400000);
-  db.sessions = db.sessions.filter(
-    (session) => new Date(session.expiresAt).getTime() > Date.now(),
-  );
-  db.sessions.push({
-    tokenHash: crypto.createHash("sha256").update(token).digest("hex"),
-    userId,
-    expiresAt: expiresAt.toISOString(),
+  await mutateAuthDb((db) => {
+    db.sessions = db.sessions.filter(
+      (session) => new Date(session.expiresAt).getTime() > Date.now(),
+    );
+    db.sessions.push({
+      tokenHash: crypto.createHash("sha256").update(token).digest("hex"),
+      userId,
+      expiresAt: expiresAt.toISOString(),
+    });
   });
-  writeAuthDb(db);
   return { token, expiresAt };
 }
 
-export function deleteSession(token?: string) {
+export async function deleteSession(token?: string) {
   if (!token) return;
   const hash = crypto.createHash("sha256").update(token).digest("hex");
-  const db = readAuthDb();
-  db.sessions = db.sessions.filter((session) => session.tokenHash !== hash);
-  writeAuthDb(db);
+  await mutateAuthDb((db) => {
+    db.sessions = db.sessions.filter((session) => session.tokenHash !== hash);
+  });
 }
 
-export function issueAttemptAgentToken(userId: string, attemptId: string) {
-  const db = readAuthDb();
+export async function issueAttemptAgentToken(userId: string, attemptId: string) {
   const token = `iat_${crypto.randomBytes(32).toString("base64url")}`;
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 90 * 86400000);
-  db.agentTokens = db.agentTokens.filter(
-    (item) =>
-      !(item.userId === userId && item.attemptId === attemptId) &&
-      new Date(item.expiresAt).getTime() > Date.now(),
-  );
-  db.agentTokens.push({
-    tokenHash: crypto.createHash("sha256").update(token).digest("hex"),
-    userId,
-    attemptId,
-    createdAt: now.toISOString(),
-    expiresAt: expiresAt.toISOString(),
+  await mutateAuthDb((db) => {
+    db.agentTokens = db.agentTokens.filter(
+      (item) =>
+        !(item.userId === userId && item.attemptId === attemptId) &&
+        new Date(item.expiresAt).getTime() > Date.now(),
+    );
+    db.agentTokens.push({
+      tokenHash: crypto.createHash("sha256").update(token).digest("hex"),
+      userId,
+      attemptId,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    });
   });
-  writeAuthDb(db);
   return { token, expiresAt: expiresAt.toISOString() };
 }
 
-export function revokeAgentTokensForUser(userId: string) {
-  const db = readAuthDb();
-  db.agentTokens = db.agentTokens.filter((item) => item.userId !== userId);
-  writeAuthDb(db);
+export async function revokeAgentTokensForUser(userId: string) {
+  await mutateAuthDb((db) => {
+    db.agentTokens = db.agentTokens.filter((item) => item.userId !== userId);
+  });
 }
 
-function authenticateAgentToken(token: string, attemptId?: string) {
+async function authenticateAgentToken(token: string, attemptId?: string) {
   const hash = crypto.createHash("sha256").update(token).digest("hex");
-  const db = readAuthDb();
+  const db = await readAuthDb();
   const grant = db.agentTokens.find(
     (item) =>
       item.tokenHash === hash &&
@@ -212,13 +226,13 @@ function authenticateAgentToken(token: string, attemptId?: string) {
   );
   if (!grant) return null;
   const account = db.accounts.find((item) => item.userId === grant.userId);
-  return account ? { user: ensureProfile(account), grant } : null;
+  return account ? { user: await ensureProfile(account), grant } : null;
 }
 
-export function getAgentRequestUser(request: Request, attemptId?: string) {
+export async function getAgentRequestUser(request: Request, attemptId?: string) {
   const authorization = request.headers.get("authorization");
   if (authorization?.startsWith("Bearer ")) {
-    return authenticateAgentToken(authorization.slice(7).trim(), attemptId)?.user ?? null;
+    return (await authenticateAgentToken(authorization.slice(7).trim(), attemptId))?.user ?? null;
   }
   return null;
 }
@@ -227,7 +241,7 @@ export async function getCurrentUser() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const hash = crypto.createHash("sha256").update(token).digest("hex");
-  const db = readAuthDb();
+  const db = await readAuthDb();
   const session = db.sessions.find(
     (item) => item.tokenHash === hash && new Date(item.expiresAt).getTime() > Date.now(),
   );
@@ -240,4 +254,16 @@ export async function requireCurrentUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   return user;
+}
+
+export async function getAccountPublic(userId: string) {
+  const db = await readAuthDb();
+  const account = db.accounts.find((item) => item.userId === userId);
+  if (!account) return null;
+  return {
+    userId: account.userId,
+    email: account.email,
+    displayName: account.displayName,
+    createdAt: account.createdAt,
+  };
 }

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const me = getAgentRequestUser(req, body.attempt_id);
+  const me = await getAgentRequestUser(req, body.attempt_id);
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!body.user_confirmed) {
     return NextResponse.json(
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       ? await resolveLinkPreview(externalUrl)
       : null;
     const coverUrl = explicitCover || preview?.imageUrl || "/covers/hushcity.jpg";
-    const result = publishWork(me.id, {
+    const result = await publishWork(me.id, {
       attemptId: body.attempt_id,
       title: body.title,
       summary: body.summary,

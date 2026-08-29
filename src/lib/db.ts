@@ -1,17 +1,19 @@
-import fs from "node:fs";
-import path from "node:path";
 import { createSeed } from "./seed";
 import { recomputeIdeaStatus } from "./format";
+import { readJsonFile, withStoreLock, writeJsonFile } from "./json-store";
 import type { Database } from "./types";
 
 const VERSION = 3;
-const dbPath = path.join(process.cwd(), "data", "db.json");
+const DB_FILE = "db.json";
 
 function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
 function normalizeDb(db: Database) {
+  for (const user of db.users) {
+    user.projectLinks ??= [];
+  }
   for (const idea of db.ideas) {
     idea.status = recomputeIdeaStatus(idea, db);
     const activityTimes = [
@@ -30,39 +32,36 @@ function normalizeDb(db: Database) {
   return db;
 }
 
-export function readDb(): Database {
+export async function readDb(): Promise<Database> {
   try {
-    if (fs.existsSync(dbPath)) {
-      const parsed = JSON.parse(fs.readFileSync(dbPath, "utf8")) as Database;
-      if (parsed.version === VERSION) {
-        return clone(normalizeDb(parsed));
-      }
+    const parsed = await readJsonFile<Database>(DB_FILE);
+    if (parsed?.version === VERSION) {
+      return clone(normalizeDb(parsed));
     }
   } catch {
     // fall through to seed
   }
   const seed = createSeed();
-  writeDb(seed);
+  await writeDb(seed);
   return clone(seed);
 }
 
-export function writeDb(db: Database) {
+export async function writeDb(db: Database) {
   const snapshot = clone(normalizeDb(db));
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const temporaryPath = `${dbPath}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(temporaryPath, JSON.stringify(snapshot, null, 2));
-  fs.renameSync(temporaryPath, dbPath);
+  await writeJsonFile(DB_FILE, snapshot);
 }
 
-export function mutateDb(mutator: (db: Database) => void): Database {
-  const db = readDb();
-  mutator(db);
-  writeDb(db);
-  return clone(db);
+export async function mutateDb(mutator: (db: Database) => void): Promise<Database> {
+  return withStoreLock(async () => {
+    const db = await readDb();
+    mutator(db);
+    await writeDb(db);
+    return clone(db);
+  });
 }
 
-export function resetDb(): Database {
+export async function resetDb(): Promise<Database> {
   const seed = createSeed();
-  writeDb(seed);
+  await writeDb(seed);
   return clone(seed);
 }

@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const db = readDb();
+  const db = await readDb();
   const work = workById(db, id);
   if (!work) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const idea = ideaById(db, work.ideaId);

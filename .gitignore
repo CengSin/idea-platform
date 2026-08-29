@@ -3,6 +3,7 @@ node_modules
 out
 data/db.json
 data/auth.json
+.vercel
 .DS_Store
 *.log
 .env

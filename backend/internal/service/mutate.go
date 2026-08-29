@@ -450,7 +450,22 @@ func (s *Service) MarkNotificationsRead(ctx context.Context, userID string) erro
 }
 
 func (s *Service) ClearContent(ctx context.Context) error {
-	if err := s.Seed(ctx, true); err != nil {
+	emptyUsers := []domain.User{}
+	emptyIdeas := []domain.Idea{}
+	emptyAttempts := []domain.Attempt{}
+	emptyWorks := []domain.Work{}
+	emptyEvents := []domain.Event{}
+	emptyNotifications := []domain.Notification{}
+	emptyFollows := []domain.Follow{}
+	if err := s.ImportDump(ctx, &DataDump{
+		Users:         &emptyUsers,
+		Ideas:         &emptyIdeas,
+		Attempts:      &emptyAttempts,
+		Works:         &emptyWorks,
+		Events:        &emptyEvents,
+		Notifications: &emptyNotifications,
+		Follows:       &emptyFollows,
+	}, true); err != nil {
 		return err
 	}
 	s.invalidate(ctx)

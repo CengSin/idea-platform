@@ -195,6 +195,16 @@ export function clsxJoin(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
+export function displayHost(url: string) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    const path = new URL(url).pathname.replace(/\/$/, "");
+    return path && path !== "/" ? `${host}${path}` : host;
+  } catch {
+    return url;
+  }
+}
+
 export function userById(db: Database, id: string) {
   return db.users.find((u) => u.id === id);
 }

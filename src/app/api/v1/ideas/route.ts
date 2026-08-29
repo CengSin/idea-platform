@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").toLowerCase();
-  const db = readDb();
+  const db = await readDb();
   const ideas = db.ideas
     .filter((i) => i.visibility === "public" && i.status !== "draft")
     .filter((i) => {
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     );
   }
   try {
-    const result = publishIdea(me.id, {
+    const result = await publishIdea(me.id, {
       title: body.title,
       summary: body.summary ?? "",
       problem: body.problem,

@@ -28,8 +28,13 @@ func main() {
 	}
 
 	svc := service.New(st, cfg)
-	if err := svc.SeedIfEmpty(context.Background()); err != nil {
-		log.Fatalf("seed: %v", err)
+	if cfg.InitSource == "" {
+		log.Printf("mysql init skipped (MYSQL_INIT_SOURCE empty)")
+	} else {
+		log.Printf("mysql init source: %s", cfg.InitSource)
+		if err := svc.SeedIfEmpty(context.Background()); err != nil {
+			log.Fatalf("init: %v", err)
+		}
 	}
 
 	r := httpapi.New(cfg, svc)

@@ -12,7 +12,9 @@ type Config struct {
 	HTTPAddr       string
 	AppOrigin      string
 	DefaultUserID  string
-	SeedPath       string
+	InitSource     string
+	InitToken      string
+	AdminToken     string
 	MySQLDSN       string
 	RedisAddr      string
 	RedisPassword  string
@@ -31,7 +33,9 @@ func Load() Config {
 		HTTPAddr:       env("HTTP_ADDR", ":8081"),
 		AppOrigin:      env("APP_ORIGIN", "http://localhost:3001"),
 		DefaultUserID:  env("DEFAULT_USER_ID", "user_linshen"),
-		SeedPath:       env("SEED_PATH", "seed/db.json"),
+		InitSource:     firstNonEmpty(env("MYSQL_INIT_SOURCE", ""), env("SEED_PATH", "")),
+		InitToken:      firstNonEmpty(env("MYSQL_INIT_TOKEN", ""), env("DATA_EXPORT_TOKEN", "")),
+		AdminToken:     firstNonEmpty(env("ADMIN_TOKEN", ""), env("DATA_EXPORT_TOKEN", "")),
 		MySQLDSN:       env("MYSQL_DSN", "idea:idea@tcp(127.0.0.1:3306)/idea_platform?charset=utf8mb4&parseTime=True&loc=UTC"),
 		RedisAddr:      env("REDIS_ADDR", "127.0.0.1:6379"),
 		RedisPassword:  env("REDIS_PASSWORD", ""),
@@ -60,6 +64,15 @@ func envInt(key string, fallback int) int {
 		}
 	}
 	return fallback
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func envBool(key string, fallback bool) bool {

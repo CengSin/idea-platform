@@ -18,7 +18,7 @@ function destination(value: FormDataEntryValue | null) {
 }
 
 async function setSession(userId: string) {
-  const session = createSession(userId);
+  const session = await createSession(userId);
   (await cookies()).set(SESSION_COOKIE, session.token, {
     httpOnly: true,
     sameSite: "lax",
@@ -35,7 +35,7 @@ export async function loginAction(
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   if (!email || !password) return { error: "请输入邮箱和密码。" };
-  const account = authenticate(email, password);
+  const account = await authenticate(email, password);
   if (!account) return { error: "邮箱或密码不正确。" };
   await setSession(account.userId);
   redirect(destination(formData.get("next")));
@@ -56,7 +56,7 @@ export async function registerAction(
   if (password !== confirmPassword) return { error: "两次输入的密码不一致。" };
 
   try {
-    const account = registerAccount({ displayName, email, password });
+    const account = await registerAccount({ displayName, email, password });
     await setSession(account.userId);
   } catch (error) {
     return { error: error instanceof Error ? error.message : "注册失败，请稍后重试。" };
@@ -66,7 +66,7 @@ export async function registerAction(
 
 export async function logoutAction() {
   const store = await cookies();
-  deleteSession(store.get(SESSION_COOKIE)?.value);
+  await deleteSession(store.get(SESSION_COOKIE)?.value);
   store.delete(SESSION_COOKIE);
   redirect("/login");
 }

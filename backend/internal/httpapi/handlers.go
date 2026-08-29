@@ -316,6 +316,28 @@ func (s *Server) upload(c *gin.Context) {
 	})
 }
 
+func (s *Server) exportData(c *gin.Context) {
+	dump, err := s.Svc.ExportDump(c.Request.Context())
+	if err != nil {
+		writeErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, dump)
+}
+
+func (s *Server) importData(c *gin.Context) {
+	var dump service.DataDump
+	if err := c.ShouldBindJSON(&dump); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
+		return
+	}
+	if err := s.Svc.ImportDump(c.Request.Context(), &dump, true); err != nil {
+		writeErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 func (s *Server) getFile(c *gin.Context) {
 	key := strings.TrimPrefix(c.Param("key"), "/")
 	key = path.Clean(key)
