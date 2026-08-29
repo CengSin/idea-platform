@@ -11,6 +11,9 @@ function clone<T>(value: T): T {
 }
 
 function normalizeDb(db: Database) {
+  for (const user of db.users) {
+    user.projectLinks ??= [];
+  }
   for (const idea of db.ideas) {
     idea.status = recomputeIdeaStatus(idea, db);
     const activityTimes = [

@@ -109,9 +109,19 @@ export function Sidebar({ unread = 0, user }: { unread?: number; user: User }) {
           设置
         </Link>
         <div className="mx-1 my-2 h-px bg-line" />
-        <div className="flex items-center justify-center py-1" title={user.displayName}>
-          <Avatar initials={user.initials} accent={user.accent} size={34} />
-        </div>
+        <Link
+          href="/profile"
+          title={user.displayName}
+          className={clsxJoin(
+            "pressable relative mt-0.5 flex flex-col items-center gap-1 rounded-2xl px-1 py-3 text-[11px] tracking-[0.04em]",
+            pathname.startsWith("/profile")
+              ? "bg-idea/12 text-idea"
+              : "text-muted hover:bg-white/4 hover:text-artifact",
+          )}
+        >
+          <Avatar initials={user.initials} accent={user.accent} size={28} />
+          资料
+        </Link>
         <form action={logoutAction}>
           <button
             type="submit"

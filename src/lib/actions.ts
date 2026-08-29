@@ -10,11 +10,13 @@ import { buildAgentsMd } from "./agent-setup";
 import { readDb } from "./db";
 import { attemptById, ideaById } from "./format";
 import {
+  addProjectLink,
   adoptIdea,
   clearContent,
   followIdea,
   markNotificationsRead,
   publishIdea,
+  removeProjectLink,
 } from "./ops";
 
 function refresh() {
@@ -86,5 +88,33 @@ export async function clearContentAction() {
   const me = await requireCurrentUser();
   await revokeAgentTokensForUser(me.id);
   await clearContent();
+  refresh();
+}
+
+export type ProfileLinkState = { error?: string; ok?: boolean };
+
+export async function addProjectLinkAction(
+  _state: ProfileLinkState,
+  formData: FormData,
+): Promise<ProfileLinkState> {
+  const me = await requireCurrentUser();
+  try {
+    await addProjectLink(me.id, {
+      title: String(formData.get("title") ?? ""),
+      url: String(formData.get("url") ?? ""),
+      note: String(formData.get("note") ?? ""),
+    });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "添加失败，请稍后重试。" };
+  }
+  refresh();
+  return { ok: true };
+}
+
+export async function removeProjectLinkAction(formData: FormData) {
+  const me = await requireCurrentUser();
+  const linkId = String(formData.get("linkId") ?? "");
+  if (!linkId) return;
+  await removeProjectLink(me.id, linkId);
   refresh();
 }

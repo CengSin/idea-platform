@@ -122,6 +122,7 @@ async function ensureProfile(account: Account): Promise<User> {
     skills: [],
     visibility: "public",
     createdAt: account.createdAt,
+    projectLinks: [],
   };
   await mutateDb((db) => db.users.push(profile));
   return profile;
@@ -253,4 +254,16 @@ export async function requireCurrentUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   return user;
+}
+
+export async function getAccountPublic(userId: string) {
+  const db = await readAuthDb();
+  const account = db.accounts.find((item) => item.userId === userId);
+  if (!account) return null;
+  return {
+    userId: account.userId,
+    email: account.email,
+    displayName: account.displayName,
+    createdAt: account.createdAt,
+  };
 }

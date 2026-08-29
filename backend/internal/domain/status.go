@@ -184,4 +184,7 @@ func NormalizeUser(u *User) {
 	if u.Skills == nil {
 		u.Skills = []string{}
 	}
+	if u.ProjectLinks == nil {
+		u.ProjectLinks = []ProjectLink{}
+	}
 }

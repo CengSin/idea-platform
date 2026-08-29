@@ -255,6 +255,46 @@ export async function publishWork(userId: string, input: {
   return { work_id: id, url: `/works/${id}` };
 }
 
+export async function addProjectLink(
+  userId: string,
+  input: { title: string; url: string; note?: string },
+) {
+  const title = input.title.trim();
+  if (!title) throw new Error("请填写项目名称。");
+  if (title.length > 80) throw new Error("项目名称过长。");
+  let parsed: URL;
+  try {
+    parsed = new URL(input.url.trim());
+  } catch {
+    throw new Error("请输入有效的项目链接。");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("链接需以 http 或 https 开头。");
+  }
+  const url = parsed.toString();
+  const note = input.note?.trim() || undefined;
+  const id = `plink_${nanoid(8)}`;
+  const createdAt = nowIso();
+  await mutateDb((db) => {
+    const me = db.users.find((u) => u.id === userId);
+    if (!me) throw new Error("用户不存在");
+    me.projectLinks ??= [];
+    if (me.projectLinks.some((link) => link.url === url)) {
+      throw new Error("该项目链接已经添加过。");
+    }
+    me.projectLinks.unshift({ id, title, url, note, createdAt });
+  });
+  return { id };
+}
+
+export async function removeProjectLink(userId: string, linkId: string) {
+  await mutateDb((db) => {
+    const me = db.users.find((u) => u.id === userId);
+    if (!me) throw new Error("用户不存在");
+    me.projectLinks = (me.projectLinks ?? []).filter((link) => link.id !== linkId);
+  });
+}
+
 export async function markNotificationsRead() {
   await mutateDb((db) => {
     db.notifications.forEach((n) => {

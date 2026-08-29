@@ -61,6 +61,14 @@ export interface License {
   commercialUse: CommercialUse;
 }
 
+export interface ProjectLink {
+  id: string;
+  title: string;
+  url: string;
+  note?: string;
+  createdAt: string;
+}
+
 export interface User {
   id: string;
   displayName: string;
@@ -70,6 +78,7 @@ export interface User {
   skills: string[];
   visibility: UserVisibility;
   createdAt: string;
+  projectLinks: ProjectLink[];
 }
 
 export interface ExistingAttemptRef {

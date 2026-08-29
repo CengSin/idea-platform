@@ -38,15 +38,24 @@ type Point struct {
 	Y float64 `json:"y"`
 }
 
+type ProjectLink struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	URL       string `json:"url"`
+	Note      string `json:"note,omitempty"`
+	CreatedAt string `json:"createdAt"`
+}
+
 type User struct {
-	ID          string   `json:"id" gorm:"primaryKey;size:64"`
-	DisplayName string   `json:"displayName" gorm:"size:128"`
-	Initials    string   `json:"initials" gorm:"size:16"`
-	Accent      string   `json:"accent" gorm:"size:16"`
-	Bio         string   `json:"bio" gorm:"type:text"`
-	Skills      []string `json:"skills" gorm:"serializer:json;type:json"`
-	Visibility  string   `json:"visibility" gorm:"size:32"`
-	CreatedAt   string   `json:"createdAt" gorm:"column:created_at;size:40;autoCreateTime:false"`
+	ID           string        `json:"id" gorm:"primaryKey;size:64"`
+	DisplayName  string        `json:"displayName" gorm:"size:128"`
+	Initials     string        `json:"initials" gorm:"size:16"`
+	Accent       string        `json:"accent" gorm:"size:16"`
+	Bio          string        `json:"bio" gorm:"type:text"`
+	Skills       []string      `json:"skills" gorm:"serializer:json;type:json"`
+	Visibility   string        `json:"visibility" gorm:"size:32"`
+	CreatedAt    string        `json:"createdAt" gorm:"column:created_at;size:40;autoCreateTime:false"`
+	ProjectLinks []ProjectLink `json:"projectLinks" gorm:"serializer:json;type:json"`
 }
 
 func (User) TableName() string { return "users" }
