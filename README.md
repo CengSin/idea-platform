@@ -50,7 +50,7 @@ go run ./cmd/api
 | `POST` | `/api/v1/works` | 发布作品 |
 | `GET` | `/api/v1/ideas/:id/context` | 结构化 Idea Context |
 
-发布作品时提供公开的 `external_url`，平台会读取 `og:image` / `twitter:image` 作为封面；`cover_url` 仅用于显式覆盖。
+发布作品时提供公开的 `external_url`，平台会读取 `og:image` / `twitter:image` 作为封面，没有预览图时回退到网站图标；`cover_url` 仅用于显式覆盖。
 
 ### 公开访问
 
@@ -114,7 +114,7 @@ All write operations require `user_confirmed: true`. Attempt updates and work pu
 | `POST` | `/api/v1/works` | Publish a work |
 | `GET` | `/api/v1/ideas/:id/context` | Structured idea context |
 
-When publishing a work, pass a public `external_url`. The platform reads `og:image` / `twitter:image` as the cover; `cover_url` is only for an explicit override.
+When publishing a work, pass a public `external_url`. The platform reads `og:image` / `twitter:image` as the cover, then falls back to the site icon; `cover_url` is only for an explicit override.
 
 ### Public access
 

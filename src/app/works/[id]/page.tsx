@@ -35,7 +35,7 @@ export default async function WorkPage({
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
           <div>
             <div className="media-zoom overflow-hidden rounded-[28px]">
-              <CoverImage src={work.coverUrl} className="h-[340px] w-full object-cover" />
+              <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-[340px] w-full object-cover" />
             </div>
             <h1 className="mt-6 text-[32px] font-semibold tracking-[-0.04em]">{work.title}</h1>
             <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted">{work.summary}</p>

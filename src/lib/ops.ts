@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { DEFAULT_COVER } from "./cover";
 import { mutateDb, resetDb } from "./db";
 import { buildAdoptionPrompt } from "./format";
 import { type AttemptStatus, type Visibility } from "./types";
@@ -212,7 +213,7 @@ export async function publishWork(userId: string, input: {
       title: input.title.trim(),
       summary: input.summary.trim(),
       type: input.type,
-      coverUrl: input.coverUrl || "/covers/hushcity.jpg",
+      coverUrl: input.coverUrl || DEFAULT_COVER,
       externalUrl: input.externalUrl || undefined,
       repositoryUrl: input.repositoryUrl || undefined,
       status: "published",

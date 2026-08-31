@@ -44,7 +44,7 @@ export default async function WorksPage({
             const idea = ideaById(db, work.ideaId);
             return (
               <Link key={work.id} href={`/works/${work.id}`} className="glass lift pressable media-zoom overflow-hidden rounded-3xl">
-                <CoverImage src={work.coverUrl} className="h-40 w-full object-cover" />
+                <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-40 w-full object-cover" />
                 <div className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="text-[16px] tracking-[-0.02em]">{work.title}</div>

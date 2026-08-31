@@ -1,19 +1,23 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import {
+  DEFAULT_COVER,
+  extractPreviewImages,
+  isDefaultCover,
+  siteMarkUrl,
+  type CoverPreview as LinkPreview,
+} from "./cover";
+
+export type { LinkPreview };
 
 const MAX_HTML_BYTES = 1_000_000;
 const MAX_REDIRECTS = 4;
 const REQUEST_TIMEOUT_MS = 5_000;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1_000;
+const FAILED_CACHE_TTL_MS = 5 * 60 * 1_000;
 const MAX_CACHE_ENTRIES = 200;
-
-type PreviewSource = "open_graph" | "twitter_card";
-
-export interface LinkPreview {
-  imageUrl: string;
-  pageUrl: string;
-  source: PreviewSource;
-}
+const PREVIEW_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 IdeaPlatform-LinkPreview/1.0";
 
 interface CacheEntry {
   expiresAt: number;
@@ -22,58 +26,7 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-function decodeHtmlEntities(value: string) {
-  return value
-    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([\da-f]+);/gi, (_, code: string) =>
-      String.fromCodePoint(Number.parseInt(code, 16)),
-    )
-    .replace(/&amp;/gi, "&")
-    .replace(/&quot;/gi, '"')
-    .replace(/&apos;|&#39;/gi, "'")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">");
-}
-
-function attributes(tag: string) {
-  const result = new Map<string, string>();
-  const pattern = /([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g;
-  for (const match of tag.matchAll(pattern)) {
-    result.set(match[1].toLowerCase(), decodeHtmlEntities(match[2] ?? match[3] ?? match[4] ?? ""));
-  }
-  return result;
-}
-
-export function extractPreviewImage(html: string, pageUrl: string): LinkPreview | null {
-  const openGraphImages: string[] = [];
-  const twitterImages: string[] = [];
-  for (const tag of html.match(/<meta\b[^>]*>/gi) ?? []) {
-    const attrs = attributes(tag);
-    const key = (attrs.get("property") ?? attrs.get("name") ?? "").toLowerCase();
-    const content = attrs.get("content")?.trim();
-    if (!content) continue;
-    if (key === "og:image" || key === "og:image:url" || key === "og:image:secure_url") {
-      openGraphImages.push(content);
-    } else if (key === "twitter:image" || key === "twitter:image:src") {
-      twitterImages.push(content);
-    }
-  }
-
-  const candidates: Array<{ imageUrl: string; source: PreviewSource }> = [
-    ...openGraphImages.map((imageUrl) => ({ imageUrl, source: "open_graph" as const })),
-    ...twitterImages.map((imageUrl) => ({ imageUrl, source: "twitter_card" as const })),
-  ];
-  for (const candidate of candidates) {
-    try {
-      const imageUrl = new URL(candidate.imageUrl, pageUrl);
-      if (imageUrl.protocol !== "http:" && imageUrl.protocol !== "https:") continue;
-      return { imageUrl: imageUrl.toString(), pageUrl, source: candidate.source };
-    } catch {
-      // Ignore invalid metadata and try the next candidate.
-    }
-  }
-  return null;
-}
+export { extractPreviewImage, extractPreviewImages } from "./cover";
 
 function isPrivateIPv4(address: string) {
   const octets = address.split(".").map(Number);
@@ -94,15 +47,15 @@ function isPrivateIPv4(address: string) {
   );
 }
 
-function isPrivateAddress(address: string) {
+export function isPrivateAddress(address: string) {
   const family = isIP(address);
   if (family === 4) return isPrivateIPv4(address);
   if (family !== 6) return true;
   const normalized = address.toLowerCase();
+  if (normalized.startsWith("::ffff:")) return isPrivateAddress(normalized.slice("::ffff:".length));
   return (
     normalized === "::" ||
     normalized === "::1" ||
-    normalized.startsWith("::ffff:") ||
     normalized.startsWith("fc") ||
     normalized.startsWith("fd") ||
     /^fe[89ab]/.test(normalized) ||
@@ -165,7 +118,7 @@ async function fetchHtml(inputUrl: string) {
     const response = await fetch(current, {
       headers: {
         Accept: "text/html,application/xhtml+xml",
-        "User-Agent": "IdeaPlatform-LinkPreview/1.0",
+        "User-Agent": PREVIEW_UA,
       },
       redirect: "manual",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -189,7 +142,10 @@ async function fetchHtml(inputUrl: string) {
 
 function remember(url: string, preview: LinkPreview | null) {
   if (cache.size >= MAX_CACHE_ENTRIES) cache.delete(cache.keys().next().value!);
-  cache.set(url, { expiresAt: Date.now() + CACHE_TTL_MS, preview });
+  cache.set(url, {
+    expiresAt: Date.now() + (preview ? CACHE_TTL_MS : FAILED_CACHE_TTL_MS),
+    preview,
+  });
 }
 
 export async function resolveLinkPreview(inputUrl: string): Promise<LinkPreview | null> {
@@ -208,12 +164,26 @@ export async function resolveLinkPreview(inputUrl: string): Promise<LinkPreview 
 
   try {
     const page = await fetchHtml(normalizedUrl);
-    const preview = extractPreviewImage(page.html, page.pageUrl);
-    if (preview) await assertPublicHttpUrl(new URL(preview.imageUrl));
-    remember(normalizedUrl, preview);
-    return preview;
+    for (const preview of extractPreviewImages(page.html, page.pageUrl)) {
+      try {
+        await assertPublicHttpUrl(new URL(preview.imageUrl));
+        remember(normalizedUrl, preview);
+        return preview;
+      } catch {
+        // Try the next public candidate (favicon / apple-touch-icon).
+      }
+    }
+    remember(normalizedUrl, null);
+    return null;
   } catch {
     remember(normalizedUrl, null);
     return null;
   }
+}
+
+export async function resolveWorkCover(work: { coverUrl?: string; externalUrl?: string }) {
+  if (!isDefaultCover(work.coverUrl) && work.coverUrl) return work.coverUrl;
+  if (!work.externalUrl) return work.coverUrl || DEFAULT_COVER;
+  const preview = await resolveLinkPreview(work.externalUrl);
+  return preview?.imageUrl || siteMarkUrl(work.externalUrl) || work.coverUrl || DEFAULT_COVER;
 }

@@ -586,7 +586,7 @@ export function IdeaGraph({
                   zIndex: 2,
                 }}
               >
-                <CoverImage src={work.coverUrl} className="h-[108px] w-full object-cover" />
+                <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-[108px] w-full object-cover" />
                 <div className="px-3 py-2.5">
                   <div className="text-[14px] font-medium tracking-[-0.02em]">{work.title}</div>
                   <div className="mt-0.5 flex items-center justify-between text-[11px] text-muted">

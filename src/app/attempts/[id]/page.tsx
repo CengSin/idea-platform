@@ -85,7 +85,7 @@ export default async function AttemptPage({
           <div className="mt-8 grid grid-cols-3 gap-4">
             {works.map((work) => (
               <Link key={work.id} href={`/works/${work.id}`} className="glass lift media-zoom overflow-hidden rounded-2xl">
-                <CoverImage src={work.coverUrl} className="h-28 w-full object-cover" />
+                <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-28 w-full object-cover" />
                 <div className="p-3 text-[14px]">{work.title}</div>
               </Link>
             ))}

@@ -42,7 +42,7 @@ go run ./cmd/api
 
 接口请求体同时接受 camelCase 与 snake_case。Next.js 主应用在承接页生成 `AGENTS.md` 和分支专属 Token，由 Agent 自动调用进展与作品接口。
 
-发布作品时提供公开的 `external_url`，API 会自动读取页面的 `og:image` / `twitter:image` 作为封面；`cover_url` 仅用于显式覆盖。链接预览包含超时、重定向次数、响应大小和内网地址限制，解析失败时使用默认封面。
+发布作品时提供公开的 `external_url`，API 会自动读取页面的 `og:image` / `twitter:image` 作为封面，没有预览图时回退到网站图标；`cover_url` 仅用于显式覆盖。链接预览包含超时、重定向次数、响应大小和内网地址限制，解析失败时使用网站标示。
 
 ## 基础设施
 

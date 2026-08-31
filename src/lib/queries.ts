@@ -1,4 +1,4 @@
-import { readDb } from "./db";
+import { mutateDb, readDb } from "./db";
 import { getAccountPublic, requireCurrentUser } from "./auth";
 import {
   attemptById,
@@ -7,10 +7,40 @@ import {
   userById,
   workById,
 } from "./format";
+import { isDefaultCover } from "./cover";
+import { resolveWorkCover } from "./link-preview";
+import type { Database } from "./types";
+
+let coverPersist: Promise<void> | null = null;
+
+async function hydrateDatabaseCovers(db: Database): Promise<Database> {
+  const works = await Promise.all(
+    db.works.map(async (work) => {
+      const coverUrl = await resolveWorkCover(work);
+      return coverUrl === work.coverUrl ? work : { ...work, coverUrl };
+    }),
+  );
+  const changed = works.filter((work, index) => work.coverUrl !== db.works[index].coverUrl);
+  if (changed.length === 0) return db;
+  if (!coverPersist) {
+    const updates = changed.map((work) => ({ id: work.id, coverUrl: work.coverUrl }));
+    coverPersist = mutateDb((live) => {
+      for (const update of updates) {
+        const current = live.works.find((work) => work.id === update.id);
+        if (current && isDefaultCover(current.coverUrl)) current.coverUrl = update.coverUrl;
+      }
+    })
+      .then(() => undefined)
+      .finally(() => {
+        coverPersist = null;
+      });
+  }
+  return { ...db, works };
+}
 
 export async function getSnapshot() {
   const me = await requireCurrentUser();
-  const db = await readDb();
+  const db = await hydrateDatabaseCovers(await readDb());
   return {
     db,
     me,
@@ -20,7 +50,7 @@ export async function getSnapshot() {
 
 export async function getIdeaBundle(id: string) {
   const me = await requireCurrentUser();
-  const db = await readDb();
+  const db = await hydrateDatabaseCovers(await readDb());
   const idea = ideaById(db, id);
   if (!idea) return null;
   const attempts = db.attempts
@@ -60,7 +90,7 @@ export async function getIdeaBundle(id: string) {
 
 export async function getAttemptBundle(id: string) {
   const me = await requireCurrentUser();
-  const db = await readDb();
+  const db = await hydrateDatabaseCovers(await readDb());
   const attempt = attemptById(db, id);
   if (!attempt) return null;
   return {
@@ -77,7 +107,7 @@ export async function getAttemptBundle(id: string) {
 export async function getProfile() {
   const me = await requireCurrentUser();
   const account = await getAccountPublic(me.id);
-  const db = await readDb();
+  const db = await hydrateDatabaseCovers(await readDb());
   const myAttemptIds = new Set(
     db.attempts.filter((attempt) => attempt.ownerId === me.id).map((attempt) => attempt.id),
   );
@@ -109,7 +139,7 @@ export async function getProfile() {
 
 export async function getWorkBundle(id: string) {
   await requireCurrentUser();
-  const db = await readDb();
+  const db = await hydrateDatabaseCovers(await readDb());
   const work = workById(db, id);
   if (!work) return null;
   return {

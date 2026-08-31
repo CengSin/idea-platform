@@ -22,7 +22,7 @@ export function WorkGallery({ works }: { works: Work[] }) {
             className="glass lift pressable media-zoom group overflow-hidden rounded-3xl"
           >
             <div className="relative">
-              <CoverImage src={work.coverUrl} className="h-[168px] w-full object-cover" />
+              <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-[168px] w-full object-cover" />
               <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-artifact backdrop-blur-sm">
                 <Play className="h-3.5 w-3.5 fill-current" />
               </span>

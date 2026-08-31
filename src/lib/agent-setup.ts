@@ -156,7 +156,7 @@ curl -fsS -X POST "${baseUrl}/api/v1/works" \\
 
 \`type\` 可用值：\`website\`、\`app\`、\`video\`、\`article\`、\`research\`、\`art\`、\`hardware\`、\`other\`。
 
-作品封面默认由平台从 \`external_url\` 的 \`og:image\` 或 \`twitter:image\` 自动提取。通常不要传 \`cover_url\`；只有用户明确指定封面时才传该字段覆盖自动预览。链接无法解析时平台会使用默认封面，不影响作品发布。
+作品封面默认由平台从 \`external_url\` 的 \`og:image\` / \`twitter:image\` 提取，没有预览图时再回退到网站图标（favicon / apple-touch-icon）。通常不要传 \`cover_url\`；只有用户明确指定封面时才传该字段覆盖自动预览。不要传平台默认封面路径。链接无法解析时平台会使用网站标示，不影响作品发布。
 
 ### Web 作品的链接预览要求
 
@@ -167,7 +167,7 @@ curl -fsS -X POST "${baseUrl}/api/v1/works" \\
 3. \`og:image\` 和 \`twitter:image\` 必须是无需登录即可访问的绝对 HTTPS 地址；推荐使用约 1200×630 的图片。
 4. 最终 \`external_url\` 必须是公网可访问地址，不能提交 \`localhost\`、\`127.0.0.1\` 或局域网地址。
 5. 发布前实际请求最终页面，确认响应 HTML 中存在上述元标签，并确认图片地址返回成功的图片响应。
-6. 如果项目无法配置这些元数据，必须在发布请求中显式提供公网可访问的 \`cover_url\`。
+6. 如果项目无法配置这些元数据，平台会回退到网站图标；只有需要指定特定封面时才传 \`cover_url\`。
 
 HTML 项目的最小示例：
 

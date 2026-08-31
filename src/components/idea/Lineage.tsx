@@ -123,7 +123,7 @@ export function Lineage({
                     className="glass lift media-zoom flex items-center gap-3 overflow-hidden rounded-2xl"
                   >
                     <span className="absolute left-[-18px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-artifact" />
-                    <CoverImage src={work.coverUrl} className="h-[76px] w-[112px] object-cover" />
+                    <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-[76px] w-[112px] object-cover" />
                     <span className="min-w-0 py-2 pr-3">
                       <span className="block truncate text-[14px]">{work.title}</span>
                       <span className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-muted">

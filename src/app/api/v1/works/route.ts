@@ -1,5 +1,6 @@
 import { publishWork } from "@/lib/ops";
 import { getAgentRequestUser } from "@/lib/auth";
+import { DEFAULT_COVER, isDefaultCover, siteMarkUrl } from "@/lib/cover";
 import { resolveLinkPreview } from "@/lib/link-preview";
 import { NextResponse } from "next/server";
 
@@ -47,10 +48,10 @@ export async function POST(req: Request) {
         throw new Error("cover_url 不能包含用户名或密码");
       }
     }
-    const preview = !explicitCover && externalUrl
-      ? await resolveLinkPreview(externalUrl)
-      : null;
-    const coverUrl = explicitCover || preview?.imageUrl || "/covers/hushcity.jpg";
+    const customCover = explicitCover && !isDefaultCover(explicitCover) ? explicitCover : "";
+    const preview = !customCover && externalUrl ? await resolveLinkPreview(externalUrl) : null;
+    const coverUrl =
+      customCover || preview?.imageUrl || (externalUrl ? siteMarkUrl(externalUrl) : null) || DEFAULT_COVER;
     const result = await publishWork(me.id, {
       attemptId: body.attempt_id,
       title: body.title,
@@ -73,7 +74,9 @@ export async function POST(req: Request) {
       },
       preview: {
         cover_url: coverUrl,
-        source: explicitCover ? "provided" : preview?.source ?? "default",
+        source: customCover
+          ? "provided"
+          : preview?.source ?? (coverUrl !== DEFAULT_COVER ? "site_mark" : "default"),
       },
     });
   } catch (e) {
