@@ -47,7 +47,7 @@ export function AgentSetupPanel({ attemptId }: { attemptId: string }) {
         <div>
           <h2 className="text-[17px] font-medium tracking-[-0.025em]">让 Agent 接管这条分支</h2>
           <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-muted">
-            进展、阻塞、测试阶段和作品发布都由 Agent 在完成需求后自动同步，你不需要手动维护状态。
+            进展、阻塞、测试阶段和作品发布由 Agent 自动同步；配置也包含修改、删除自己作品的接口与权限说明。
           </p>
         </div>
         <Button tone="idea" disabled={pending} onClick={generate}>
@@ -61,7 +61,7 @@ export function AgentSetupPanel({ attemptId }: { attemptId: string }) {
           创建一个空文件夹，或进入准备开发的现有仓库。
         </Step>
         <Step icon={Download} number="2" title="放入 AGENTS.md">
-          将下载的文件放在项目根目录，不要提交其中的 Token。
+          将下载的文件放在项目根目录。旧配置可重新生成以获取最新接口说明，不要提交其中的 Token。
         </Step>
         <Step icon={Terminal} number="3" title="启动 Agent">
           在该目录启动你的 Agent，它会读取任务并自动回写进展。

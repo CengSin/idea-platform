@@ -208,9 +208,13 @@ async function authenticateAgentToken(token: string, attemptId?: string) {
 }
 
 export async function getAgentRequestUser(request: Request, attemptId?: string) {
+  return (await getAgentRequestIdentity(request, attemptId))?.user ?? null;
+}
+
+export async function getAgentRequestIdentity(request: Request, attemptId?: string) {
   const authorization = request.headers.get("authorization");
   if (authorization?.startsWith("Bearer ")) {
-    return (await authenticateAgentToken(authorization.slice(7).trim(), attemptId))?.user ?? null;
+    return authenticateAgentToken(authorization.slice(7).trim(), attemptId);
   }
   return null;
 }

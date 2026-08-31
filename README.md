@@ -42,7 +42,7 @@ go run ./cmd/api
 
 发布想法和确认承接由登录用户发起。承接创建后，承接页会生成专属 `AGENTS.md`，其中包含只允许操作该分支的 Bearer Token。
 
-所有写操作都要求 `user_confirmed: true`。更新承接和发布作品还需要 `Authorization: Bearer <attempt-token>`。
+所有写操作都要求 `user_confirmed: true`。更新承接、发布作品，以及 Agent 修改或删除作品需要 `Authorization: Bearer <attempt-token>`。作品详情页的编辑和删除入口仅向作品所属承接的所有者显示；网页操作使用登录会话，服务端仍会检查所有权。
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
@@ -50,9 +50,17 @@ go run ./cmd/api
 | `POST` | `/api/v1/attempts` | 承接想法 |
 | `PATCH` | `/api/v1/attempts/:id` | 更新承接进展 |
 | `POST` | `/api/v1/works` | 发布作品 |
+| `PATCH` | `/api/v1/works/:id` | 修改自己分支的作品，未传字段保持不变 |
+| `DELETE` | `/api/v1/works/:id` | 确认后删除自己分支的作品 |
 | `GET` | `/api/v1/ideas/:id/context` | 结构化 Idea Context |
 
 发布作品时提供公开的 `external_url`，平台会读取 `og:image` / `twitter:image` 作为封面，没有预览图时回退到网站图标；`cover_url` 仅用于显式覆盖。
+
+编辑接受 `title`、`summary`、`type`、`external_url`、`repository_url`、`cover_url` 和完整 `license` 对象；链接字段也接受 camelCase。名称不可清空，简介和可选链接可用空字符串清空。修改作品地址且不传封面，或把封面清空，会重新提取预览。作品 ID、来源、署名、发布时间和统计不可修改。
+
+修改、删除均须发送 JSON，包含严格的布尔值 `user_confirmed: true`。成功返回 `work_id`、`updated_at`、`attempt_id`、`attempt_status`、`graph_status`；修改还返回 `work`，删除返回 `deleted: true`。错误状态为 400（参数无效）、401（凭证无效）、403（非所有者或 Token 分支不匹配）、404（作品不存在）、415（Content-Type 错误）。
+
+删除会清理作品引用及其动态、通知，保留来源想法、承接和衍生想法，不会删除外部站点或仓库。删去分支最后一个已发布作品时，原为 `published` 的承接回到 `testing`；暂停或放弃状态不变。每条承接生成的 `AGENTS.md` 包含作品 ID 列表、修改/删除的功能说明、curl 示例和权限约束。旧文件需在承接页重新生成（原 Token 随之失效）。
 
 ### 公开访问
 
@@ -108,7 +116,7 @@ Listens on [http://localhost:8081](http://localhost:8081) by default. See [backe
 
 Publishing an idea and confirming an adoption are user-initiated. After an attempt is created, the attempt page generates an `AGENTS.md` with a Bearer token that can only mutate that branch.
 
-All write operations require `user_confirmed: true`. Attempt updates and work publishing also require `Authorization: Bearer <attempt-token>`.
+All write operations require `user_confirmed: true`. Agent attempt updates and work publication, editing and deletion require `Authorization: Bearer <attempt-token>`. Browser edits/deletes use the signed-in session. Both paths enforce branch ownership on the server.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -116,9 +124,13 @@ All write operations require `user_confirmed: true`. Attempt updates and work pu
 | `POST` | `/api/v1/attempts` | Adopt an idea |
 | `PATCH` | `/api/v1/attempts/:id` | Update attempt progress |
 | `POST` | `/api/v1/works` | Publish a work |
+| `PATCH` | `/api/v1/works/:id` | Edit a work owned by the current branch owner |
+| `DELETE` | `/api/v1/works/:id` | Delete an owned work after confirmation |
 | `GET` | `/api/v1/ideas/:id/context` | Structured idea context |
 
 When publishing a work, pass a public `external_url`. The platform reads `og:image` / `twitter:image` as the cover, then falls back to the site icon; `cover_url` is only for an explicit override.
+
+PATCH accepts title, summary, type, external/repository/cover URLs and a complete license object. Omitted fields are preserved; identity, attribution, publication time and counters cannot be edited. DELETE removes the work and dead references while preserving the idea, branch, derived ideas and external resources. Removing the last published work changes a published branch to `testing`. All generated `AGENTS.md` files include these contracts and examples; regenerate previously downloaded files to receive the update (this rotates the branch token).
 
 ### Public access
 
@@ -126,7 +138,7 @@ When publishing a work, pass a public `external_url`. The platform reads `og:ima
 
 Page reads reuse data only within the current request and never wait for external cover scraping. Covers are resolved on work publication, with browser fallbacks for older content. Navigation includes loading placeholders and pending feedback. Background updates run at most once every 30 seconds while the page is visible and no editor is active.
 
-Run `npm test` for the public-data isolation, redirect safety, cover, and persistence tests, and `npm run build` for production compilation and type validation.
+Run `npm test` for public-data isolation, redirect safety, covers, persistence and work ownership/cleanup tests. `npm run test:work-api` verifies authentication, branch scope, partial updates and deletion over HTTP using a disposable local app and synthetic data. Run `npm run build` for production compilation and type validation, and `cd backend && go test ./...` for Go tests.
 
 When deploying to another domain:
 

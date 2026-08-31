@@ -106,7 +106,7 @@ export async function getProfile() {
 }
 
 export async function getWorkBundle(id: string) {
-  const { db } = await getSnapshot();
+  const { db, me } = await getSnapshot();
   const work = workById(db, id);
   if (!work) return null;
   return {
@@ -115,5 +115,6 @@ export async function getWorkBundle(id: string) {
     idea: ideaById(db, work.ideaId)!,
     attempt: attemptById(db, work.attemptId)!,
     forks: db.ideas.filter((i) => i.sourceWorkId === id),
+    canManage: db.attempts.some((attempt) => attempt.id === work.attemptId && attempt.ownerId === me.id),
   };
 }

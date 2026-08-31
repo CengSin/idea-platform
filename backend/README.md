@@ -32,6 +32,8 @@ go run ./cmd/api
 | 作品 `/works` | GET | `/api/v1/works` / `?mine=1` | 已发布作品 |
 | 发布作品 | POST | `/api/v1/works` | 需 `user_confirmed=true` |
 | 作品详情 `/works/:id` | GET | `/api/v1/works/:id` | work + 归因 + 衍生想法 |
+| 编辑自己的作品 | PATCH | `/api/v1/works/:id` | 分支所有者可操作，需 `user_confirmed=true` |
+| 删除自己的作品 | DELETE | `/api/v1/works/:id` | 分支所有者可操作，需 `user_confirmed=true` |
 | 通知 | GET | `/api/v1/notifications` | |
 | 全部已读 | POST | `/api/v1/notifications/read` | |
 | 设置 | GET | `/api/v1/me` | 用户信息 |
@@ -43,6 +45,16 @@ go run ./cmd/api
 接口请求体同时接受 camelCase 与 snake_case。Next.js 主应用在承接页生成 `AGENTS.md` 和分支专属 Token，由 Agent 自动调用进展与作品接口。
 
 发布作品时提供公开的 `external_url`，API 会自动读取页面的 `og:image` / `twitter:image` 作为封面，没有预览图时回退到网站图标；`cover_url` 仅用于显式覆盖。链接预览包含超时、重定向次数、响应大小和内网地址限制，解析失败时使用网站标示。
+
+### 编辑与删除作品
+
+PATCH 接受 `title`（1–200 字符）、`summary`（最多 10000 字符）、`type`、`external_url`、`repository_url`、`cover_url`、完整 `license`。仅更新传入字段，支持链接字段的 camelCase 别名。简介与链接可用空字符串清空；清空封面或只修改作品地址会重新读取网站预览。来源想法、承接、署名、发布时间和统计不可修改。
+
+DELETE 请求体为 `{ "user_confirmed": true }`，永久移除作品并清理承接的作品引用、作品动态与通知；来源想法、承接、衍生想法及外部资源保留。衍生想法移除失效作品链接，保留来源想法关联。若没有剩余已发布作品且承接原为 `published`，自动回到 `testing`。
+
+两者成功均返回 `work_id`、`updated_at`、`attempt_id`、`attempt_status`、`graph_status`；PATCH 另返回更新后的 `work`，DELETE 另返回 `deleted: true`。参数无效为 400，无所有权为 403，不存在为 404。
+
+Go 独立后端沿用受信开发环境的 `X-User-Id` 身份约定，不自行认证浏览器会话或分支 Token，不能直接暴露为公网用户鉴权入口。Next.js `/api/v1/works/:id` 负责登录会话及 Bearer Token 认证，且会核对 Token 的分支范围。每个承接在 Next.js 生成的 `AGENTS.md` 都包含修改/删除说明和示例。
 
 ## 基础设施
 

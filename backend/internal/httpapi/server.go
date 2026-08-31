@@ -47,6 +47,8 @@ func New(cfg config.Config, svc *service.Service) *gin.Engine {
 		v1.GET("/works", s.listWorks)
 		v1.POST("/works", s.publishWork)
 		v1.GET("/works/:id", s.getWork)
+		v1.PATCH("/works/:id", s.updateWork)
+		v1.DELETE("/works/:id", s.deleteWork)
 
 		v1.GET("/notifications", s.listNotifications)
 		v1.POST("/notifications/read", s.markRead)

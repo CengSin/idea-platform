@@ -53,10 +53,17 @@ ${list(idea.desiredOutputs)}
 - Attempt API：${baseUrl}/api/v1/attempts/${attempt.id}
 - Idea Context API：${baseUrl}/api/v1/ideas/${idea.id}/context
 - Work API：${baseUrl}/api/v1/works
+- Work Detail / Edit / Delete API：${baseUrl}/api/v1/works/<work_id>（GET / PATCH / DELETE）
 - Bearer Token：${token}
 - Token 到期时间：${tokenExpiresAt}
 
 此 Token 只允许操作当前承接分支。不要把它提交到 Git、写入日志、复制到公开文档或发送给第三方。
+
+### 当前分支已发布的作品
+
+${list(attempt.workIds.map((id) => `${id} — ${baseUrl}/api/v1/works/${id}`), "- 暂无作品。发布成功后保存接口返回的 work_id。")}
+
+以上列表是文件生成时的快照。操作前可使用本文件的 Bearer Token 调用 GET Attempt API，读取返回的 \`attempt.workIds\` 获取最新作品 ID；再调用 GET Work Detail API 核对标题、\`work.attemptId\` 与公开内容。不要猜测 ID，也不要用重复发布代替编辑。
 
 ## 启动时必须执行
 
@@ -158,7 +165,61 @@ curl -fsS -X POST "${baseUrl}/api/v1/works" \\
 
 作品封面默认由平台从 \`external_url\` 的 \`og:image\` / \`twitter:image\` 提取，没有预览图时再回退到网站图标（favicon / apple-touch-icon）。通常不要传 \`cover_url\`；只有用户明确指定封面时才传该字段覆盖自动预览。不要传平台默认封面路径。链接无法解析时平台会使用网站标示，不影响作品发布。
 
-### Web 作品的链接预览要求
+## 修改自己的作品
+
+用户可以在作品详情页点击“编辑作品”，也可以授权 Agent 调用 \`PATCH /api/v1/works/<work_id>\`。仅作品所属承接的所有者可修改；此 Token 只能修改 Attempt ID 为 \`${attempt.id}\` 的作品，即使同一用户的其他分支也不可操作。
+
+修改前核对目标作品并确认用户已授权本次公开信息变更。请求必须包含 \`user_confirmed: true\`，仅传需要修改的字段，未传字段保留原值：
+
+| 字段 | 功能与约束 |
+| --- | --- |
+| \`title\` | 作品名称，1–200 字符，不能清空 |
+| \`summary\` | 作品简介，最多 10000 字符，可传空字符串清空 |
+| \`type\` | 与发布接口相同的八种作品类型 |
+| \`external_url\` | 作品地址，http/https 链接；空字符串清空 |
+| \`repository_url\` | 代码仓库地址，http/https 链接；空字符串清空 |
+| \`cover_url\` | 封面地址，站内路径或 http/https 链接；空字符串重新自动提取 |
+| \`license\` | 完整授权对象：implementation、derivatives、commercialUse，与发布格式一致 |
+
+链接不能含用户名、密码。修改作品地址且未传封面时会重新提取新网站的预览图；未修改作品地址与封面时保留现有封面。编辑不改变作品 ID、发布时间、统计数据、来源想法、承接分支或贡献署名；不可传 \`idea_id\`、\`attempt_id\`、\`credits\` 等字段改写归因。
+
+\`\`\`bash
+curl -fsS -X PATCH "${baseUrl}/api/v1/works/<work_id>" \\
+  -H "Authorization: Bearer ${token}" \\
+  -H "Content-Type: application/json" \\
+  --data '{
+    "user_confirmed": true,
+    "title": "<更新后的作品名称>",
+    "summary": "<更新后的简介和验证结果>",
+    "external_url": "https://example.com/updated-work"
+  }'
+\`\`\`
+
+成功返回 \`work_id\`、更新后的 \`work\`、\`updated_at\`、\`attempt_id\`、\`attempt_status\` 和 \`graph_status\`。完成后核对返回内容，再向用户报告结果。
+
+## 删除自己的作品
+
+用户可以在作品详情页点击“删除作品”并确认，或明确授权 Agent 删除指定作品。删除不可恢复；只有用户已明确确认删除目标时才可执行。不要把“修改作品”“重新发布”或“清理代码”视为删除授权。
+
+\`\`\`bash
+curl -fsS -X DELETE "${baseUrl}/api/v1/works/<work_id>" \\
+  -H "Authorization: Bearer ${token}" \\
+  -H "Content-Type: application/json" \\
+  --data '{"user_confirmed": true}'
+\`\`\`
+
+- 删除权限与修改相同：仅分支所有者及该分支 Token 可以操作。
+- 成功返回 \`deleted: true\`、\`work_id\`、\`updated_at\`、\`attempt_id\`、\`attempt_status\` 和 \`graph_status\`。
+- 平台移除作品、承接的作品引用、指向该作品的动态与通知，并刷新作品列表和图谱。
+- 不会删除来源想法、承接分支、其他作品、外部网站或代码仓库。衍生想法会保留，移除失效作品链接，并保留来源想法关联。
+- 如果删除后该分支没有已发布作品，且承接原状态为 \`published\`，平台自动改为 \`testing\`；有其他已发布作品时保持发布状态，暂停或放弃的分支不被重新激活。
+- 删除后不要再写回 \`published\`，也不要自动重新发布被删除的作品。按接口返回状态同步真实进展。
+
+### 修改与删除的错误处理
+
+\`400\`：JSON、字段或确认参数无效；\`401\`：未登录或 Token 无效/过期；\`403\`：不是所有者或 Token 分支不匹配；\`404\`：作品不存在或已被删除；\`415\`：未使用 application/json。网络失败或其他错误时先读取作品确认现状，不要伪造成功。重复删除返回 404，应核对作品确已不存在。
+
+## Web 作品的链接预览要求
 
 如果作品包含可访问的网页，在调用 Work API 前必须完成以下检查：
 

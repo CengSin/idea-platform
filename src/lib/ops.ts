@@ -1,7 +1,10 @@
 import { nanoid } from "nanoid";
 import { DEFAULT_COVER } from "./cover";
-import { mutateDb, resetDb } from "./db";
-import { buildAdoptionPrompt } from "./format";
+import { mutateDb, readDb, resetDb } from "./db";
+import { buildAdoptionPrompt, recomputeIdeaStatus } from "./format";
+import { isPlaceholderCover } from "./cover";
+import { resolveLinkPreview } from "./link-preview";
+import { applyWorkDelete, applyWorkUpdate, ownedWork, parseWorkPatch } from "./work-management";
 import { type AttemptStatus, type Visibility } from "./types";
 import type { License, WorkType } from "./types";
 
@@ -254,6 +257,54 @@ export async function publishWork(userId: string, input: {
     });
   });
   return { work_id: id, url: `/works/${id}` };
+}
+
+export async function updateWork(userId: string, workId: string, raw: unknown, scopeAttemptId?: string) {
+  const { work } = ownedWork(await readDb(), userId, workId, scopeAttemptId);
+  const patch = parseWorkPatch(raw);
+  const externalChanged = patch.externalUrl !== undefined && patch.externalUrl !== (work.externalUrl ?? "");
+  if ((patch.coverUrl !== undefined && isPlaceholderCover(patch.coverUrl)) || (externalChanged && patch.coverUrl === undefined)) {
+    const externalUrl = patch.externalUrl ?? work.externalUrl;
+    const preview = externalUrl ? await resolveLinkPreview(externalUrl) : null;
+    patch.coverUrl = preview?.imageUrl || DEFAULT_COVER;
+  }
+  return mutateWork(userId, workId, "update", patch, scopeAttemptId);
+}
+
+export async function deleteWork(userId: string, workId: string, scopeAttemptId?: string) {
+  return mutateWork(userId, workId, "delete", undefined, scopeAttemptId);
+}
+
+async function mutateWork(userId: string, workId: string, operation: "update" | "delete", patch?: Parameters<typeof applyWorkUpdate>[3], scopeAttemptId?: string) {
+  const at = nowIso();
+  const eventId = `evt_${nanoid(6)}`;
+  const db = await mutateDb((db) => {
+    // Recheck ownership inside the store transaction, including on conflict retries.
+    const { work, attempt } = operation === "delete"
+      ? applyWorkDelete(db, userId, workId, at, scopeAttemptId)
+      : applyWorkUpdate(db, userId, workId, patch!, at, scopeAttemptId);
+    const idea = db.ideas.find((item) => item.id === work.ideaId);
+    if (idea) {
+      idea.updatedAt = at;
+      idea.status = recomputeIdeaStatus(idea, db);
+    }
+    db.events.unshift({
+      id: eventId, at, actorId: userId,
+      actorName: db.users.find((user) => user.id === userId)?.displayName ?? "作品作者",
+      text: `${operation === "delete" ? "删除" : "更新"}了作品「${work.title}」`,
+      ideaId: work.ideaId, attemptId: attempt.id,
+      ...(operation === "update" ? { workId } : {}),
+    });
+  });
+  const event = db.events.find((item) => item.id === eventId)!;
+  return {
+    work_id: workId,
+    ...(operation === "delete" ? { deleted: true } : { work: db.works.find((item) => item.id === workId) }),
+    updated_at: at,
+    attempt_id: event.attemptId,
+    attempt_status: db.attempts.find((item) => item.id === event.attemptId)?.status,
+    graph_status: db.ideas.find((item) => item.id === event.ideaId)?.status,
+  };
 }
 
 export async function addProjectLink(
