@@ -1,6 +1,6 @@
 import type { Database } from "./types";
 
-export type DataBackend = "vercel" | "mysql";
+export type DataBackend = "vercel" | "mysql" | "turso";
 
 export type AuthDump = {
   version: 1;
@@ -15,7 +15,9 @@ export type DataDump = Database & {
 
 export function dataBackend(): DataBackend {
   const value = (process.env.DATA_BACKEND ?? "vercel").trim().toLowerCase();
-  return value === "mysql" ? "mysql" : "vercel";
+  if (value === "mysql") return "mysql";
+  if (value === "turso") return "turso";
+  return "vercel";
 }
 
 export function mysqlApiUrl() {
@@ -41,4 +43,29 @@ export function asDatabase(dump: DataDump): Database {
     notifications: dump.notifications ?? [],
     follows: dump.follows ?? [],
   };
+}
+
+export function parseAuthDump(raw: unknown): AuthDump {
+  if (raw == null) return emptyAuthDump();
+  if (typeof raw !== "object") throw new Error("auth.json is not an object");
+  const parsed = raw as Partial<AuthDump>;
+  if (parsed.version !== 1) {
+    throw new Error(`unsupported auth.json version: ${String(parsed.version)}`);
+  }
+  return {
+    version: 1,
+    accounts: Array.isArray(parsed.accounts) ? parsed.accounts : [],
+    sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
+    agentTokens: Array.isArray(parsed.agentTokens) ? parsed.agentTokens : [],
+  };
+}
+
+export function parseDatabaseDump(raw: unknown): Database | null {
+  if (raw == null) return null;
+  if (typeof raw !== "object") throw new Error("db.json is not an object");
+  const parsed = raw as Partial<DataDump>;
+  if (parsed.version !== 3) {
+    throw new Error(`unsupported db.json version: ${String(parsed.version)}`);
+  }
+  return asDatabase(parsed as DataDump);
 }

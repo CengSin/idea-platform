@@ -3,8 +3,9 @@ import "server-only";
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { parseAuthDump } from "./data-backend";
 import { mutateDb, readDb } from "./db";
-import { readJsonFile, withStoreLock, writeJsonFile } from "./json-store";
+import { mutateJsonDocument, readJsonFile } from "./json-store";
 import type { User } from "./types";
 
 export const SESSION_COOKIE = "idea_session";
@@ -41,15 +42,6 @@ type AuthDb = {
   agentTokens: AgentToken[];
 };
 
-function emptyAuthDb(): AuthDb {
-  return {
-    version: 1,
-    accounts: [],
-    sessions: [],
-    agentTokens: [],
-  };
-}
-
 function passwordHash(password: string, salt: string) {
   return crypto.scryptSync(password, salt, 64).toString("hex");
 }
@@ -72,32 +64,17 @@ function createAccount(
   };
 }
 
-async function readAuthDb(): Promise<AuthDb> {
-  try {
-    const parsed = await readJsonFile<AuthDb>(AUTH_FILE);
-    if (parsed?.version === 1) {
-      parsed.agentTokens ??= [];
-      return parsed;
-    }
-  } catch {
-    // Initialize an empty auth database below.
-  }
-  const db = emptyAuthDb();
-  await writeAuthDb(db);
-  return db;
+function asAuthDb(raw: unknown): AuthDb {
+  return parseAuthDump(raw) as AuthDb;
 }
 
-async function writeAuthDb(db: AuthDb) {
-  await writeJsonFile(AUTH_FILE, db);
+async function readAuthDb(): Promise<AuthDb> {
+  const parsed = await readJsonFile<AuthDb>(AUTH_FILE);
+  return asAuthDb(parsed);
 }
 
 async function mutateAuthDb(mutator: (db: AuthDb) => void): Promise<AuthDb> {
-  return withStoreLock(async () => {
-    const db = await readAuthDb();
-    mutator(db);
-    await writeAuthDb(db);
-    return db;
-  });
+  return mutateJsonDocument(AUTH_FILE, asAuthDb, mutator);
 }
 
 function safeEqual(a: string, b: string) {

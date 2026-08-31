@@ -1,9 +1,9 @@
+import { parseDatabaseDump } from "./data-backend";
 import { createSeed } from "./seed";
 import { recomputeIdeaStatus } from "./format";
-import { readJsonFile, withStoreLock, writeJsonFile } from "./json-store";
+import { mutateJsonDocument, readJsonFile, writeJsonFile } from "./json-store";
 import type { Database } from "./types";
 
-const VERSION = 3;
 const DB_FILE = "db.json";
 
 function clone<T>(value: T): T {
@@ -32,18 +32,14 @@ function normalizeDb(db: Database) {
   return db;
 }
 
+function loadDatabase(raw: unknown): Database {
+  const parsed = parseDatabaseDump(raw);
+  return clone(normalizeDb(parsed ?? createSeed()));
+}
+
 export async function readDb(): Promise<Database> {
-  try {
-    const parsed = await readJsonFile<Database>(DB_FILE);
-    if (parsed?.version === VERSION) {
-      return clone(normalizeDb(parsed));
-    }
-  } catch {
-    // fall through to seed
-  }
-  const seed = createSeed();
-  await writeDb(seed);
-  return clone(seed);
+  const parsed = await readJsonFile<Database>(DB_FILE);
+  return loadDatabase(parsed);
 }
 
 export async function writeDb(db: Database) {
@@ -52,12 +48,8 @@ export async function writeDb(db: Database) {
 }
 
 export async function mutateDb(mutator: (db: Database) => void): Promise<Database> {
-  return withStoreLock(async () => {
-    const db = await readDb();
-    mutator(db);
-    await writeDb(db);
-    return clone(db);
-  });
+  const db = await mutateJsonDocument(DB_FILE, loadDatabase, mutator);
+  return clone(db);
 }
 
 export async function resetDb(): Promise<Database> {

@@ -1,4 +1,9 @@
-import { BlobNotFoundError, get, put } from "@vercel/blob";
+import {
+  BlobNotFoundError,
+  BlobPreconditionFailedError,
+  get,
+  put,
+} from "@vercel/blob";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
@@ -10,13 +15,20 @@ import {
   type AuthDump,
   type DataDump,
 } from "./data-backend";
+import {
+  StorePreconditionFailedError,
+  readTursoAuth,
+  readTursoContent,
+  writeTursoAuth,
+  writeTursoContent,
+} from "./turso";
 
 const dataDir = path.join(process.cwd(), "data");
 const AUTH_FILE = "auth.json";
 const DB_FILE = "db.json";
 
 function useBlobStore() {
-  if (dataBackend() === "mysql") return false;
+  if (dataBackend() === "mysql" || dataBackend() === "turso") return false;
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN) || process.env.VERCEL === "1";
 }
 
@@ -76,16 +88,50 @@ async function importMysql(body: DataDump | { auth: AuthDump }) {
   }
 }
 
-export async function readJsonFile<T>(name: string): Promise<T | null> {
+export type JsonRecord<T> = {
+  value: T | null;
+  etag?: string;
+};
+
+export type WriteJsonOptions = {
+  etag?: string;
+  createOnly?: boolean;
+};
+
+function isNotFoundError(error: unknown) {
+  if (error instanceof BlobNotFoundError) return true;
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: string }).code === "ENOENT",
+  );
+}
+
+export async function readJsonRecord<T>(name: string): Promise<JsonRecord<T>> {
+  if (dataBackend() === "turso") {
+    if (name === AUTH_FILE) {
+      const record = await readTursoAuth();
+      return { value: record.value as T | null, etag: record.etag };
+    }
+    if (name === DB_FILE) {
+      const record = await readTursoContent();
+      return { value: record.value as T | null, etag: record.etag };
+    }
+    throw new Error(`unsupported turso document: ${name}`);
+  }
+
   if (dataBackend() === "mysql") {
     try {
       const dump = await fetchMysqlDump();
       if (name === AUTH_FILE) {
-        return (dump.auth ?? emptyAuthDump()) as T;
+        return { value: (dump.auth ?? emptyAuthDump()) as T };
       }
-      return asDatabase(dump) as T;
+      return { value: asDatabase(dump) as T };
     } catch (error) {
-      if (error instanceof Error && error.message.includes("404")) return null;
+      if (error instanceof Error && /\b404\b/.test(error.message)) {
+        return { value: null };
+      }
       throw error;
     }
   }
@@ -93,25 +139,53 @@ export async function readJsonFile<T>(name: string): Promise<T | null> {
   if (useBlobStore()) {
     try {
       const result = await get(name, { access: "private", useCache: false });
-      if (result?.statusCode !== 200) return null;
+      if (result == null) return { value: null };
+      if (result.statusCode !== 200 || !result.stream) {
+        throw new Error(`${name}: unexpected blob status ${result.statusCode}`);
+      }
       const text = await new Response(result.stream).text();
-      if (!text) return null;
-      return JSON.parse(text) as T;
+      if (!text.trim()) {
+        throw new Error(`${name} is empty`);
+      }
+      return { value: JSON.parse(text) as T, etag: result.blob.etag };
     } catch (error) {
-      if (error instanceof BlobNotFoundError) return null;
+      if (error instanceof BlobNotFoundError) return { value: null };
       throw error;
     }
   }
 
   try {
     const raw = await fs.readFile(path.join(dataDir, name), "utf8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
+    if (!raw.trim()) throw new Error(`${name} is empty`);
+    return { value: JSON.parse(raw) as T };
+  } catch (error) {
+    if (isNotFoundError(error)) return { value: null };
+    throw error;
   }
 }
 
-export async function writeJsonFile(name: string, value: unknown) {
+export async function readJsonFile<T>(name: string): Promise<T | null> {
+  const record = await readJsonRecord<T>(name);
+  return record.value;
+}
+
+export async function writeJsonFile(
+  name: string,
+  value: unknown,
+  options: WriteJsonOptions = {},
+) {
+  if (dataBackend() === "turso") {
+    if (name === AUTH_FILE) {
+      await writeTursoAuth(value as AuthDump, options);
+      return;
+    }
+    if (name === DB_FILE) {
+      await writeTursoContent(value as DataDump, options);
+      return;
+    }
+    throw new Error(`unsupported turso document: ${name}`);
+  }
+
   if (dataBackend() === "mysql") {
     if (name === AUTH_FILE) {
       await importMysql({ auth: value as AuthDump });
@@ -129,7 +203,8 @@ export async function writeJsonFile(name: string, value: unknown) {
     await put(name, payload, {
       access: "private",
       addRandomSuffix: false,
-      allowOverwrite: true,
+      allowOverwrite: options.createOnly ? false : true,
+      ...(options.etag ? { ifMatch: options.etag } : {}),
       contentType: "application/json; charset=utf-8",
     });
     return;
@@ -140,6 +215,43 @@ export async function writeJsonFile(name: string, value: unknown) {
   const temporaryPath = `${target}.${process.pid}.${Date.now()}.tmp`;
   await fs.writeFile(temporaryPath, payload);
   await fs.rename(temporaryPath, target);
+}
+
+export async function mutateJsonDocument<T>(
+  name: string,
+  load: (raw: unknown) => T,
+  mutator: (value: T) => void,
+): Promise<T> {
+  return withStoreLock(async () => {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const record = await readJsonRecord<unknown>(name);
+      const value = load(record.value);
+      mutator(value);
+      try {
+        await writeJsonFile(
+          name,
+          value,
+          record.value == null
+            ? { createOnly: true }
+            : record.etag
+              ? { etag: record.etag }
+              : {},
+        );
+        return value;
+      } catch (error) {
+        lastError = error;
+        if (
+          error instanceof BlobPreconditionFailedError ||
+          error instanceof StorePreconditionFailedError
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError;
+  });
 }
 
 export async function exportDataDump(): Promise<DataDump> {
