@@ -8,6 +8,7 @@ data/auth.json
 *.log
 .env
 .env.local
+ENV.md
 backend/.bin/
 backend/.cache/
 backend/.idea/
