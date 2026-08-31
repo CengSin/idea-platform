@@ -7,7 +7,7 @@ import {
   userById,
   workById,
 } from "./format";
-import { isDefaultCover } from "./cover";
+import { isPlaceholderCover } from "./cover";
 import { resolveWorkCover } from "./link-preview";
 import type { Database } from "./types";
 
@@ -27,7 +27,7 @@ async function hydrateDatabaseCovers(db: Database): Promise<Database> {
     coverPersist = mutateDb((live) => {
       for (const update of updates) {
         const current = live.works.find((work) => work.id === update.id);
-        if (current && isDefaultCover(current.coverUrl)) current.coverUrl = update.coverUrl;
+        if (current && isPlaceholderCover(current.coverUrl)) current.coverUrl = update.coverUrl;
       }
     })
       .then(() => undefined)

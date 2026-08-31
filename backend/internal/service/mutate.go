@@ -332,14 +332,11 @@ func (s *Service) PublishWork(ctx context.Context, userID string, in PublishWork
 		}
 	}
 	coverSource := "provided"
-	if in.CoverURL == "" || linkpreview.IsDefaultCover(in.CoverURL) {
+	if in.CoverURL == "" || linkpreview.IsPlaceholderCover(in.CoverURL) {
 		coverSource = "default"
 		if preview := linkpreview.Resolve(ctx, in.ExternalURL); preview != nil {
 			in.CoverURL = preview.ImageURL
 			coverSource = preview.Source
-		} else if mark := linkpreview.SiteMark(in.ExternalURL); mark != "" {
-			in.CoverURL = mark
-			coverSource = "site_mark"
 		} else {
 			in.CoverURL = "/covers/hushcity.jpg"
 		}

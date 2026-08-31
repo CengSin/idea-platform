@@ -20,30 +20,74 @@ export function isDefaultCover(url?: string | null) {
   }
 }
 
-export function siteMarkUrl(externalUrl: string) {
+export function isPlaceholderCover(url?: string | null) {
+  if (isDefaultCover(url)) return true;
+  const lower = url?.trim().toLowerCase() ?? "";
+  return (
+    lower.includes("google.com/s2/favicons") ||
+    lower.includes("gstatic.com/favicon") ||
+    lower.includes("icons.duckduckgo.com")
+  );
+}
+
+function publicOrigin(externalUrl: string) {
+  const parsed = new URL(externalUrl);
+  const host = parsed.hostname.trim().toLowerCase();
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+  if (!host || host === "localhost" || host.endsWith(".localhost") || host === "127.0.0.1") return null;
+  return parsed.origin;
+}
+
+export function siteIconCandidates(externalUrl: string) {
   try {
-    const host = new URL(externalUrl).hostname.trim();
-    if (!host) return null;
-    return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(host)}`;
+    const origin = publicOrigin(externalUrl);
+    if (!origin) return [];
+    return [
+      `${origin}/og-image.jpg`,
+      `${origin}/og-image.png`,
+      `${origin}/apple-touch-icon.png`,
+      `${origin}/favicon.svg`,
+      `${origin}/icon.svg`,
+      `${origin}/favicon.ico`,
+    ];
   } catch {
-    return null;
+    return [];
   }
+}
+
+export function siteMarkUrl(externalUrl: string) {
+  return siteIconCandidates(externalUrl).find((url) => isSiteMarkUrl(url)) ?? null;
 }
 
 export function isSiteMarkUrl(url: string) {
   const lower = url.toLowerCase();
+  if (isPlaceholderCover(url)) return false;
   return (
-    lower.includes("/s2/favicons") ||
-    lower.includes("icons.duckduckgo.com") ||
     /(?:^|\/)(?:favicon|apple-touch-icon|icon)(?:[./?#]|$)/.test(lower) ||
     /\.ico(?:\?|$)/.test(lower)
   );
 }
 
+export function coverCandidates(coverUrl?: string, externalUrl?: string) {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const add = (url?: string | null, allowDefault = false) => {
+    const value = url?.trim();
+    if (!value || seen.has(value)) return;
+    if (!allowDefault && isPlaceholderCover(value)) return;
+    seen.add(value);
+    out.push(value);
+  };
+  add(coverUrl);
+  if (externalUrl) {
+    for (const candidate of siteIconCandidates(externalUrl)) add(candidate);
+  }
+  add(DEFAULT_COVER, true);
+  return out;
+}
+
 export function displayCoverUrl(coverUrl?: string, externalUrl?: string) {
-  if (!isDefaultCover(coverUrl) && coverUrl) return coverUrl;
-  if (externalUrl) return siteMarkUrl(externalUrl) || coverUrl || DEFAULT_COVER;
-  return coverUrl || DEFAULT_COVER;
+  return coverCandidates(coverUrl, externalUrl)[0] || DEFAULT_COVER;
 }
 
 function decodeHtmlEntities(value: string) {

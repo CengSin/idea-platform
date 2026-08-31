@@ -1,7 +1,7 @@
 "use client";
 
-import { DEFAULT_COVER, displayCoverUrl, isSiteMarkUrl, siteMarkUrl } from "@/lib/cover";
-import { useEffect, useState } from "react";
+import { coverCandidates, DEFAULT_COVER, isSiteMarkUrl } from "@/lib/cover";
+import { useEffect, useMemo, useState } from "react";
 
 export function CoverImage({
   src,
@@ -14,21 +14,18 @@ export function CoverImage({
   alt?: string;
   className?: string;
 }) {
-  const resolved = displayCoverUrl(src, pageUrl);
-  const [currentSrc, setCurrentSrc] = useState(resolved);
+  const candidates = useMemo(() => coverCandidates(src, pageUrl), [src, pageUrl]);
+  const [index, setIndex] = useState(0);
 
-  useEffect(() => setCurrentSrc(displayCoverUrl(src, pageUrl)), [src, pageUrl]);
+  const candidateKey = candidates.join("\n");
+  useEffect(() => setIndex(0), [candidateKey]);
 
-  const mark = isSiteMarkUrl(currentSrc);
+  const currentSrc = candidates[Math.min(index, Math.max(candidates.length - 1, 0))] || DEFAULT_COVER;
   const onError = () => {
-    const siteMark = pageUrl ? siteMarkUrl(pageUrl) : null;
-    if (siteMark && currentSrc !== siteMark) {
-      setCurrentSrc(siteMark);
-      return;
-    }
-    if (currentSrc !== DEFAULT_COVER) setCurrentSrc(DEFAULT_COVER);
+    setIndex((current) => (current + 1 < candidates.length ? current + 1 : current));
   };
 
+  const mark = isSiteMarkUrl(currentSrc);
   if (mark) {
     const wrapperClass = [className?.replace(/\bobject-\S+/g, "").trim(), "flex items-center justify-center bg-canvas-soft"]
       .filter(Boolean)

@@ -143,12 +143,14 @@ func IsDefaultCover(raw string) bool {
 	return parsed.Path == defaultCoverPath || strings.HasSuffix(parsed.Path, defaultCoverPath)
 }
 
-func SiteMark(rawURL string) string {
-	target, err := url.Parse(strings.TrimSpace(rawURL))
-	if err != nil || strings.TrimSpace(target.Hostname()) == "" {
-		return ""
+func IsPlaceholderCover(raw string) bool {
+	if IsDefaultCover(raw) {
+		return true
 	}
-	return "https://www.google.com/s2/favicons?sz=128&domain=" + url.QueryEscape(target.Hostname())
+	lower := strings.ToLower(raw)
+	return strings.Contains(lower, "google.com/s2/favicons") ||
+		strings.Contains(lower, "gstatic.com/favicon") ||
+		strings.Contains(lower, "icons.duckduckgo.com")
 }
 
 func usableImage(raw string, pageURL *url.URL) string {

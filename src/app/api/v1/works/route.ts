@@ -1,6 +1,6 @@
 import { publishWork } from "@/lib/ops";
 import { getAgentRequestUser } from "@/lib/auth";
-import { DEFAULT_COVER, isDefaultCover, siteMarkUrl } from "@/lib/cover";
+import { DEFAULT_COVER, isPlaceholderCover } from "@/lib/cover";
 import { resolveLinkPreview } from "@/lib/link-preview";
 import { NextResponse } from "next/server";
 
@@ -48,10 +48,9 @@ export async function POST(req: Request) {
         throw new Error("cover_url 不能包含用户名或密码");
       }
     }
-    const customCover = explicitCover && !isDefaultCover(explicitCover) ? explicitCover : "";
+    const customCover = explicitCover && !isPlaceholderCover(explicitCover) ? explicitCover : "";
     const preview = !customCover && externalUrl ? await resolveLinkPreview(externalUrl) : null;
-    const coverUrl =
-      customCover || preview?.imageUrl || (externalUrl ? siteMarkUrl(externalUrl) : null) || DEFAULT_COVER;
+    const coverUrl = customCover || preview?.imageUrl || DEFAULT_COVER;
     const result = await publishWork(me.id, {
       attemptId: body.attempt_id,
       title: body.title,
@@ -76,7 +75,7 @@ export async function POST(req: Request) {
         cover_url: coverUrl,
         source: customCover
           ? "provided"
-          : preview?.source ?? (coverUrl !== DEFAULT_COVER ? "site_mark" : "default"),
+          : preview?.source ?? "default",
       },
     });
   } catch (e) {

@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   DEFAULT_COVER,
+  coverCandidates,
   displayCoverUrl,
   extractPreviewImage,
   extractPreviewImages,
   isDefaultCover,
+  isPlaceholderCover,
   isSiteMarkUrl,
-  siteMarkUrl,
 } from "./cover.ts";
 
 test("isDefaultCover treats platform fallback photos as default", () => {
@@ -16,28 +17,41 @@ test("isDefaultCover treats platform fallback photos as default", () => {
   assert.equal(isDefaultCover("https://mood.z-agent.ccwu.cc/og-image.jpg"), false);
 });
 
-test("siteMarkUrl uses the site hostname", () => {
+test("isPlaceholderCover includes third-party favicon services", () => {
   assert.equal(
-    siteMarkUrl("https://mood.z-agent.ccwu.cc/admin"),
-    "https://www.google.com/s2/favicons?sz=128&domain=mood.z-agent.ccwu.cc",
+    isPlaceholderCover("https://www.google.com/s2/favicons?sz=128&domain=mood.z-agent.ccwu.cc"),
+    true,
   );
+  assert.equal(isPlaceholderCover("https://mood.z-agent.ccwu.cc/og-image.jpg"), false);
 });
 
-test("displayCoverUrl keeps unique covers and falls back to a site mark", () => {
-  assert.equal(
-    displayCoverUrl("https://mood.z-agent.ccwu.cc/og-image.jpg", "https://mood.z-agent.ccwu.cc/"),
-    "https://mood.z-agent.ccwu.cc/og-image.jpg",
+test("coverCandidates prefers a real cover then first-party images", () => {
+  assert.deepEqual(
+    coverCandidates("https://mood.z-agent.ccwu.cc/og-image.jpg", "https://mood.z-agent.ccwu.cc/"),
+    [
+      "https://mood.z-agent.ccwu.cc/og-image.jpg",
+      "https://mood.z-agent.ccwu.cc/og-image.png",
+      "https://mood.z-agent.ccwu.cc/apple-touch-icon.png",
+      "https://mood.z-agent.ccwu.cc/favicon.svg",
+      "https://mood.z-agent.ccwu.cc/icon.svg",
+      "https://mood.z-agent.ccwu.cc/favicon.ico",
+      DEFAULT_COVER,
+    ],
   );
   assert.equal(
     displayCoverUrl(DEFAULT_COVER, "https://mood.z-agent.ccwu.cc/"),
-    siteMarkUrl("https://mood.z-agent.ccwu.cc/"),
+    "https://mood.z-agent.ccwu.cc/og-image.jpg",
+  );
+  assert.equal(
+    displayCoverUrl("https://www.google.com/s2/favicons?sz=128&domain=mood.z-agent.ccwu.cc", "https://mood.z-agent.ccwu.cc/"),
+    "https://mood.z-agent.ccwu.cc/og-image.jpg",
   );
 });
 
-test("isSiteMarkUrl detects favicons and icon services", () => {
+test("isSiteMarkUrl detects first-party icons only", () => {
   assert.equal(isSiteMarkUrl("https://mood.z-agent.ccwu.cc/favicon.svg"), true);
   assert.equal(isSiteMarkUrl("https://idea-platform.z-agent.ccwu.cc/icon.svg"), true);
-  assert.equal(isSiteMarkUrl(siteMarkUrl("https://mood.z-agent.ccwu.cc/")!), true);
+  assert.equal(isSiteMarkUrl("https://www.google.com/s2/favicons?sz=128&domain=mood.z-agent.ccwu.cc"), false);
   assert.equal(isSiteMarkUrl("https://mood.z-agent.ccwu.cc/og-image.jpg"), false);
 });
 

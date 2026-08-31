@@ -3,8 +3,7 @@ import { isIP } from "node:net";
 import {
   DEFAULT_COVER,
   extractPreviewImages,
-  isDefaultCover,
-  siteMarkUrl,
+  isPlaceholderCover,
   type CoverPreview as LinkPreview,
 } from "./cover";
 
@@ -182,8 +181,8 @@ export async function resolveLinkPreview(inputUrl: string): Promise<LinkPreview 
 }
 
 export async function resolveWorkCover(work: { coverUrl?: string; externalUrl?: string }) {
-  if (!isDefaultCover(work.coverUrl) && work.coverUrl) return work.coverUrl;
+  if (!isPlaceholderCover(work.coverUrl) && work.coverUrl) return work.coverUrl;
   if (!work.externalUrl) return work.coverUrl || DEFAULT_COVER;
   const preview = await resolveLinkPreview(work.externalUrl);
-  return preview?.imageUrl || siteMarkUrl(work.externalUrl) || work.coverUrl || DEFAULT_COVER;
+  return preview?.imageUrl || DEFAULT_COVER;
 }

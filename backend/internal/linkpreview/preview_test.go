@@ -60,11 +60,12 @@ func TestIsDefaultCover(t *testing.T) {
 	}
 }
 
-func TestSiteMark(t *testing.T) {
-	got := SiteMark("https://mood.z-agent.ccwu.cc/admin")
-	want := "https://www.google.com/s2/favicons?sz=128&domain=mood.z-agent.ccwu.cc"
-	if got != want {
-		t.Fatalf("got %s want %s", got, want)
+func TestIsPlaceholderCover(t *testing.T) {
+	if !IsPlaceholderCover("https://www.google.com/s2/favicons?sz=128&domain=mood.z-agent.ccwu.cc") {
+		t.Fatal("google favicon should be a placeholder")
+	}
+	if IsPlaceholderCover("https://mood.z-agent.ccwu.cc/og-image.jpg") {
+		t.Fatal("og image should not be a placeholder")
 	}
 }
 
