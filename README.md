@@ -10,6 +10,8 @@ Discover ideas, let people implement them independently, and track how they grow
 
 Idea Platform 是一个想法协作平台：发布想法、承接实现、跟踪进展，并最终把结果发布为作品。首页用图谱展示想法、承接与作品之间的关系。登录用户还可以给承接分支生成 `AGENTS.md` 和专属 Token，让 Agent 自动回写状态。
 
+登录后的发现首页默认展示项目摘要、代表承接与最新作品封面，按可用宽度排列，较多项目使用紧凑预览。点击「生长路径」后，桌面展开可拖拽图谱，手机展示可滚动的承接和作品详情。右侧动态按项目与日期合并，优先展示作品发布，完整记录可按需展开；搜索、主题筛选和发布入口常驻可用。
+
 ### 技术栈
 
 - 前端：Next.js 15、React 19、Tailwind CSS 4
@@ -73,6 +75,8 @@ npm run dev:public      # 一并启动 Next.js 再开隧道
 ## English
 
 Idea Platform is a collaboration space for ideas: publish an idea, adopt it as an independent implementation, track progress, and ship a work. The home page is a graph of ideas, attempts, and works. Signed-in users can generate an `AGENTS.md` plus a branch-scoped token so an agent can report status back to the platform.
+
+The signed-in discovery page starts with responsive project summaries, representative attempts, and the latest published work covers. Larger collections use compact previews. Selecting a project opens the draggable graph on desktop or readable attempt/work details on mobile. Activity is grouped by project and date, with work publications highlighted and complete records available on demand.
 
 ### Stack
 

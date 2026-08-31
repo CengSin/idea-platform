@@ -1,5 +1,8 @@
 "use client";
 
+import { IdeaOverview } from "./IdeaOverview";
+import { ActivityDigest } from "./ActivityDigest";
+import { MobileIdeaFocus } from "./MobileIdeaFocus";
 import { SproutIcon } from "@/components/icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { useSheets } from "@/components/sheets/SheetContext";
@@ -15,7 +18,7 @@ import {
   WORK_TYPE_LABEL,
 } from "@/lib/format";
 import { type Database, type Idea } from "@/lib/types";
-import { Search, SlidersHorizontal, Users } from "lucide-react";
+import { ArrowLeft, Plus, Search, SlidersHorizontal, Users, X } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -61,6 +64,9 @@ export function IdeaGraph({
   const [view, setView] = useState<"graph" | "list">("graph");
   const [tag, setTag] = useState<string | null>(null);
   const viewport = useRef<HTMLDivElement>(null);
+  const overview = useRef<HTMLDivElement>(null);
+  const overviewScroll = useRef(0);
+  const returnFocusId = useRef<string | null>(null);
   const cam = useRef({ x: 560, y: 300, k: 1 });
   const [, setTick] = useState(0);
   const drag = useRef<{
@@ -110,6 +116,9 @@ export function IdeaGraph({
       .slice(0, 3);
     return { attempts, works, forks };
   }, [db, selected]);
+
+  const isFocus = view === "graph" && Boolean(selected);
+  const filteredIdeas = ideas.filter(match);
 
   const metrics = selected ? metricsById.get(selected.id)! : null;
   const myAttempt = selected
@@ -193,64 +202,62 @@ export function IdeaGraph({
     const el = viewport.current;
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
-    const k = resetZoom ? 1 : cam.current.k;
-    const tx = (width - (window.innerWidth < 768 ? 0 : 316)) / 2 - idea.graph.x * k;
-    const ty = height / 2 - 80 - idea.graph.y * k;
-    goToCam(tx, ty, k, animate);
+    const attempts = db.attempts.filter((a) => a.ideaId === idea.id && a.featuredOnGraph && a.graph);
+    const works = db.works.filter((w) => w.status === "published" && w.graph && attempts.some((a) => a.id === w.attemptId || a.workIds.includes(w.id)));
+    const minX = Math.min(idea.graph.x - 184, ...attempts.map((a) => a.graph!.x - 80), ...works.map((w) => w.graph!.x - 112));
+    const maxX = Math.max(idea.graph.x + 184, ...attempts.map((a) => a.graph!.x + 80), ...works.map((w) => w.graph!.x + 112));
+    const minY = Math.min(idea.graph.y - 50, ...attempts.map((a) => a.graph!.y - 45), ...works.map((w) => w.graph!.y - 110));
+    const maxY = Math.max(idea.graph.y + 310, ...attempts.map((a) => a.graph!.y + 65), ...works.map((w) => w.graph!.y + 110));
+    const side = window.innerWidth < 768 ? 0 : 332;
+    const availableW = Math.max(180, width - side - 32);
+    const availableH = Math.max(200, height - 168);
+    const k = resetZoom ? Math.min(1, Math.max(0.32, Math.min(availableW / (maxX - minX), availableH / (maxY - minY)))) : cam.current.k;
+    goToCam(16 + availableW / 2 - (minX + maxX) / 2 * k, 104 + availableH / 2 - (minY + maxY) / 2 * k, k, animate);
   };
 
-  const fitAll = (animate = true) => {
-    const el = viewport.current;
-    if (!el || ideas.length === 0) return;
-    const { width, height } = el.getBoundingClientRect();
-    const xs = ideas.map((i) => i.graph.x);
-    const ys = ideas.map((i) => i.graph.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    const leftPad = 48;
-    const rightPad = window.innerWidth < 768 ? 24 : 332;
-    const topPad = 88;
-    const bottomPad = 168;
-    const availW = Math.max(180, width - leftPad - rightPad);
-    const availH = Math.max(180, height - topPad - bottomPad);
-    const worldW = Math.max(1, maxX - minX);
-    const worldH = Math.max(1, maxY - minY);
-    const margin = 160;
-    const k = Math.min(
-      1.05,
-      Math.max(0.32, Math.min(availW / (worldW + margin * 2), availH / (worldH + margin * 2))),
-    );
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-    const tx = leftPad + availW / 2 - cx * k;
-    const ty = topPad + availH / 2 - cy * k;
-    goToCam(tx, ty, k, animate);
+  const selectIdea = (idea: Idea) => {
+    returnFocusId.current = idea.id;
+    setView("graph");
+    setHoverId(null);
+    setSelectedId(idea.id);
+    centerOn(idea, true, true);
+  };
+
+  const showOverview = () => {
+    stopSpring();
+    setHoverId(null);
+    setSelectedId(null);
   };
 
   useEffect(() => {
-    const run = () => {
-      if (selected) centerOn(selected, false, true);
-      else fitAll(false);
-    };
-    const id = requestAnimationFrame(() => requestAnimationFrame(run));
-    const onResize = () => run();
-    window.addEventListener("resize", onResize);
+    if (isFocus || !overview.current) return;
+    overview.current.scrollTop = overviewScroll.current;
+    const button = Array.from(overview.current.querySelectorAll<HTMLButtonElement>("button[data-idea-id]"))
+      .find((item) => item.dataset.ideaId === returnFocusId.current);
+    button?.focus({ preventScroll: true });
+    returnFocusId.current = null;
+  }, [isFocus]);
+
+  useEffect(() => {
+    const run = () => { if (selected && view === "graph") centerOn(selected, false, true); };
+    const id = requestAnimationFrame(run);
+    window.addEventListener("resize", run);
     return () => {
       cancelAnimationFrame(id);
       cancelAnimationFrame(raf.current);
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", run);
     };
+    // Refit only when selection/view changes, not on every camera frame.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selected?.id, view]);
 
   const clampPan = (x: number, y: number, k: number, loose = false) => {
     const el = viewport.current;
     if (!el) return { x, y };
     const { width, height } = el.getBoundingClientRect();
-    const xs = ideas.map((i) => i.graph.x);
-    const ys = ideas.map((i) => i.graph.y);
+    const points = [...ideas.map((idea) => idea.graph), ...neighborhood.attempts.map((attempt) => attempt.graph!), ...neighborhood.works.map((work) => work.graph!)];
+    const xs = points.map((point) => point.x);
+    const ys = points.map((point) => point.y);
     const minX = Math.min(...xs) * k;
     const maxX = Math.max(...xs) * k;
     const minY = Math.min(...ys) * k;
@@ -272,7 +279,7 @@ export function IdeaGraph({
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (view !== "graph") return;
+    if (!isFocus) return;
     if ((e.target as HTMLElement).closest("[data-node]")) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     stopSpring();
@@ -304,8 +311,7 @@ export function IdeaGraph({
     const { samples, moved } = drag.current;
     drag.current = null;
     if (!moved) {
-      setSelectedId(null);
-      fitAll(true);
+      showOverview();
       return;
     }
     if (prefersReducedMotion() || samples.length < 2) {
@@ -335,7 +341,7 @@ export function IdeaGraph({
   };
 
   const onWheel = (e: React.WheelEvent) => {
-    if (view !== "graph") return;
+    if (!isFocus) return;
     e.preventDefault();
     stopSpring();
     const el = viewport.current;
@@ -344,7 +350,7 @@ export function IdeaGraph({
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
     const factor = e.deltaY > 0 ? 0.94 : 1.06;
-    const k = Math.min(2.1, Math.max(0.42, cam.current.k * factor));
+    const k = Math.min(2.1, Math.max(0.32, cam.current.k * factor));
     const nx = cx - ((cx - cam.current.x) * k) / cam.current.k;
     const ny = cy - ((cy - cam.current.y) * k) / cam.current.k;
     const clamped = clampPan(nx, ny, k);
@@ -352,12 +358,11 @@ export function IdeaGraph({
   };
 
   const { x, y, k } = cam.current;
-  const events = useMemo(() => [...db.events].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 8), [db.events]);
   const showLabels = k >= 0.48 || !selected;
   const hovered = hoverId ? ideas.find((i) => i.id === hoverId) : null;
 
   return (
-    <div className="relative h-full min-h-0">
+    <div className="discovery-page relative h-full min-h-0">
       <div
         ref={viewport}
         data-graph-canvas
@@ -367,7 +372,7 @@ export function IdeaGraph({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onWheel={onWheel}
-        style={{ cursor: view === "list" ? "auto" : drag.current ? "grabbing" : "grab", touchAction: view === "graph" ? "none" : "pan-y" }}
+        style={{ cursor: !isFocus ? "auto" : drag.current ? "grabbing" : "grab", touchAction: isFocus ? "none" : "pan-y" }}
       >
         <div
           className="graph-grid pointer-events-none absolute inset-0"
@@ -375,9 +380,9 @@ export function IdeaGraph({
             backgroundPosition: `${x * 0.06}px ${y * 0.06}px, ${x * 0.04}px ${y * 0.04}px, ${x * 0.03}px ${y * 0.03}px, ${x * 0.16}px ${y * 0.16}px, ${x * 0.12}px ${y * 0.12}px, ${x * 0.12}px ${y * 0.12}px`,
           }}
         />
-        {view === "graph" ? (
+        {isFocus ? (
           <div
-            className="absolute left-0 top-0"
+            className="discovery-focus-canvas absolute left-0 top-0"
             style={{
               transform: `translate(${x}px, ${y}px) scale(${k})`,
               transformOrigin: "0 0",
@@ -487,9 +492,10 @@ export function IdeaGraph({
                   key={idea.id}
                   data-node
                   type="button"
+                  aria-label={`展开 ${idea.title}`}
+                  aria-pressed={isSel}
                   onClick={() => {
-                    setSelectedId(idea.id);
-                    centerOn(idea);
+                    selectIdea(idea);
                   }}
                   onDoubleClick={() => router.push(`/ideas/${idea.id}`)}
                   onPointerEnter={() => setHoverId(idea.id)}
@@ -498,7 +504,7 @@ export function IdeaGraph({
                   style={{
                     left: idea.graph.x,
                     top: idea.graph.y,
-                    opacity: visible ? (distant && !isFork ? 0.48 : 1) : 0.12,
+                    opacity: isSel ? 1 : visible ? (distant && !isFork ? 0.22 : 1) : 0.08,
                     zIndex: isSel ? 4 : hoverId === idea.id ? 3 : 1,
                     cursor: "pointer",
                   }}
@@ -517,7 +523,7 @@ export function IdeaGraph({
                         {r >= 14 ? <SproutIcon className="idea-core" /> : null}
                       </span>
                       {m.workCount > 0 && !isSel ? (
-                        <span className="idea-badge">{m.workCount}</span>
+                        <span className="idea-badge">{m.workCount} 作品</span>
                       ) : null}
                     </span>
                     {showLabels && !isSel ? (
@@ -662,36 +668,35 @@ export function IdeaGraph({
             ) : null}
           </div>
         ) : (
-          <div className="graph-list absolute inset-0 overflow-auto pb-16 pl-8 pr-[332px] pt-36">
-            <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
-              {ideas.filter(match).map((idea) => {
-                const m = metricsById.get(idea.id)!;
-                return (
-                  <Link
-                    key={idea.id}
-                    href={`/ideas/${idea.id}`}
-                    className="glass lift pressable rounded-3xl p-5"
-                  >
-                    <div className="mb-3 flex gap-1.5">
-                      {idea.tags.map((t) => (
-                        <Chip key={t}>{t}</Chip>
-                      ))}
-                    </div>
-                    <h3 className="text-[18px] font-semibold tracking-[-0.03em]">{idea.title}</h3>
-                    <p className="mt-2 line-clamp-2 text-[13.5px] leading-relaxed text-muted">
-                      {idea.summary}
-                    </p>
-                    <p className="mt-4 text-[12px] text-muted">
-                      {m.activeAttemptCount} 个有效承接 · {m.workCount} 个作品 · {m.forkCount} 次衍生
-                    </p>
-                  </Link>
-                );
-              })}
-            </div>
+          <div ref={overview} onScroll={(e) => { overviewScroll.current = e.currentTarget.scrollTop; }} className="discovery-overview scroll-thin" data-node>
+            {ideas.length > 0 ? <>
+              <header className="discovery-intro">
+                <h1>想法，正在长成作品<span>。</span></h1>
+                <p className="discovery-intro-note">发现值得实现的想法，也看见它们走过的路。</p>
+                <div className="discovery-filter-row">
+                  <span className="discovery-total" role="status">{filteredIdeas.length} 个想法 · {filteredIdeas.reduce((sum, idea) => sum + metricsById.get(idea.id)!.workCount, 0)} 个作品</span>
+                  {tags.length > 0 ? <div className="discovery-filters" aria-label="按主题筛选">
+                    <button type="button" aria-pressed={tag === null} onClick={() => setTag(null)}>全部</button>
+                    {tags.map((item) => <button type="button" key={item} aria-pressed={tag === item} onClick={() => setTag(tag === item ? null : item)}>{item}</button>)}
+                  </div> : null}
+                </div>
+              </header>
+              {filteredIdeas.length > 0 ? <IdeaOverview db={db} ideas={filteredIdeas} metricsById={metricsById} onSelect={selectIdea} list={view === "list"} /> : (
+                <div className="discovery-no-results" role="status">
+                  <Search aria-hidden="true" className="h-6 w-6 text-idea" />
+                  <h2>还没有找到这个想法</h2>
+                  <p>换个关键词，或清除主题筛选再看看。</p>
+                  <button type="button" onClick={() => { setQuery(""); setTag(null); }}>清除筛选</button>
+                </div>
+              )}
+              <p className="discovery-map-note"><span className="discovery-dot" />想法<span className="discovery-note-line" /><span className="discovery-dot active" />承接<span className="discovery-note-line" /><span className="discovery-dot work" />作品<span className="discovery-note-hint">每一条路径，都从一个想法开始</span></p>
+            </> : null}
           </div>
         )}
-        {view === "graph" ? <div className="graph-vignette" /> : null}
+        {isFocus ? <div className="graph-vignette" /> : null}
       </div>
+
+      {isFocus && selected ? <MobileIdeaFocus db={db} idea={selected} myAttempt={myAttempt} onAdopt={() => sheets.openAdopt(selected)} /> : null}
 
       {ideas.length === 0 ? (
         <div className="graph-empty pointer-events-none absolute inset-y-0 left-0 right-[332px] z-20 grid place-items-center px-8">
@@ -714,115 +719,30 @@ export function IdeaGraph({
 
       <div className="pointer-events-none absolute inset-0 z-10">
         <div className="graph-toolbar pointer-events-auto absolute left-4 right-[332px] top-4">
-          <div className="glass mx-auto flex h-12 max-w-[720px] items-center gap-3 rounded-full px-4">
-            <Search className="h-4 w-4 text-muted" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索一个尚未发生的未来…"
-              aria-label="搜索想法"
-              className="h-full w-full bg-transparent text-[14px] outline-none placeholder:text-muted"
-            />
-            <button
-              type="button"
-              onClick={() => setView(view === "graph" ? "list" : "graph")}
-              className="pressable shrink-0 rounded-full px-3 py-1 text-[12px] text-muted hover:bg-white/6 hover:text-artifact"
-            >
-              {view === "graph" ? "列表" : "Graph"}
-            </button>
-          </div>
-          {view === "list" ? (
-            <div className="mx-auto mt-3 flex max-w-[720px] flex-wrap justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => setTag(null)}
-                className={`pressable rounded-full border px-3 py-1 text-[12px] ${tag === null ? "border-idea/40 bg-idea/10 text-idea" : "border-white/10 text-muted hover:text-artifact"}`}
-              >
-                全部主题
-              </button>
-              {tags.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTag(tag === t ? null : t)}
-                  className={`pressable rounded-full border px-3 py-1 text-[12px] ${tag === t ? "border-idea/40 bg-idea/10 text-idea" : "border-white/10 text-muted hover:text-artifact"}`}
-                >
-                  {t}
-                </button>
-              ))}
+          <div className="discovery-toolbar-row">
+            <div className="discovery-search glass">
+              <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-muted" />
+              <input value={query} onChange={(e) => { setQuery(e.target.value); if (selected) showOverview(); }} placeholder="搜索一个尚未发生的未来…" aria-label="搜索想法" />
+              {query ? <button type="button" aria-label="清除搜索" onClick={() => setQuery("")}><X className="h-4 w-4" /></button> : null}
             </div>
-          ) : null}
+            <button type="button" className="discovery-view-toggle glass pressable" onClick={() => { showOverview(); setView(view === "graph" ? "list" : "graph"); }} aria-label={view === "graph" ? "切换到列表" : "切换到项目地图"}>{view === "graph" ? "列表" : "项目地图"}</button>
+            <Button tone="idea" className="discovery-publish" onClick={sheets.openPublishIdea}><Plus aria-hidden="true" className="h-4 w-4" /><span>发布想法</span></Button>
+          </div>
+          {isFocus ? <button type="button" className="discovery-back glass pressable" onClick={showOverview}><ArrowLeft aria-hidden="true" className="h-4 w-4" />返回项目地图</button> : null}
         </div>
 
-        <aside className="graph-activity pointer-events-auto absolute bottom-4 right-4 top-4 flex w-[300px] flex-col">
-          <div className="glass-heavy flex min-h-0 flex-1 flex-col rounded-[28px] p-5">
-            <h2 className="flex items-center gap-2 text-[15px] font-medium tracking-[-0.02em]">
-              <span className="live-dot" />
-              正在发生
-            </h2>
-            <div className="mt-4 flex-1 space-y-1 overflow-auto pr-1">
-              {events.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-line px-4 py-5 text-center text-[12.5px] leading-relaxed text-muted">
-                  还没有动态。发布或承接项目后，进展会出现在这里。
-                </p>
-              ) : null}
-              {events.map((ev) => {
-                const u = userById(db, ev.actorId);
-                return (
-                  <div
-                    key={ev.id}
-                    className="flex items-start gap-3 rounded-2xl px-1 py-2.5 transition-colors hover:bg-white/6"
-                  >
-                    <span
-                      className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[11px]"
-                      style={{
-                        color: u?.accent ?? "#66C7C0",
-                        borderColor: `${u?.accent ?? "#66C7C0"}66`,
-                        background: `${u?.accent ?? "#66C7C0"}18`,
-                      }}
-                    >
-                      {u?.initials ?? "·"}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="truncate text-[13.5px]">{ev.actorName}</div>
-                        <div className="shrink-0 text-[11px] text-muted">
-                          {relativeTime(ev.at)}
-                        </div>
-                      </div>
-                      <div className="mt-0.5 text-[12.5px] text-muted">{ev.text}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => (selected ? centerOn(selected, true, true) : fitAll(true))}
-            disabled={ideas.length === 0}
-            title="将所有想法重新居中并缩放到可见范围"
-            className="glass pressable mt-3 flex h-12 items-center justify-center gap-2 rounded-2xl text-[13.5px] hover:bg-white/6"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            整理视图
-          </button>
+        <aside className="graph-activity pointer-events-auto absolute right-4 top-[96px] bottom-5 flex w-[300px] flex-col gap-4">
+          <ActivityDigest db={db} ideas={ideas} onSelect={selectIdea} />
+          <div className="discovery-sidebar-note"><SproutIcon aria-hidden="true" className="h-5 w-5" /><p>一个想法，可以有很多种实现。<br />找到你在意的，开始下一条路径。</p></div>
+          {isFocus ? <button type="button" onClick={() => selected && centerOn(selected, true, true)} className="glass pressable mt-auto flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl text-[13.5px] hover:bg-white/6"><SlidersHorizontal aria-hidden="true" className="h-4 w-4" />整理视图</button> : null}
         </aside>
 
-        {view === "graph" ? (
-          <div className="graph-legend glass pointer-events-auto absolute bottom-5 left-4 rounded-2xl px-4 py-3 text-[12px] text-muted">
-            <LegendDot color="#F2A65A" label="想法（按承接人数）" />
-            <LegendDot color="#66C7C0" label="承接者（进行中）" />
-            <LegendDot color="#3d8f8a" label="关注者（观察中）" ring />
-            <LegendDot color="#F2EFE8" label="作品（已完成）" square />
-            <div className="mt-1.5 flex items-center gap-2">
-              <span className="h-px w-6 bg-active" />
-              进行中
-            </div>
-            <div className="mt-1 flex items-center gap-2">
-              <span className="w-6 border-t border-dashed border-active/70" />
-              观察中
-            </div>
+        {isFocus ? (
+          <div className="graph-legend glass pointer-events-auto absolute bottom-5 left-4 flex flex-wrap items-center gap-x-4 rounded-2xl px-4 py-2 text-[11px] text-muted">
+            <LegendDot color="#F2A65A" label="想法" />
+            <LegendDot color="#66C7C0" label="承接" />
+            <LegendDot color="#F2EFE8" label="作品" square />
+            <span>拖动平移 · 滚轮缩放</span>
           </div>
         ) : null}
       </div>
