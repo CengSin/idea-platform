@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { authDestination } from "./auth-destination";
 import {
   SESSION_COOKIE,
   authenticate,
@@ -11,11 +12,6 @@ import {
 } from "./auth";
 
 export type AuthState = { error?: string };
-
-function destination(value: FormDataEntryValue | null) {
-  const next = typeof value === "string" ? value : "/";
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/";
-}
 
 async function setSession(userId: string) {
   const session = await createSession(userId);
@@ -38,7 +34,7 @@ export async function loginAction(
   const account = await authenticate(email, password);
   if (!account) return { error: "邮箱或密码不正确。" };
   await setSession(account.userId);
-  redirect(destination(formData.get("next")));
+  redirect(authDestination(formData.get("next")));
 }
 
 export async function registerAction(
@@ -61,7 +57,7 @@ export async function registerAction(
   } catch (error) {
     return { error: error instanceof Error ? error.message : "注册失败，请稍后重试。" };
   }
-  redirect("/");
+  redirect(authDestination(formData.get("next")));
 }
 
 export async function logoutAction() {

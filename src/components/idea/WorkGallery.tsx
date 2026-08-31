@@ -3,7 +3,7 @@ import { CoverImage } from "@/components/ui/CoverImage";
 import { WORK_TYPE_LABEL } from "@/lib/format";
 import type { Work } from "@/lib/types";
 import { Eye, GitFork, Play, Star } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 
 function compact(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "")}k`;

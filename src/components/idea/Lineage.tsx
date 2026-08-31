@@ -5,7 +5,7 @@ import type { Attempt, Database, Work } from "@/lib/types";
 import { ATTEMPT_STAGE_ORDER } from "@/lib/types";
 import { SproutIcon } from "@/components/icons";
 import { Bike, Fish, Headphones, Waves } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 
 const STAGES = ATTEMPT_STAGE_ORDER;
 const PREFERRED = ["att_seawalk", "att_noiseless", "att_echoplan", "att_citystudio"];
@@ -44,11 +44,12 @@ export function Lineage({
   );
   const hidden = eligible.length - tracks.length;
 
+  if (tracks.length === 0) return <p className="rounded-2xl border border-dashed border-line p-6 text-[13px] text-muted">还没有实现轨道。承接后，你的进展会出现在这里。</p>;
+
   return (
     <section className="mt-8">
       <div
-        className="grid items-end gap-3 pb-2"
-        style={{ gridTemplateColumns: "172px 1fr 1fr 1fr 280px" }}
+        className="lineage-heading grid items-end gap-3 pb-2"
       >
         <div />
         {["理解中", "原型中", "公开测试", "已发布"].map((label) => (
@@ -73,10 +74,9 @@ export function Lineage({
           return (
             <div
               key={attempt.id}
-              className="grid items-center gap-3"
-              style={{ gridTemplateColumns: "172px 1fr 1fr 1fr 280px" }}
+              className="lineage-row grid items-center gap-3"
             >
-              <Link href={`/attempts/${attempt.id}`} className="flex items-center gap-3">
+              <Link href={`/attempts/${attempt.id}`} className="lineage-name flex items-center gap-3">
                 <span
                   className="flex h-10 w-10 items-center justify-center rounded-full border"
                   style={{
@@ -94,7 +94,7 @@ export function Lineage({
                 const isCurrent = i === stageIndex && status !== "published";
                 const dashed = i > stageIndex;
                 return (
-                  <div key={stage} className="relative flex items-center">
+                  <div key={stage} data-stage={["理解中", "原型中", "公开测试"][i]} className="lineage-stage relative flex items-center">
                     <div
                       className="h-px w-full"
                       style={{
@@ -116,7 +116,7 @@ export function Lineage({
                   </div>
                 );
               })}
-              <div className="relative min-h-[76px]">
+              <div className="lineage-work relative min-h-[76px]">
                 {work ? (
                   <Link
                     href={`/works/${work.id}`}

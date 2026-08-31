@@ -16,7 +16,7 @@ import {
 } from "@/lib/format";
 import { type Database, type Idea } from "@/lib/types";
 import { Search, SlidersHorizontal, Users } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -76,8 +76,9 @@ export function IdeaGraph({
   const raf = useRef<number>(0);
   const spring = useRef({ vx: 0, vy: 0, vk: 0, tx: 0, ty: 0, tk: 1, last: 0 });
 
-  const ideas = db.ideas.filter((i) => i.status !== "draft" && i.status !== "archived");
-  const tags = Array.from(new Set(ideas.flatMap((i) => i.tags)));
+  const ideas = useMemo(() => db.ideas.filter((i) => i.status !== "draft" && i.status !== "archived"), [db.ideas]);
+  const tags = useMemo(() => Array.from(new Set(ideas.flatMap((i) => i.tags))), [ideas]);
+  const metricsById = useMemo(() => new Map(ideas.map((idea) => [idea.id, ideaMetrics(db, idea.id)])), [db, ideas]);
   const q = query.trim().toLowerCase();
 
   const match = (idea: Idea) => {
@@ -110,7 +111,7 @@ export function IdeaGraph({
     return { attempts, works, forks };
   }, [db, selected]);
 
-  const metrics = selected ? ideaMetrics(db, selected.id) : null;
+  const metrics = selected ? metricsById.get(selected.id)! : null;
   const myAttempt = selected
     ? db.attempts.find(
         (a) =>
@@ -193,7 +194,7 @@ export function IdeaGraph({
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
     const k = resetZoom ? 1 : cam.current.k;
-    const tx = (width - 316) / 2 - idea.graph.x * k;
+    const tx = (width - (window.innerWidth < 768 ? 0 : 316)) / 2 - idea.graph.x * k;
     const ty = height / 2 - 80 - idea.graph.y * k;
     goToCam(tx, ty, k, animate);
   };
@@ -209,7 +210,7 @@ export function IdeaGraph({
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
     const leftPad = 48;
-    const rightPad = 332;
+    const rightPad = window.innerWidth < 768 ? 24 : 332;
     const topPad = 88;
     const bottomPad = 168;
     const availW = Math.max(180, width - leftPad - rightPad);
@@ -231,6 +232,7 @@ export function IdeaGraph({
   useEffect(() => {
     const run = () => {
       if (selected) centerOn(selected, false, true);
+      else fitAll(false);
     };
     const id = requestAnimationFrame(() => requestAnimationFrame(run));
     const onResize = () => run();
@@ -333,6 +335,7 @@ export function IdeaGraph({
   };
 
   const onWheel = (e: React.WheelEvent) => {
+    if (view !== "graph") return;
     e.preventDefault();
     stopSpring();
     const el = viewport.current;
@@ -349,7 +352,7 @@ export function IdeaGraph({
   };
 
   const { x, y, k } = cam.current;
-  const events = [...db.events].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 8);
+  const events = useMemo(() => [...db.events].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 8), [db.events]);
   const showLabels = k >= 0.48 || !selected;
   const hovered = hoverId ? ideas.find((i) => i.id === hoverId) : null;
 
@@ -364,7 +367,7 @@ export function IdeaGraph({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onWheel={onWheel}
-        style={{ cursor: drag.current ? "grabbing" : "grab", touchAction: "none" }}
+        style={{ cursor: view === "list" ? "auto" : drag.current ? "grabbing" : "grab", touchAction: view === "graph" ? "none" : "pan-y" }}
       >
         <div
           className="graph-grid pointer-events-none absolute inset-0"
@@ -470,7 +473,7 @@ export function IdeaGraph({
             </svg>
 
             {ideas.map((idea) => {
-              const m = ideaMetrics(db, idea.id);
+              const m = metricsById.get(idea.id)!;
               const r = Math.min(30, 10 + m.workCount * 3 + m.activeAttemptCount * 1.4);
               const isSel = idea.id === selected?.id;
               const visible = match(idea);
@@ -628,18 +631,17 @@ export function IdeaGraph({
                   ))}
                 </div>
                 <div className="mt-3 flex flex-col gap-2">
+                  <Link href={`/ideas/${selected.id}`} className="explore-secondary w-full">查看想法详情</Link>
+                  {myAttempt ? <Link href={`/attempts/${myAttempt.id}`} className="explore-cta w-full"><Users className="h-4 w-4" />查看我的承接</Link> : (
                   <Button
                     tone="idea"
                     className="w-full"
-                    onClick={() =>
-                      myAttempt
-                        ? router.push(`/attempts/${myAttempt.id}`)
-                        : sheets.openAdopt(selected)
-                    }
+                    onClick={() => sheets.openAdopt(selected)}
                   >
                     <Users className="h-4 w-4" />
-                    {myAttempt ? "查看我的承接" : "承接这个想法"}
+                    承接这个想法
                   </Button>
+                  )}
                 </div>
               </div>
             ) : null}
@@ -660,10 +662,10 @@ export function IdeaGraph({
             ) : null}
           </div>
         ) : (
-          <div className="absolute inset-0 overflow-auto pb-16 pl-8 pr-[332px] pt-36">
-            <div className="stagger-in grid grid-cols-2 gap-4 xl:grid-cols-3">
+          <div className="graph-list absolute inset-0 overflow-auto pb-16 pl-8 pr-[332px] pt-36">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
               {ideas.filter(match).map((idea) => {
-                const m = ideaMetrics(db, idea.id);
+                const m = metricsById.get(idea.id)!;
                 return (
                   <Link
                     key={idea.id}
@@ -692,7 +694,7 @@ export function IdeaGraph({
       </div>
 
       {ideas.length === 0 ? (
-        <div className="pointer-events-none absolute inset-y-0 left-0 right-[332px] z-20 grid place-items-center px-8">
+        <div className="graph-empty pointer-events-none absolute inset-y-0 left-0 right-[332px] z-20 grid place-items-center px-8">
           <div className="pointer-events-auto max-w-md text-center">
             <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-idea/30 bg-idea/10 text-idea shadow-[0_0_36px_rgba(232,184,106,0.2)]">
               <SproutIcon className="h-9 w-9" />
@@ -711,13 +713,14 @@ export function IdeaGraph({
       ) : null}
 
       <div className="pointer-events-none absolute inset-0 z-10">
-        <div className="overlay-in pointer-events-auto absolute left-4 right-[332px] top-4">
+        <div className="graph-toolbar pointer-events-auto absolute left-4 right-[332px] top-4">
           <div className="glass mx-auto flex h-12 max-w-[720px] items-center gap-3 rounded-full px-4">
             <Search className="h-4 w-4 text-muted" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="搜索一个尚未发生的未来…"
+              aria-label="搜索想法"
               className="h-full w-full bg-transparent text-[14px] outline-none placeholder:text-muted"
             />
             <button
@@ -751,7 +754,7 @@ export function IdeaGraph({
           ) : null}
         </div>
 
-        <aside className="overlay-in-right pointer-events-auto absolute bottom-4 right-4 top-4 flex w-[300px] flex-col">
+        <aside className="graph-activity pointer-events-auto absolute bottom-4 right-4 top-4 flex w-[300px] flex-col">
           <div className="glass-heavy flex min-h-0 flex-1 flex-col rounded-[28px] p-5">
             <h2 className="flex items-center gap-2 text-[15px] font-medium tracking-[-0.02em]">
               <span className="live-dot" />
@@ -807,7 +810,7 @@ export function IdeaGraph({
         </aside>
 
         {view === "graph" ? (
-          <div className="glass overlay-in pointer-events-auto absolute bottom-5 left-4 rounded-2xl px-4 py-3 text-[12px] text-muted">
+          <div className="graph-legend glass pointer-events-auto absolute bottom-5 left-4 rounded-2xl px-4 py-3 text-[12px] text-muted">
             <LegendDot color="#F2A65A" label="想法（按承接人数）" />
             <LegendDot color="#66C7C0" label="承接者（进行中）" />
             <LegendDot color="#3d8f8a" label="关注者（观察中）" ring />

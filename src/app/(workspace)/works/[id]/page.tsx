@@ -5,7 +5,7 @@ import { CoverImage } from "@/components/ui/CoverImage";
 import { formatDate, formatLicense, WORK_TYPE_LABEL } from "@/lib/format";
 import { getWorkBundle } from "@/lib/queries";
 import { ExternalLink } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";

@@ -8,8 +8,8 @@ import {
   loginAction,
   registerAction,
 } from "@/lib/auth-actions";
-import { ArrowRight, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { ArrowRight, ArrowUpRight, Sparkles } from "lucide-react";
+import Link from "@/components/ui/NavigationLink";
 import { useActionState } from "react";
 
 export function AuthForm({
@@ -101,10 +101,15 @@ export function AuthForm({
 
             <p className="mt-7 text-center text-[13px] text-muted">
               {isLogin ? "还没有账号？" : "已经有账号？"}{" "}
-              <Link href={isLogin ? "/register" : "/login"} className="text-idea hover:underline">
+              <Link href={`${isLogin ? "/register" : "/login"}?next=${encodeURIComponent(next)}`} className="text-idea hover:underline">
                 {isLogin ? "立即注册" : "返回登录"}
               </Link>
             </p>
+            <div className="mt-6 border-t border-line pt-5 text-center">
+              <Link href="/explore" className="inline-flex min-h-10 items-center gap-2 text-[13px] text-muted hover:text-idea">
+                先逛逛，以游客身份浏览 <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
           </div>
         </section>
       </div>

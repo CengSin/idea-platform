@@ -32,10 +32,10 @@ export function CoverImage({
       .join(" ");
     return (
       <span className={wrapperClass}>
-        <img src={currentSrc} alt={alt} className="h-[52%] w-[52%] object-contain" onError={onError} />
+        <img src={currentSrc} alt={alt} loading="lazy" decoding="async" className="h-[52%] w-[52%] object-contain" onError={onError} />
       </span>
     );
   }
 
-  return <img src={currentSrc} alt={alt} className={className} onError={onError} />;
+  return <img src={currentSrc} alt={alt} loading="lazy" decoding="async" className={className} onError={onError} />;
 }

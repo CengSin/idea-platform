@@ -8,7 +8,7 @@
     "start": "next start --port 3001",
     "tunnel": "bash scripts/tunnel.sh",
     "dev:public": "bash scripts/tunnel.sh --dev",
-    "test": "node --experimental-strip-types --test src/lib/cover.test.ts src/lib/data-backend.test.ts src/lib/turso.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/cover.test.ts src/lib/data-backend.test.ts src/lib/turso.test.ts src/lib/public-catalog.test.ts",
     "migrate:turso": "node --experimental-strip-types scripts/migrate-to-turso.ts"
   },
   "dependencies": {

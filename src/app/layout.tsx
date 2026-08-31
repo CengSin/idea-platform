@@ -1,8 +1,4 @@
 import type { Metadata } from "next";
-import { AppShell } from "@/components/chrome/AppShell";
-import { SheetProvider } from "@/components/sheets/SheetContext";
-import { getSnapshot } from "@/lib/queries";
-import { getCurrentUser } from "@/lib/auth";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://idea.z-agent.ccwu.cc";
@@ -40,30 +36,12 @@ export const metadata: Metadata = {
   },
 };
 
-export const dynamic = "force-dynamic";
-
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const me = await getCurrentUser();
-  const unread = me
-    ? (await getSnapshot()).db.notifications.filter((n) => !n.read).length
-    : 0;
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
       <body className="grain antialiased">
-        {me ? (
-          <SheetProvider>
-            <AppShell unread={unread} user={me}>{children}</AppShell>
-          </SheetProvider>
-        ) : (
-          <div className="relative min-h-dvh overflow-hidden">
-            <div className="atmosphere" aria-hidden>
-              <span className="atmosphere-blob a" />
-              <span className="atmosphere-blob b" />
-              <span className="atmosphere-blob c" />
-            </div>
-            {children}
-          </div>
-        )}
+        <div className="atmosphere" aria-hidden="true" />
+        {children}
       </body>
     </html>
   );

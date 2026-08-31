@@ -20,7 +20,7 @@ import {
   Lightbulb,
   Link2,
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 
 export const dynamic = "force-dynamic";
 

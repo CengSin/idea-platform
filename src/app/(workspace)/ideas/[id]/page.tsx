@@ -6,7 +6,7 @@ import { WorkGallery } from "@/components/idea/WorkGallery";
 import { Chip } from "@/components/ui/Chip";
 import { IDEA_STATUS_LABEL } from "@/lib/format";
 import { getIdeaBundle } from "@/lib/queries";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";

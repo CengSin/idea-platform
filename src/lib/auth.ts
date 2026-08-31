@@ -1,10 +1,11 @@
 import "server-only";
 
 import crypto from "node:crypto";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { parseAuthDump } from "./data-backend";
-import { mutateDb, readDb } from "./db";
+import { mutateDb, readDb, readDbForRender } from "./db";
 import { mutateJsonDocument, readJsonFile } from "./json-store";
 import type { User } from "./types";
 
@@ -214,7 +215,7 @@ export async function getAgentRequestUser(request: Request, attemptId?: string) 
   return null;
 }
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const hash = crypto.createHash("sha256").update(token).digest("hex");
@@ -224,8 +225,10 @@ export async function getCurrentUser() {
   );
   if (!session) return null;
   const account = db.accounts.find((item) => item.userId === session.userId);
-  return account ? ensureProfile(account) : null;
-}
+  if (!account) return null;
+  const profile = (await readDbForRender()).users.find((user) => user.id === account.userId);
+  return profile ?? ensureProfile(account);
+});
 
 export async function requireCurrentUser() {
   const user = await getCurrentUser();

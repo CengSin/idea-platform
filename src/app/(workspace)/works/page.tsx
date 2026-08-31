@@ -3,7 +3,7 @@ import { Chip } from "@/components/ui/Chip";
 import { CoverImage } from "@/components/ui/CoverImage";
 import { WORK_TYPE_LABEL, ideaById } from "@/lib/format";
 import { getSnapshot } from "@/lib/queries";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 
 export const dynamic = "force-dynamic";
 
@@ -25,21 +25,22 @@ export default async function WorksPage({
 
   return (
     <PageFrame>
-        <div className="mb-6 flex items-end justify-between">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-[28px] font-semibold tracking-[-0.04em]">作品</h1>
             <p className="mt-1 text-[13.5px] text-muted">每个作品都保留来源想法与实现轨道。</p>
           </div>
           <div className="flex gap-2 text-[13px]">
-            <Link href="/works" className={!mine ? "text-idea" : "text-muted"}>
+            <Link href="/works" className={`catalog-filter ${!mine ? "selected" : ""}`} aria-current={!mine ? "page" : undefined}>
               全站
             </Link>
-            <Link href="/works?mine=1" className={mine ? "text-idea" : "text-muted"}>
+            <Link href="/works?mine=1" className={`catalog-filter ${mine ? "selected" : ""}`} aria-current={mine ? "page" : undefined}>
               我的
             </Link>
           </div>
         </div>
-        <div className="stagger-in grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {works.length === 0 ? <div className="rounded-3xl border border-dashed border-line px-5 py-16 text-center"><h2 className="text-lg">{mine ? "你的第一个作品，正在路上" : "这里将收集实现的成果"}</h2><p className="mt-2 text-sm text-muted">从感兴趣的想法开始，完成一次属于你的尝试。</p><Link href="/" className="explore-secondary mt-5">发现想法</Link></div> : null}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {works.map((work) => {
             const idea = ideaById(db, work.ideaId);
             return (

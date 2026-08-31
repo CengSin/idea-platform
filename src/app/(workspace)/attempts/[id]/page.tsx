@@ -8,7 +8,7 @@ import {
   formatDateTime,
 } from "@/lib/format";
 import { getAttemptBundle } from "@/lib/queries";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";

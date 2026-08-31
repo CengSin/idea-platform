@@ -2,7 +2,7 @@ import { PageFrame } from "@/components/chrome/PageFrame";
 import { ClearContent } from "@/components/chrome/ClearContent";
 import { Chip } from "@/components/ui/Chip";
 import { getSnapshot } from "@/lib/queries";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 
 export const dynamic = "force-dynamic";
 

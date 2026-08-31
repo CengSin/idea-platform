@@ -3,7 +3,7 @@ import { Chip } from "@/components/ui/Chip";
 import { PublishIdeaButton } from "@/components/idea/PublishIdeaButton";
 import { IDEA_STATUS_LABEL, ideaMetrics, relativeTime } from "@/lib/format";
 import { getSnapshot } from "@/lib/queries";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 
 export const dynamic = "force-dynamic";
 

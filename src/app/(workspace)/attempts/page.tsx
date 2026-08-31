@@ -8,7 +8,7 @@ import {
   relativeTime,
 } from "@/lib/format";
 import { getSnapshot } from "@/lib/queries";
-import Link from "next/link";
+import Link from "@/components/ui/NavigationLink";
 
 export const dynamic = "force-dynamic";
 

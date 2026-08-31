@@ -3,6 +3,7 @@ import { createSeed } from "./seed";
 import { recomputeIdeaStatus } from "./format";
 import { mutateJsonDocument, readJsonFile, writeJsonFile } from "./json-store";
 import type { Database } from "./types";
+import { cache } from "react";
 
 const DB_FILE = "db.json";
 
@@ -41,6 +42,9 @@ export async function readDb(): Promise<Database> {
   const parsed = await readJsonFile<Database>(DB_FILE);
   return loadDatabase(parsed);
 }
+
+// Request-scoped only: mutations keep using readDb for a fresh store read.
+export const readDbForRender = cache(readDb);
 
 export async function writeDb(db: Database) {
   const snapshot = clone(normalizeDb(db));

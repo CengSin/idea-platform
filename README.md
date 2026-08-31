@@ -87,7 +87,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) and register a local account. Content is stored in `data/db.json`; accounts and sessions are stored in `data/auth.json`.
+Open [http://localhost:3001](http://localhost:3001). Visitors enter the public explore page; registering or signing in opens the workspace. Content is stored in `data/db.json`; accounts and sessions are stored in `data/auth.json`.
 
 ### Backend API
 
@@ -117,6 +117,12 @@ All write operations require `user_confirmed: true`. Attempt updates and work pu
 When publishing a work, pass a public `external_url`. The platform reads `og:image` / `twitter:image` as the cover, then falls back to the site icon; `cover_url` is only for an explicit override.
 
 ### Public access
+
+`/explore` is the guest entrance, and `/explore/:id` shows a public idea and its public works. Only published public ideas and works belonging to public, non-abandoned attempts are exposed. Drafts, unlisted/private ideas, account data, notifications, and execution prompts are excluded. Public responses are not cached, so visibility changes apply on the next request. Participation still requires authentication; login and registration preserve the selected idea as the return destination.
+
+Page reads reuse data only within the current request and never wait for external cover scraping. Covers are resolved on work publication, with browser fallbacks for older content. Navigation includes loading placeholders and pending feedback. Background updates run at most once every 30 seconds while the page is visible and no editor is active.
+
+Run `npm test` for the public-data isolation, redirect safety, cover, and persistence tests, and `npm run build` for production compilation and type validation.
 
 When deploying to another domain:
 
