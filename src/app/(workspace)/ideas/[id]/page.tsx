@@ -2,7 +2,7 @@ import { PageFrame } from "@/components/chrome/PageFrame";
 import { AgentContextPanel } from "@/components/idea/AgentContextPanel";
 import { DraftIdeaActions } from "@/components/idea/DraftIdeaActions";
 import { IdeaHeader } from "@/components/idea/IdeaHeader";
-import { Lineage, LineageRail } from "@/components/idea/Lineage";
+import { Lineage } from "@/components/idea/Lineage";
 import { WorkGallery } from "@/components/idea/WorkGallery";
 import { Chip } from "@/components/ui/Chip";
 import { IDEA_STATUS_LABEL } from "@/lib/format";
@@ -46,14 +46,13 @@ export default async function IdeaDetailPage({
           isOwner={isOwner}
         />
 
-        <div className="mt-10 flex gap-6">
-          <div className="hidden pt-10 md:block">
-            <LineageRail />
-          </div>
-          <div className="min-w-0 flex-1">
-            <Lineage db={db} attempts={attempts} works={works} currentUserId={currentUserId} />
-          </div>
-        </div>
+        <Lineage
+          db={db}
+          attempts={attempts}
+          works={works}
+          currentUserId={currentUserId}
+          ideaTitle={idea.title}
+        />
 
         <div className="mt-4 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <WorkGallery works={works} />

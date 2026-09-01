@@ -916,15 +916,27 @@ button:active, .pressable:active { transition-duration: 60ms; }
 .join-idea-card { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; min-height: 330px; padding: 28px; border: 1px dashed rgba(232,184,106,0.2); border-radius: 20px; background: radial-gradient(ellipse at 0 100%,rgba(232,184,106,0.04),transparent); }
 .how-section { margin-top: 72px; padding-top: 36px; border-top: 1px solid var(--color-line); }
 .how-card { padding: 24px; border-radius: 18px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,228,196,0.07); }
-.lineage-heading, .lineage-row { grid-template-columns: 172px 1fr 1fr 1fr 280px; }
+.lineage-tree { max-width: 920px; }
+.lineage-tree-root { display: flex; align-items: center; gap: 14px; }
+.lineage-tree-branches { position: relative; margin-left: 24px; padding: 20px 0 0 36px; }
+.lineage-tree-branches::before { content: ""; position: absolute; left: 0; top: 0; width: 1px; height: 30px; background: var(--color-active-deep); }
+.lineage-tree-branch { position: relative; }
+.lineage-tree-branch + .lineage-tree-branch { margin-top: 22px; }
+.lineage-tree-branch::before { content: ""; position: absolute; left: -36px; top: 29px; width: 25px; height: 1px; background: var(--color-active-deep); }
+.lineage-tree-branch:not(:last-child)::after { content: ""; position: absolute; left: -36px; top: 29px; bottom: -51px; width: 1px; background: linear-gradient(var(--color-active-deep), var(--color-line-strong)); }
+.lineage-tree-branch.is-dim { opacity: .58; }
+.lineage-tree-attempt { display: flex; align-items: center; gap: 12px; min-height: 58px; max-width: 620px; padding: 11px 14px; border-radius: 18px; }
+.lineage-tree-status { flex-shrink: 0; color: var(--color-active); font-size: 11px; }
+.lineage-tree-works { position: relative; display: grid; gap: 10px; margin: 0 0 0 18px; padding: 12px 0 0 30px; }
+.lineage-tree-works::before { content: ""; position: absolute; left: 0; top: 0; bottom: 38px; width: 1px; background: var(--color-line-strong); }
+.lineage-tree-work-row { position: relative; }
+.lineage-tree-work-row::before { content: ""; position: absolute; left: -30px; top: 38px; width: 20px; height: 1px; background: var(--color-line-strong); }
+.lineage-tree-work { display: flex; align-items: center; width: min(100%, 560px); overflow: hidden; border-radius: 16px; }
+.lineage-tree-progress { position: relative; display: flex; align-items: center; gap: 9px; min-height: 36px; margin-left: 18px; padding: 10px 0 0 30px; color: var(--color-muted); font-size: 12px; }
+.lineage-tree-progress::before { content: ""; position: absolute; left: 0; top: 0; width: 1px; height: 28px; background: var(--color-line-strong); }
+.lineage-tree-progress::after { content: ""; position: absolute; left: 0; top: 27px; width: 20px; height: 1px; background: var(--color-line-strong); }
 
 @media (max-width: 1023px) {
-  .lineage-heading { display: none; }
-  .lineage-row { grid-template-columns: repeat(3, minmax(0,1fr)); padding: 18px; border: 1px solid var(--color-line); border-radius: 20px; background: rgba(36,30,24,0.4); }
-  .lineage-name, .lineage-work { grid-column: 1 / -1; }
-  .lineage-stage { min-height: 24px; margin: 0 0 20px; }
-  .lineage-stage::after { content: attr(data-stage); position: absolute; top: 25px; left: 50%; transform: translateX(-50%); white-space: nowrap; color: var(--color-muted); font-size: 11px; }
-  .lineage-work > a > span.absolute { display: none; }
   .explore-hero { grid-template-columns: 1fr 0.95fr; gap: 10px; }
   .garden-card { padding: 13px 11px; gap: 8px; }
   .garden-card strong { font-size: 10px; }
@@ -932,6 +944,12 @@ button:active, .pressable:active { transition-duration: 60ms; }
   .garden-caption { font-size: 9px; }
 }
 @media (max-width: 767px) {
+  .lineage-tree-branches { margin-left: 20px; padding-left: 24px; }
+  .lineage-tree-branch::before { left: -24px; width: 16px; }
+  .lineage-tree-branch:not(:last-child)::after { left: -24px; }
+  .lineage-tree-attempt { padding: 10px 12px; }
+  .lineage-tree-works, .lineage-tree-progress { margin-left: 10px; padding-left: 20px; }
+  .lineage-tree-work-row::before { left: -20px; width: 12px; }
   .explore-hero { grid-template-columns: 1fr; gap: 8px; padding: 40px 0 30px; }
   .explore-title { font-size: 47px; }
   .idea-garden { height: 290px; max-width: 430px; width: 100%; margin: 4px auto 0; }
