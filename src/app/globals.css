@@ -306,11 +306,11 @@ a {
 .discovery-no-results h2 { font-size: 19px; margin-top: 20px; }
 .discovery-no-results p { font-size: 13px; color: var(--color-muted); margin-top: 10px; }
 .discovery-no-results button { margin-top: 22px; font-size: 13px; padding: 9px 15px; border-radius: 12px; color: var(--color-idea); background: rgba(232, 184, 106, .1); }
-.discovery-digest { border-radius: 24px; padding: 20px 16px 0; min-height: 0; overflow: auto; scrollbar-width: thin; }
+.discovery-digest { display: flex; flex: 1 1 0; flex-direction: column; border-radius: 24px; padding: 20px 16px 0; min-height: 0; overflow: auto; scrollbar-width: thin; }
 .discovery-digest-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 4px 16px; }
 .discovery-digest-heading h2 { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
 .discovery-digest-heading > span { font-size: 10px; color: var(--color-muted); }
-.discovery-events { list-style: none; margin: 0; padding: 0; }
+.discovery-events { flex: 1; list-style: none; margin: 0; padding: 0; }
 .discovery-events > li + li { border-top: 1px solid var(--color-line); }
 .discovery-event { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 16px 4px; text-align: left; border-radius: 10px; }
 .discovery-event-icon { width: 28px; height: 28px; flex-shrink: 0; border-radius: 9px; display: grid; place-items: center; color: var(--color-active); background: rgba(111, 212, 203, .08); }
@@ -326,7 +326,7 @@ a {
 .discovery-event-history li + li { margin-top: 14px; }
 .discovery-event-history time { font-size: 10px; }
 .discovery-event-history p { color: #dfd6c9; overflow-wrap: anywhere; line-height: 1.8; margin-top: 4px; white-space: pre-wrap; }
-.discovery-digest-empty { font-size: 12px; line-height: 1.8; color: var(--color-muted); padding: 12px 4px 24px; }
+.discovery-digest-empty { flex: 1; font-size: 12px; line-height: 1.8; color: var(--color-muted); padding: 12px 4px 24px; }
 .discovery-digest-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--color-line); padding: 16px 4px; font-size: 11px; color: var(--color-muted); }
 .discovery-sidebar-note { display: flex; align-items: flex-start; gap: 10px; padding: 0 16px; color: var(--color-muted); }
 .discovery-sidebar-note > svg { color: var(--color-idea); flex-shrink: 0; margin-top: 3px; }
