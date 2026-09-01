@@ -17,6 +17,7 @@ import {
   userById,
   WORK_TYPE_LABEL,
 } from "@/lib/format";
+import { ideaGrowthPath } from "@/lib/idea-graph";
 import { type Database, type Idea } from "@/lib/types";
 import { ArrowLeft, Plus, Search, SlidersHorizontal, Users, X } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
@@ -59,7 +60,6 @@ export function IdeaGraph({
   const router = useRouter();
   const sheets = useSheets();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [hoverId, setHoverId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"graph" | "list">("graph");
   const [tag, setTag] = useState<string | null>(null);
@@ -101,26 +101,17 @@ export function IdeaGraph({
   const selected = selectedId ? ideas.find((i) => i.id === selectedId) : undefined;
 
   const neighborhood = useMemo(() => {
-    if (!selected) return { attempts: [], works: [], forks: [] };
-    const attempts = db.attempts.filter(
-      (a) => a.ideaId === selected.id && a.featuredOnGraph && a.graph,
-    );
-    const works = db.works.filter(
-      (w) =>
-        w.status === "published" &&
-        w.graph &&
-        attempts.some((a) => a.id === w.attemptId || a.workIds.includes(w.id)),
-    );
-    const forks = db.ideas
-      .filter((i) => i.parentIdeaId === selected.id && i.status !== "draft")
-      .slice(0, 3);
-    return { attempts, works, forks };
+    if (!selected) return { attempts: [], works: [] };
+    return ideaGrowthPath(db, selected.id);
   }, [db, selected]);
 
   const isFocus = view === "graph" && Boolean(selected);
   const filteredIdeas = ideas.filter(match);
 
   const metrics = selected ? metricsById.get(selected.id)! : null;
+  const selectedRadius = metrics
+    ? Math.min(30, 10 + metrics.workCount * 3 + metrics.activeAttemptCount * 1.4)
+    : 0;
   const myAttempt = selected
     ? db.attempts.find(
         (a) =>
@@ -218,14 +209,12 @@ export function IdeaGraph({
   const selectIdea = (idea: Idea) => {
     returnFocusId.current = idea.id;
     setView("graph");
-    setHoverId(null);
     setSelectedId(idea.id);
     centerOn(idea, true, true);
   };
 
   const showOverview = () => {
     stopSpring();
-    setHoverId(null);
     setSelectedId(null);
   };
 
@@ -255,7 +244,7 @@ export function IdeaGraph({
     const el = viewport.current;
     if (!el) return { x, y };
     const { width, height } = el.getBoundingClientRect();
-    const points = [...ideas.map((idea) => idea.graph), ...neighborhood.attempts.map((attempt) => attempt.graph!), ...neighborhood.works.map((work) => work.graph!)];
+    const points = [selected!.graph, ...neighborhood.attempts.map((attempt) => attempt.graph!), ...neighborhood.works.map((work) => work.graph!)];
     const xs = points.map((point) => point.x);
     const ys = points.map((point) => point.y);
     const minX = Math.min(...xs) * k;
@@ -358,8 +347,6 @@ export function IdeaGraph({
   };
 
   const { x, y, k } = cam.current;
-  const showLabels = k >= 0.48 || !selected;
-  const hovered = hoverId ? ideas.find((i) => i.id === hoverId) : null;
 
   return (
     <div className="discovery-page relative h-full min-h-0">
@@ -402,24 +389,6 @@ export function IdeaGraph({
                   <stop offset="100%" stopColor="#C4893A" />
                 </radialGradient>
               </defs>
-              {ideas.map((idea) => {
-                if (!idea.parentIdeaId) return null;
-                const parent = ideas.find((p) => p.id === idea.parentIdeaId);
-                if (!parent) return null;
-                const related =
-                  idea.id === selected?.id ||
-                  parent.id === selected?.id ||
-                  idea.parentIdeaId === selected?.id;
-                return (
-                  <path
-                    key={`kin-${idea.id}`}
-                    d={quadPath(parent.graph.x, parent.graph.y, idea.graph.x, idea.graph.y, 22)}
-                    fill="none"
-                    stroke={related ? "rgba(232,184,106,0.38)" : "rgba(232,184,106,0.16)"}
-                    strokeWidth={related ? 1.15 : 0.8}
-                  />
-                );
-              })}
               {selected
                 ? neighborhood.attempts.map((attempt) => {
                     const st = effectiveAttemptStatus(attempt);
@@ -457,89 +426,44 @@ export function IdeaGraph({
                     );
                   })
                 : null}
-              {selected
-                ? neighborhood.forks.map((fork) => (
-                    <path
-                      key={fork.id}
-                      d={quadPath(
-                        selected.graph.x,
-                        selected.graph.y,
-                        fork.graph.x,
-                        fork.graph.y,
-                        24,
-                      )}
-                      fill="none"
-                      stroke="rgba(242,166,90,0.4)"
-                      strokeWidth="1.2"
-                      className="edge-draw-solid"
-                    />
-                  ))
-                : null}
             </svg>
 
-            {ideas.map((idea) => {
-              const m = metricsById.get(idea.id)!;
-              const r = Math.min(30, 10 + m.workCount * 3 + m.activeAttemptCount * 1.4);
-              const isSel = idea.id === selected?.id;
-              const visible = match(idea);
-              const isFork = idea.parentIdeaId === selected?.id;
-              const distant = selected
-                ? !isSel && idea.parentIdeaId !== selected.id && idea.id !== selected.parentIdeaId
-                : false;
-              const live = idea.status === "evolving" || idea.status === "realized";
-              return (
-                <button
-                  key={idea.id}
-                  data-node
-                  type="button"
-                  aria-label={`展开 ${idea.title}`}
-                  aria-pressed={isSel}
-                  onClick={() => {
-                    selectIdea(idea);
-                  }}
-                  onDoubleClick={() => router.push(`/ideas/${idea.id}`)}
-                  onPointerEnter={() => setHoverId(idea.id)}
-                  onPointerLeave={() => setHoverId((id) => (id === idea.id ? null : id))}
-                  className="idea-node absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{
-                    left: idea.graph.x,
-                    top: idea.graph.y,
-                    opacity: isSel ? 1 : visible ? (distant && !isFork ? 0.22 : 1) : 0.08,
-                    zIndex: isSel ? 4 : hoverId === idea.id ? 3 : 1,
-                    cursor: "pointer",
-                  }}
-                >
-                  <span className="idea-node-inner">
-                    <span
-                      className={`idea-shell ${isSel ? "is-selected" : live ? "is-live" : ""} ${idea.status === "dormant" ? "is-dormant" : ""}`}
-                      style={{ width: r * 2, height: r * 2 }}
-                    >
-                      <span className="idea-bloom" />
-                      {live || isSel ? <span className="idea-orbit" /> : null}
-                      {isSel ? <span className="idea-orbit outer" /> : null}
-                      {m.workCount > 0 ? <span className="idea-orbit work" /> : null}
-                      <span className="idea-orb">
-                        <span className="idea-spec" />
-                        {r >= 14 ? <SproutIcon className="idea-core" /> : null}
-                      </span>
-                      {m.workCount > 0 && !isSel ? (
-                        <span className="idea-badge">{m.workCount} 作品</span>
-                      ) : null}
+            {selected && metrics ? (
+              <button
+                key={selected.id}
+                data-node
+                type="button"
+                aria-label={`展开 ${selected.title}`}
+                aria-pressed="true"
+                onDoubleClick={() => router.push(`/ideas/${selected.id}`)}
+                className="idea-node absolute -translate-x-1/2 -translate-y-1/2"
+                style={{
+                  left: selected.graph.x,
+                  top: selected.graph.y,
+                  zIndex: 4,
+                  cursor: "pointer",
+                }}
+              >
+                <span className="idea-node-inner">
+                  <span
+                    className={`idea-shell is-selected ${selected.status === "dormant" ? "is-dormant" : ""}`}
+                    style={{
+                      width: selectedRadius * 2,
+                      height: selectedRadius * 2,
+                    }}
+                  >
+                    <span className="idea-bloom" />
+                    <span className="idea-orbit" />
+                    <span className="idea-orbit outer" />
+                    {metrics.workCount > 0 ? <span className="idea-orbit work" /> : null}
+                    <span className="idea-orb">
+                      <span className="idea-spec" />
+                      <SproutIcon className="idea-core" />
                     </span>
-                    {showLabels && !isSel ? (
-                      <span
-                        className="idea-label"
-                        style={{
-                          color: hoverId === idea.id ? "#f6f0e6" : "rgba(246,240,230,0.78)",
-                        }}
-                      >
-                        {idea.title}
-                      </span>
-                    ) : null}
                   </span>
-                </button>
-              );
-            })}
+                </span>
+              </button>
+            ) : null}
 
             {neighborhood.attempts.map((attempt, i) => {
               const owner = userById(db, attempt.ownerId);
@@ -652,20 +576,6 @@ export function IdeaGraph({
               </div>
             ) : null}
 
-            {hovered && hovered.id !== selected?.id ? (
-              <div
-                className="glass pointer-events-none absolute w-[220px] rounded-2xl px-3 py-2.5"
-                style={{
-                  left: hovered.graph.x + 28,
-                  top: hovered.graph.y,
-                  transform: "translateY(-50%)",
-                  zIndex: 6,
-                }}
-              >
-                <div className="text-[13px] tracking-[-0.02em] text-artifact">{hovered.title}</div>
-                <div className="mt-1 text-[12px] leading-snug text-muted">{hovered.summary}</div>
-              </div>
-            ) : null}
           </div>
         ) : (
           <div ref={overview} onScroll={(e) => { overviewScroll.current = e.currentTarget.scrollTop; }} className="discovery-overview scroll-thin" data-node>
