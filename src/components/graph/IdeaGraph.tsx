@@ -641,7 +641,7 @@ export function IdeaGraph({
           {isFocus ? <button type="button" className="discovery-back glass pressable" onClick={showOverview}><ArrowLeft aria-hidden="true" className="h-4 w-4" />返回项目地图</button> : null}
         </div>
 
-        <aside className="graph-activity pointer-events-auto absolute right-4 top-[96px] bottom-5 flex w-[300px] flex-col gap-4">
+        <aside className="graph-activity pointer-events-auto absolute right-4 top-4 bottom-5 flex w-[300px] flex-col gap-4">
           <ActivityDigest db={db} ideas={ideas} onSelect={selectIdea} />
           <div className="discovery-sidebar-note"><SproutIcon aria-hidden="true" className="h-5 w-5" /><p>一个想法，可以有很多种实现。<br />找到你在意的，开始下一条路径。</p></div>
           {isFocus ? <button type="button" onClick={() => selected && centerOn(selected, true, true)} className="glass pressable mt-auto flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl text-[13.5px] hover:bg-white/6"><SlidersHorizontal aria-hidden="true" className="h-4 w-4" />整理视图</button> : null}
