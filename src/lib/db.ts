@@ -16,6 +16,8 @@ function normalizeDb(db: Database) {
     user.projectLinks ??= [];
   }
   for (const idea of db.ideas) {
+    // Data written before draft support is published by definition.
+    if (!idea.status) idea.status = "published";
     idea.status = recomputeIdeaStatus(idea, db);
     const activityTimes = [
       idea.updatedAt,

@@ -3,6 +3,7 @@ import { attemptById, ideaById, workById } from "@/lib/format";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAgentRequestIdentity, getCurrentUser } from "@/lib/auth";
+import { canAccessIdea } from "@/lib/content-access";
 import { deleteWork, updateWork } from "@/lib/ops";
 import { WorkMutationError, workRequestBody } from "@/lib/work-management";
 
@@ -45,7 +46,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -54,6 +55,12 @@ export async function GET(
   if (!work) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const idea = ideaById(db, work.ideaId);
   const attempt = attemptById(db, work.attemptId);
+  const hasAuthorization = req.headers.has("authorization");
+  const agent = hasAuthorization ? await getAgentRequestIdentity(req) : null;
+  const me = hasAuthorization ? agent?.user : await getCurrentUser();
+  if (!idea || !canAccessIdea(idea, me?.id) || (agent && agent.grant.attemptId !== work.attemptId)) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
   return NextResponse.json({
     work,
     attribution: {

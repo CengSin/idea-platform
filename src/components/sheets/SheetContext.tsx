@@ -3,7 +3,12 @@
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field, Select, TextArea, TextInput } from "@/components/ui/Field";
-import { adoptIdeaAction, publishIdeaAction } from "@/lib/actions";
+import {
+  adoptIdeaAction,
+  publishIdeaAction,
+  saveIdeaDraftAction,
+  updateIdeaDraftAction,
+} from "@/lib/actions";
 import {
   buildAdoptionPrompt,
   buildIdeaContext,
@@ -22,6 +27,7 @@ import {
 
 type Ctx = {
   openPublishIdea: () => void;
+  openEditIdea: (idea: Idea) => void;
   openAdopt: (idea: Idea) => void;
 };
 
@@ -41,7 +47,7 @@ const defaultLicense: License = {
 
 export function SheetProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [publishIdea, setPublishIdea] = useState(false);
+  const [publishIdea, setPublishIdea] = useState<Idea | true | null>(null);
   const [adopt, setAdopt] = useState<Idea | null>(null);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +57,10 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
       openPublishIdea: () => {
         setError(null);
         setPublishIdea(true);
+      },
+      openEditIdea: (idea) => {
+        setError(null);
+        setPublishIdea(idea);
       },
       openAdopt: (idea) => {
         setError(null);
@@ -64,28 +74,35 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
     <SheetCtx.Provider value={value}>
       {children}
       <PublishIdeaDialog
-        open={publishIdea}
+        idea={publishIdea === true ? null : publishIdea}
+        open={Boolean(publishIdea)}
         error={error}
         pending={pending}
-        onClose={() => setPublishIdea(false)}
-        onSubmit={(form) => {
+        onClose={() => setPublishIdea(null)}
+        onSubmit={(form, intent) => {
           start(async () => {
             try {
-              const result = await publishIdeaAction({
+              const editing = publishIdea !== true ? publishIdea : null;
+              const input = {
                 title: form.title,
                 summary: form.summary,
                 problem: form.problem,
-                whyItMatters: form.problem,
-                constraints: [],
-                openQuestions: [],
-                desiredOutputs: [],
-                tags: [],
-                visibility: "public",
-                license: defaultLicense,
-                existingAttempts: [],
-                viaAgent: false,
-              });
-              setPublishIdea(false);
+                whyItMatters: form.whyItMatters || form.problem,
+                constraints: editing?.constraints ?? [],
+                openQuestions: editing?.openQuestions ?? [],
+                desiredOutputs: editing?.desiredOutputs ?? [],
+                tags: editing?.tags ?? [],
+                visibility: editing?.visibility ?? "public" as const,
+                license: editing?.license ?? defaultLicense,
+                existingAttempts: editing?.existingAttempts ?? [],
+                viaAgent: editing?.author.kind === "agent",
+              };
+              const result = editing
+                ? await updateIdeaDraftAction(editing.id, input)
+                : intent === "draft"
+                  ? await saveIdeaDraftAction(input)
+                  : await publishIdeaAction(input);
+              setPublishIdea(null);
               router.push(`/ideas/${result.idea_id}`);
             } catch (cause) {
               setError(cause instanceof Error ? cause.message : "发布失败");
@@ -125,43 +142,51 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
 }
 
 function PublishIdeaDialog({
+  idea,
   open,
   onClose,
   onSubmit,
   pending,
   error,
 }: {
+  idea: Idea | null;
   open: boolean;
   onClose: () => void;
-  onSubmit: (form: { title: string; summary: string; problem: string }) => void;
+  onSubmit: (
+    form: { title: string; summary: string; problem: string; whyItMatters: string },
+    intent: "draft" | "publish",
+  ) => void;
   pending: boolean;
   error: string | null;
 }) {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [problem, setProblem] = useState("");
+  const [whyItMatters, setWhyItMatters] = useState("");
 
   useEffect(() => {
     if (!open) return;
-    setTitle("");
-    setSummary("");
-    setProblem("");
-  }, [open]);
+    setTitle(idea?.title ?? "");
+    setSummary(idea?.summary ?? "");
+    setProblem(idea?.problem ?? "");
+    setWhyItMatters(idea?.whyItMatters ?? "");
+  }, [open, idea]);
 
-  const valid = Boolean(title.trim() && summary.trim() && problem.trim());
+  const canSave = Boolean(title.trim());
+  const canPublish = Boolean(title.trim() && summary.trim() && problem.trim());
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title="发布一个想法"
-      subtitle="先说清楚你的 Idea 就够了，之后可以在讨论与承接中继续完善。"
+      title={idea ? "编辑想法草稿" : "创建一个想法"}
+      subtitle="可以先保存为草稿，在草稿中创建项目、生成 AGENTS.md 和持续同步进展；准备好后再统一发布。"
     >
       <form
         className="flex flex-col gap-4"
         onSubmit={(event) => {
           event.preventDefault();
-          if (valid) onSubmit({ title, summary, problem });
+          if (canPublish && !idea) onSubmit({ title, summary, problem, whyItMatters }, "publish");
         }}
       >
         <Field label="标题">
@@ -186,15 +211,36 @@ function PublishIdeaDialog({
             placeholder="现在有什么不方便、不合理或尚未被满足？"
           />
         </Field>
+        <Field label="为什么值得做（可选）">
+          <TextArea
+            value={whyItMatters}
+            onChange={(event) => setWhyItMatters(event.target.value)}
+            placeholder="它为什么重要，会给谁带来什么改变？"
+          />
+        </Field>
         <p className="text-[12px] leading-relaxed text-muted">
-          默认公开，允许他人实现与衍生；商用时需要署名。
+          草稿及其项目、进展和作品只对你可见。发布草稿后，这些内容会按各自的公开设置一起发布。
         </p>
         {error ? <p className="text-[13px] text-blocked">{error}</p> : null}
         <div className="flex justify-end gap-2">
           <Button type="button" onClick={onClose}>取消</Button>
-          <Button type="submit" tone="idea" disabled={!valid || pending}>
-            {pending ? "正在发布…" : "发布想法"}
+          <Button
+            type="button"
+            disabled={!canSave || pending}
+            onClick={() => onSubmit({ title, summary, problem, whyItMatters }, "draft")}
+          >
+            {pending ? "正在保存…" : idea ? "保存修改" : "保存草稿"}
           </Button>
+          {!idea ? (
+            <Button
+              type="button"
+              tone="idea"
+              disabled={!canPublish || pending}
+              onClick={() => onSubmit({ title, summary, problem, whyItMatters }, "publish")}
+            >
+              {pending ? "正在发布…" : "直接发布"}
+            </Button>
+          ) : null}
         </div>
       </form>
     </Dialog>

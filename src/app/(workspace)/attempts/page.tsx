@@ -48,6 +48,7 @@ export default async function AttemptsPage() {
                     </td>
                     <td className="px-5 py-4 text-muted">
                       <Link href={`/ideas/${attempt.ideaId}`}>{idea?.title}</Link>
+                      {idea?.status === "draft" ? <span className="ml-2 text-[11px] text-idea">草稿中</span> : null}
                     </td>
                     <td className="px-5 py-4">
                       <Chip

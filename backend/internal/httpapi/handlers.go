@@ -47,7 +47,7 @@ func (s *Server) publishIdea(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
 		return
 	}
-	if !requireConfirmed(c, body.UserConfirmed, "发布前必须向用户展示最终公开内容，并设置 user_confirmed=true。") {
+	if !body.AsDraft && !requireConfirmed(c, body.UserConfirmed, "发布前必须向用户展示最终公开内容，并设置 user_confirmed=true。") {
 		return
 	}
 	out, err := s.Svc.PublishIdea(c.Request.Context(), userID(c), service.PublishIdeaInput{
@@ -63,6 +63,7 @@ func (s *Server) publishIdea(c *gin.Context) {
 		License:          body.License,
 		ExistingAttempts: pickExisting(body.ExistingAttempts, body.ExistingAlt),
 		ViaAgent:         body.ViaAgent || body.ViaAgentAlt,
+		AsDraft:          body.AsDraft,
 	})
 	if err != nil {
 		writeErr(c, err)
@@ -81,7 +82,7 @@ func (s *Server) getIdea(c *gin.Context) {
 }
 
 func (s *Server) ideaContext(c *gin.Context) {
-	out, err := s.Svc.IdeaContext(c.Param("id"), originFrom(c, s.Cfg.AppOrigin))
+	out, err := s.Svc.IdeaContext(userID(c), c.Param("id"), originFrom(c, s.Cfg.AppOrigin))
 	if err != nil {
 		writeErr(c, err)
 		return
@@ -152,7 +153,7 @@ func (s *Server) adoptIdea(c *gin.Context) {
 }
 
 func (s *Server) getAttempt(c *gin.Context) {
-	out, err := s.Svc.GetAttempt(c.Param("id"))
+	out, err := s.Svc.GetAttempt(userID(c), c.Param("id"))
 	if err != nil {
 		writeErr(c, err)
 		return
@@ -222,7 +223,7 @@ func (s *Server) publishWork(c *gin.Context) {
 }
 
 func (s *Server) getWork(c *gin.Context) {
-	out, err := s.Svc.GetWork(c.Param("id"))
+	out, err := s.Svc.GetWork(userID(c), c.Param("id"))
 	if err != nil {
 		writeErr(c, err)
 		return

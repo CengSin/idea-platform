@@ -49,7 +49,7 @@ ${list(idea.desiredOutputs)}
 
 ## 平台连接
 
-- API Base URL：${baseUrl}
+${idea.status === "draft" ? "当前来源 Idea 仍是草稿。你可以正常同步状态并发布作品；这些内容会先保存在草稿内，只有 Idea 作者发布草稿后才会对外可见。\n\n" : ""}- API Base URL：${baseUrl}
 - Attempt API：${baseUrl}/api/v1/attempts/${attempt.id}
 - Idea Context API：${baseUrl}/api/v1/ideas/${idea.id}/context
 - Work API：${baseUrl}/api/v1/works
@@ -71,7 +71,8 @@ ${list(attempt.workIds.map((id) => `${id} — ${baseUrl}/api/v1/works/${id}`), "
 2. 获取最新 Idea Context：
 
    \`\`\`bash
-   curl -fsS "${baseUrl}/api/v1/ideas/${idea.id}/context"
+   curl -fsS "${baseUrl}/api/v1/ideas/${idea.id}/context" \\
+     -H "Authorization: Bearer ${token}"
    \`\`\`
 
 3. 复述目标、约束与当前假设，给出可验证的实施计划。

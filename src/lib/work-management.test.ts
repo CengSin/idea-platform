@@ -108,4 +108,14 @@ test("every generated AGENTS.md includes branch-specific work IDs, PATCH/DELETE 
     assert.ok(markdown.includes("work — https://platform.example/api/v1/works/work"));
     for (const text of ["-X PATCH \"https://platform.example/api/v1/works/<work_id>\"", "-X DELETE", "attempt.workIds", "user_confirmed", "删除不可恢复", "403", "testing", "贡献署名"]) assert.ok(markdown.includes(text), text);
   }
+  const db = fixture();
+  const markdown = buildAgentsMd({
+    idea: { ...db.ideas[0], status: "draft" },
+    attempt: db.attempts[0],
+    baseUrl: "https://platform.example",
+    token: "draft-token",
+    tokenExpiresAt: at,
+  });
+  assert.ok(markdown.includes("当前来源 Idea 仍是草稿"));
+  assert.ok(markdown.includes('-H "Authorization: Bearer draft-token"'));
 });

@@ -10,6 +10,8 @@ Discover ideas, let people implement them independently, and track how they grow
 
 Idea Platform 是一个想法协作平台：发布想法、承接实现、跟踪进展，并最终把结果发布为作品。首页用图谱展示想法、承接与作品之间的关系。登录用户还可以给承接分支生成 `AGENTS.md` 和专属 Token，让 Agent 自动回写状态。
 
+新想法可以先保存为草稿。草稿作者仍可创建承接项目、生成 `AGENTS.md`、同步状态并发布作品；整棵草稿内容在此期间仅作者可见，发布想法时统一进入公开链路。旧数据没有草稿标记时按已发布内容迁移。
+
 登录后的发现首页默认展示项目摘要、代表承接与最新作品封面，按可用宽度排列，较多项目使用紧凑预览。点击「生长路径」后，桌面展开可拖拽图谱，手机展示可滚动的承接和作品详情。右侧动态按项目与日期合并，优先展示作品发布，完整记录可按需展开；搜索、主题筛选和发布入口常驻可用。
 
 ### 技术栈
@@ -46,7 +48,9 @@ go run ./cmd/api
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| `POST` | `/api/v1/ideas` | 发布想法 |
+| `POST` | `/api/v1/ideas` | 创建想法；`as_draft: true` 保存草稿 |
+| `PATCH` | `/api/v1/ideas/:id` | 编辑草稿；`publish: true` 确认发布 |
+| `DELETE` | `/api/v1/ideas/:id` | 删除自己的草稿及关联内容 |
 | `POST` | `/api/v1/attempts` | 承接想法 |
 | `PATCH` | `/api/v1/attempts/:id` | 更新承接进展 |
 | `POST` | `/api/v1/works` | 发布作品 |
@@ -84,6 +88,8 @@ npm run dev:public      # 一并启动 Next.js 再开隧道
 
 Idea Platform is a collaboration space for ideas: publish an idea, adopt it as an independent implementation, track progress, and ship a work. The home page is a graph of ideas, attempts, and works. Signed-in users can generate an `AGENTS.md` plus a branch-scoped token so an agent can report status back to the platform.
 
+New ideas can be kept as drafts. Their authors can still create an implementation branch, generate `AGENTS.md`, sync progress, and ship works; the full tree remains author-only until publishing the idea releases it together. Historical rows without a draft state migrate as published.
+
 The signed-in discovery page starts with responsive project summaries, representative attempts, and the latest published work covers. Larger collections use compact previews. Selecting a project opens the draggable graph on desktop or readable attempt/work details on mobile. Activity is grouped by project and date, with work publications highlighted and complete records available on demand.
 
 ### Stack
@@ -120,7 +126,9 @@ All write operations require `user_confirmed: true`. Agent attempt updates and w
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/v1/ideas` | Publish an idea |
+| `POST` | `/api/v1/ideas` | Create an idea; use `as_draft: true` to save a draft |
+| `PATCH` | `/api/v1/ideas/:id` | Edit or publish an owned draft |
+| `DELETE` | `/api/v1/ideas/:id` | Delete an owned draft and its related content |
 | `POST` | `/api/v1/attempts` | Adopt an idea |
 | `PATCH` | `/api/v1/attempts/:id` | Update attempt progress |
 | `POST` | `/api/v1/works` | Publish a work |

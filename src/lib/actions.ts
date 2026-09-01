@@ -16,7 +16,11 @@ import {
   followIdea,
   markNotificationsRead,
   publishIdea,
+  publishIdeaDraft,
   removeProjectLink,
+  saveIdeaDraft,
+  updateIdeaDraft,
+  deleteIdeaDraft,
 } from "./ops";
 
 function refresh() {
@@ -26,6 +30,37 @@ function refresh() {
 export async function publishIdeaAction(input: Parameters<typeof publishIdea>[1]) {
   const me = await requireCurrentUser();
   const result = await publishIdea(me.id, input);
+  refresh();
+  return result;
+}
+
+export async function saveIdeaDraftAction(input: Parameters<typeof saveIdeaDraft>[1]) {
+  const me = await requireCurrentUser();
+  const result = await saveIdeaDraft(me.id, input);
+  refresh();
+  return result;
+}
+
+export async function updateIdeaDraftAction(
+  ideaId: string,
+  input: Parameters<typeof updateIdeaDraft>[2],
+) {
+  const me = await requireCurrentUser();
+  const result = await updateIdeaDraft(me.id, ideaId, input);
+  refresh();
+  return result;
+}
+
+export async function publishIdeaDraftAction(ideaId: string) {
+  const me = await requireCurrentUser();
+  const result = await publishIdeaDraft(me.id, ideaId);
+  refresh();
+  return result;
+}
+
+export async function deleteIdeaDraftAction(ideaId: string) {
+  const me = await requireCurrentUser();
+  const result = await deleteIdeaDraft(me.id, ideaId);
   refresh();
   return result;
 }

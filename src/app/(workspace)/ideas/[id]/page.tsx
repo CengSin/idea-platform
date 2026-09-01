@@ -1,5 +1,6 @@
 import { PageFrame } from "@/components/chrome/PageFrame";
 import { AgentContextPanel } from "@/components/idea/AgentContextPanel";
+import { DraftIdeaActions } from "@/components/idea/DraftIdeaActions";
 import { IdeaHeader } from "@/components/idea/IdeaHeader";
 import { Lineage, LineageRail } from "@/components/idea/Lineage";
 import { WorkGallery } from "@/components/idea/WorkGallery";
@@ -21,6 +22,7 @@ export default async function IdeaDetailPage({
   if (!bundle) notFound();
   const { idea, attempts, works, forks, similar, author, metrics, following, myAttempt, db, currentUserId } =
     bundle;
+  const isOwner = idea.author.userId === currentUserId;
 
   return (
       <PageFrame
@@ -34,12 +36,14 @@ export default async function IdeaDetailPage({
           </span>
         }
       >
+        {idea.status === "draft" && isOwner ? <DraftIdeaActions idea={idea} /> : null}
         <IdeaHeader
           idea={idea}
           author={author}
           metrics={metrics}
           following={following}
           myAttemptId={myAttempt?.id}
+          isOwner={isOwner}
         />
 
         <div className="mt-10 flex gap-6">

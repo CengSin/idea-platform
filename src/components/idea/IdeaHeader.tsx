@@ -16,12 +16,14 @@ export function IdeaHeader({
   metrics,
   following,
   myAttemptId,
+  isOwner = false,
 }: {
   idea: Idea;
   author?: User;
   metrics: IdeaMetrics;
   following: boolean;
   myAttemptId?: string;
+  isOwner?: boolean;
 }) {
   const sheets = useSheets();
   const [on, setOn] = useState(following);
@@ -67,7 +69,7 @@ export function IdeaHeader({
             disabled={!!myAttemptId}
           >
             <Users className="h-4 w-4" />
-            {myAttemptId ? "你已承接" : "承接这个想法"}
+            {myAttemptId ? "项目已创建" : idea.status === "draft" && isOwner ? "为草稿创建项目" : "承接这个想法"}
           </Button>
         </div>
         <div className="flex items-center gap-3 text-[13px] text-muted">
@@ -75,7 +77,7 @@ export function IdeaHeader({
             {metrics.totalAttemptCount} 人承接 · {metrics.workCount} 个作品 · {metrics.forkCount}{" "}
             次衍生
           </span>
-          <button
+          {idea.status !== "draft" ? <button
             type="button"
             className="text-idea"
             onClick={() => {
@@ -85,7 +87,7 @@ export function IdeaHeader({
             }}
           >
             {on ? "已关注" : "关注"}
-          </button>
+          </button> : null}
         </div>
       </div>
     </header>

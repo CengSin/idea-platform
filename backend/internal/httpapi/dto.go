@@ -21,6 +21,7 @@ type publishIdeaBody struct {
 	ExistingAlt       []domain.ExistingAttemptRef `json:"existing_attempts"`
 	ViaAgent          bool                        `json:"viaAgent"`
 	ViaAgentAlt       bool                        `json:"via_agent"`
+	AsDraft           bool                        `json:"as_draft"`
 }
 
 type adoptIdeaBody struct {

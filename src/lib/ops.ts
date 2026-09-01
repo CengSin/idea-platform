@@ -6,13 +6,13 @@ import { isPlaceholderCover } from "./cover";
 import { resolveLinkPreview } from "./link-preview";
 import { applyWorkDelete, applyWorkUpdate, ownedWork, parseWorkPatch } from "./work-management";
 import { type AttemptStatus, type Visibility } from "./types";
-import type { License, WorkType } from "./types";
+import type { Idea, License, WorkType } from "./types";
 
 function nowIso() {
   return new Date().toISOString();
 }
 
-export async function publishIdea(userId: string, input: {
+export type IdeaInput = {
   title: string;
   summary: string;
   problem: string;
@@ -25,22 +25,42 @@ export async function publishIdea(userId: string, input: {
   license: License;
   existingAttempts: { title: string; note?: string }[];
   viaAgent?: boolean;
-}) {
+};
+
+function cleanIdeaInput(input: IdeaInput) {
+  return {
+    title: input.title.trim(),
+    summary: input.summary.trim(),
+    problem: input.problem.trim(),
+    whyItMatters: input.whyItMatters.trim(),
+    constraints: input.constraints.map((item) => item.trim()).filter(Boolean),
+    existingAttempts: input.existingAttempts
+      .map((item) => ({ ...item, title: item.title.trim(), note: item.note?.trim() || undefined }))
+      .filter((item) => item.title),
+    openQuestions: input.openQuestions.map((item) => item.trim()).filter(Boolean),
+    desiredOutputs: input.desiredOutputs.map((item) => item.trim()).filter(Boolean),
+    tags: input.tags.map((item) => item.trim()).filter(Boolean),
+  };
+}
+
+function validateIdea(input: ReturnType<typeof cleanIdeaInput>, publishing: boolean) {
+  if (!input.title) throw new Error("请填写想法标题。");
+  if (publishing && (!input.summary || !input.problem)) {
+    throw new Error("发布前请填写简要描述和想解决的问题。");
+  }
+}
+
+async function createIdea(userId: string, input: IdeaInput, status: "draft" | "published") {
+  const clean = cleanIdeaInput(input);
+  validateIdea(clean, status === "published");
   const id = `idea_${nanoid(8)}`;
   const createdAt = nowIso();
   await mutateDb((db) => {
-    const me = db.users.find((u) => u.id === userId)!;
+    const me = db.users.find((u) => u.id === userId);
+    if (!me) throw new Error("用户不存在");
     db.ideas.push({
       id,
-      title: input.title.trim(),
-      summary: input.summary.trim(),
-      problem: input.problem.trim(),
-      whyItMatters: input.whyItMatters.trim(),
-      constraints: input.constraints.filter(Boolean),
-      existingAttempts: input.existingAttempts.filter((x) => x.title),
-      openQuestions: input.openQuestions.filter(Boolean),
-      desiredOutputs: input.desiredOutputs.filter(Boolean),
-      tags: input.tags.filter(Boolean),
+      ...clean,
       author: {
         kind: input.viaAgent ? "agent" : "user",
         userId: me.id,
@@ -48,7 +68,7 @@ export async function publishIdea(userId: string, input: {
       },
       license: input.license,
       visibility: input.visibility,
-      status: "published",
+      status,
       graph: {
         x: (Math.random() - 0.5) * 180,
         y: (Math.random() - 0.5) * 180 + 40,
@@ -56,16 +76,112 @@ export async function publishIdea(userId: string, input: {
       createdAt,
       updatedAt: createdAt,
     });
+    if (status === "published") {
+      db.events.unshift({
+        id: `evt_${nanoid(6)}`,
+        at: createdAt,
+        actorId: me.id,
+        actorName: me.displayName,
+        text: `发布了想法「${clean.title}」`,
+        ideaId: id,
+      });
+    }
+  });
+  return { idea_id: id, url: `/ideas/${id}`, review_status: status };
+}
+
+export async function publishIdea(userId: string, input: IdeaInput) {
+  return createIdea(userId, input, "published");
+}
+
+export async function saveIdeaDraft(userId: string, input: IdeaInput) {
+  return createIdea(userId, input, "draft");
+}
+
+function applyIdeaInput(idea: Idea, input: ReturnType<typeof cleanIdeaInput>) {
+  idea.title = input.title;
+  idea.summary = input.summary;
+  idea.problem = input.problem;
+  idea.whyItMatters = input.whyItMatters;
+  idea.constraints = input.constraints;
+  idea.existingAttempts = input.existingAttempts;
+  idea.openQuestions = input.openQuestions;
+  idea.desiredOutputs = input.desiredOutputs;
+  idea.tags = input.tags;
+}
+
+export async function updateIdeaDraft(userId: string, ideaId: string, input: IdeaInput) {
+  const clean = cleanIdeaInput(input);
+  validateIdea(clean, false);
+  const updatedAt = nowIso();
+  await mutateDb((db) => {
+    const idea = db.ideas.find((item) => item.id === ideaId);
+    if (!idea) throw new Error("想法不存在");
+    if (idea.author.userId !== userId) throw new Error("只能管理自己的草稿");
+    if (idea.status !== "draft") throw new Error("已发布的想法不能作为草稿修改");
+    applyIdeaInput(idea, clean);
+    idea.license = input.license;
+    idea.visibility = input.visibility;
+    idea.updatedAt = updatedAt;
+  });
+  return { idea_id: ideaId, url: `/ideas/${ideaId}`, review_status: "draft" as const };
+}
+
+export async function publishIdeaDraft(userId: string, ideaId: string) {
+  const publishedAt = nowIso();
+  let nextStatus = "published";
+  await mutateDb((db) => {
+    const idea = db.ideas.find((item) => item.id === ideaId);
+    if (!idea) throw new Error("想法不存在");
+    if (idea.author.userId !== userId) throw new Error("只能发布自己的草稿");
+    if (idea.status !== "draft") throw new Error("该想法已经发布");
+    validateIdea(cleanIdeaInput({
+      title: idea.title, summary: idea.summary, problem: idea.problem,
+      whyItMatters: idea.whyItMatters, constraints: idea.constraints,
+      existingAttempts: idea.existingAttempts, openQuestions: idea.openQuestions,
+      desiredOutputs: idea.desiredOutputs, tags: idea.tags,
+      visibility: idea.visibility, license: idea.license,
+    }), true);
+    idea.status = "published";
+    idea.updatedAt = publishedAt;
+    nextStatus = recomputeIdeaStatus(idea, db);
+    idea.status = nextStatus as Idea["status"];
+    const me = db.users.find((item) => item.id === userId);
     db.events.unshift({
       id: `evt_${nanoid(6)}`,
-      at: createdAt,
-      actorId: me.id,
-      actorName: me.displayName,
-      text: `发布了想法「${input.title.trim()}」`,
-      ideaId: id,
+      at: publishedAt,
+      actorId: userId,
+      actorName: me?.displayName ?? idea.author.displayName,
+      text: `发布了想法「${idea.title}」及其草稿内容`,
+      ideaId,
     });
   });
-  return { idea_id: id, url: `/ideas/${id}`, review_status: "published" };
+  return { idea_id: ideaId, url: `/ideas/${ideaId}`, review_status: nextStatus };
+}
+
+export async function deleteIdeaDraft(userId: string, ideaId: string) {
+  let attemptIds: string[] = [];
+  await mutateDb((db) => {
+    const idea = db.ideas.find((item) => item.id === ideaId);
+    if (!idea) throw new Error("想法不存在");
+    if (idea.author.userId !== userId) throw new Error("只能删除自己的草稿");
+    if (idea.status !== "draft") throw new Error("只能删除尚未发布的草稿");
+    attemptIds = db.attempts.filter((item) => item.ideaId === ideaId).map((item) => item.id);
+    const workIds = new Set(db.works.filter((item) => item.ideaId === ideaId).map((item) => item.id));
+    const attemptIdSet = new Set(attemptIds);
+    db.ideas = db.ideas.filter((item) => item.id !== ideaId);
+    db.attempts = db.attempts.filter((item) => item.ideaId !== ideaId);
+    db.works = db.works.filter((item) => item.ideaId !== ideaId);
+    db.events = db.events.filter(
+      (item) => item.ideaId !== ideaId && (!item.attemptId || !attemptIdSet.has(item.attemptId)) && (!item.workId || !workIds.has(item.workId)),
+    );
+    db.notifications = db.notifications.filter(
+      (item) => !attemptIds.some((id) => item.href === `/attempts/${id}`) &&
+        ![...workIds].some((id) => item.href === `/works/${id}`),
+    );
+    db.follows = db.follows.filter((item) => item.ideaId !== ideaId);
+  });
+  return { idea_id: ideaId, deleted: true, attempt_ids: attemptIds };
 }
 
 export async function adoptIdea(userId: string, input: {
@@ -83,6 +199,9 @@ export async function adoptIdea(userId: string, input: {
   await mutateDb((db) => {
     const idea = db.ideas.find((i) => i.id === input.ideaId);
     if (!idea) throw new Error("Idea 不存在");
+    if (idea.status === "draft" && idea.author.userId !== userId) {
+      throw new Error("草稿仅作者本人可以创建项目");
+    }
     const me = db.users.find((u) => u.id === userId)!;
     const existing = db.attempts.find(
       (a) =>

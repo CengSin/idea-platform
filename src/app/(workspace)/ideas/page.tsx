@@ -16,7 +16,7 @@ export default async function MyIdeasPage() {
         <div className="mb-6 flex items-end justify-between">
           <div>
             <h1 className="text-[28px] font-semibold tracking-[-0.04em]">我的想法</h1>
-            <p className="mt-1 text-[13.5px] text-muted">发布与管理你提出的起点，而不是帖子。</p>
+            <p className="mt-1 text-[13.5px] text-muted">先在草稿中推进，准备好后再把想法、项目与作品一起发布。</p>
           </div>
           <PublishIdeaButton />
         </div>
@@ -57,7 +57,7 @@ export default async function MyIdeasPage() {
               {mine.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-12 text-center text-muted">
-                    还没有发布过想法。
+                    还没有想法或草稿。
                   </td>
                 </tr>
               ) : null}

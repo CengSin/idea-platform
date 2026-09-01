@@ -57,6 +57,11 @@ func Open(cfg config.Config) (*Store, error) {
 	); err != nil {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
+	// AutoMigrate can add the column to historical rows without applying the
+	// default on every MySQL version, so make the publication state explicit.
+	if err := db.Model(&domain.Idea{}).Where("status = '' OR status IS NULL").Update("status", "published").Error; err != nil {
+		return nil, fmt.Errorf("migrate historical idea status: %w", err)
+	}
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr:         cfg.RedisAddr,

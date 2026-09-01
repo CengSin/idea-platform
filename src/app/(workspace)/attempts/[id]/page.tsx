@@ -59,6 +59,11 @@ export default async function AttemptPage({
             </p>
           </div>
         </div>
+        {idea.status === "draft" ? (
+          <div className="mt-5 rounded-2xl border border-idea/25 bg-idea/7 px-4 py-3 text-[13px] text-muted">
+            当前项目属于想法草稿。状态、进展与作品会正常保存，但在想法发布前仅草稿作者可见。
+          </div>
+        ) : null}
         <p className="mt-5 max-w-3xl text-[14.5px] leading-relaxed text-artifact/90">
           {attempt.approach}
         </p>

@@ -75,7 +75,7 @@ type Idea struct {
 	AuthorUserID     string               `json:"-" gorm:"size:64;index"`
 	License          License              `json:"license" gorm:"serializer:json;type:json"`
 	Visibility       string               `json:"visibility" gorm:"size:32;index"`
-	Status           string               `json:"status" gorm:"size:32;index"`
+	Status           string               `json:"status" gorm:"size:32;index;default:published"`
 	ParentIdeaID     string               `json:"parentIdeaId,omitempty" gorm:"size:64;index"`
 	SourceWorkID     string               `json:"sourceWorkId,omitempty" gorm:"size:64;index"`
 	Graph            Point                `json:"graph" gorm:"serializer:json;type:json"`

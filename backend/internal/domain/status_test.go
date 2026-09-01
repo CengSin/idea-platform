@@ -32,3 +32,16 @@ func TestRecomputeIdeaStatus(t *testing.T) {
 		t.Fatalf("got %s", got)
 	}
 }
+
+func TestNormalizeIdeaPublishesHistoricalRows(t *testing.T) {
+	idea := Idea{}
+	NormalizeIdea(&idea)
+	if idea.Status != "published" {
+		t.Fatalf("historical status = %q", idea.Status)
+	}
+	draft := Idea{Status: "draft"}
+	NormalizeIdea(&draft)
+	if draft.Status != "draft" {
+		t.Fatalf("draft status changed to %q", draft.Status)
+	}
+}

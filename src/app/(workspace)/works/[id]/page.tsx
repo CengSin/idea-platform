@@ -39,6 +39,11 @@ export default async function WorkPage({
               <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-[340px] w-full object-cover" />
             </div>
             <h1 className="mt-6 text-[32px] font-semibold tracking-[-0.04em]">{work.title}</h1>
+            {idea.status === "draft" ? (
+              <div className="mt-4 rounded-2xl border border-idea/25 bg-idea/7 px-4 py-3 text-[13px] text-muted">
+                作品已保存到草稿项目，将在来源想法发布时一起对外可见。
+              </div>
+            ) : null}
             <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted">{work.summary}</p>
             {work.externalUrl ? (
               <a href={work.externalUrl} className="mt-5 inline-flex" target="_blank" rel="noreferrer">

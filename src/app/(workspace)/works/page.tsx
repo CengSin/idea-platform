@@ -19,8 +19,9 @@ export default async function WorksPage({
   );
   const works = db.works.filter((w) => {
     if (w.status !== "published") return false;
+    const idea = ideaById(db, w.ideaId);
     if (mine) return myAttemptIds.has(w.attemptId);
-    return true;
+    return idea?.status !== "draft";
   });
 
   return (
@@ -53,6 +54,9 @@ export default async function WorksPage({
                   </div>
                   <p className="mt-2 line-clamp-2 text-[13px] text-muted">{work.summary}</p>
                   <p className="mt-3 text-[12px] text-muted">来源 · {idea?.title}</p>
+                  {idea?.status === "draft" ? (
+                    <p className="mt-2 text-[12px] text-idea">随想法草稿一起发布</p>
+                  ) : null}
                 </div>
               </Link>
             );

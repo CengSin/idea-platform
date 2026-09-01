@@ -5,7 +5,7 @@ import { useSheets } from "@/components/sheets/SheetContext";
 import type { ReactNode } from "react";
 
 export function PublishIdeaButton({
-  children = "发布 Idea",
+  children = "新建想法",
   className,
 }: {
   children?: ReactNode;

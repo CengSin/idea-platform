@@ -114,6 +114,7 @@ func (s *Service) Snapshot(ctx context.Context, userID string) (*domain.Snapshot
 		return nil, err
 	}
 	normalizeSnapshot(snap)
+	scopeSnapshot(snap, userID)
 	for _, n := range snap.Notifications {
 		if !n.Read {
 			snap.UnreadCount++
@@ -124,6 +125,52 @@ func (s *Service) Snapshot(ctx context.Context, userID string) (*domain.Snapshot
 	}
 	s.Store.SetUnread(ctx, userID, int64(snap.UnreadCount))
 	return snap, nil
+}
+
+func canAccessIdea(idea domain.Idea, userID string) bool {
+	return idea.Status != "draft" || idea.AuthorUserID == userID || idea.Author.UserID == userID
+}
+
+func scopeSnapshot(snap *domain.Snapshot, userID string) {
+	ideaIDs := map[string]bool{}
+	ideas := make([]domain.Idea, 0, len(snap.Ideas))
+	for _, idea := range snap.Ideas {
+		if canAccessIdea(idea, userID) {
+			ideas = append(ideas, idea)
+			ideaIDs[idea.ID] = true
+		}
+	}
+	attemptIDs := map[string]bool{}
+	attempts := make([]domain.Attempt, 0, len(snap.Attempts))
+	for _, attempt := range snap.Attempts {
+		if ideaIDs[attempt.IdeaID] {
+			attempts = append(attempts, attempt)
+			attemptIDs[attempt.ID] = true
+		}
+	}
+	workIDs := map[string]bool{}
+	works := make([]domain.Work, 0, len(snap.Works))
+	for _, work := range snap.Works {
+		if ideaIDs[work.IdeaID] && attemptIDs[work.AttemptID] {
+			works = append(works, work)
+			workIDs[work.ID] = true
+		}
+	}
+	events := make([]domain.Event, 0, len(snap.Events))
+	for _, event := range snap.Events {
+		if (event.IdeaID == "" || ideaIDs[event.IdeaID]) &&
+			(event.AttemptID == "" || attemptIDs[event.AttemptID]) &&
+			(event.WorkID == "" || workIDs[event.WorkID]) {
+			events = append(events, event)
+		}
+	}
+	follows := make([]domain.Follow, 0, len(snap.Follows))
+	for _, follow := range snap.Follows {
+		if follow.UserID == userID && ideaIDs[follow.IdeaID] {
+			follows = append(follows, follow)
+		}
+	}
+	snap.Ideas, snap.Attempts, snap.Works, snap.Events, snap.Follows = ideas, attempts, works, events, follows
 }
 
 func normalizeSnapshot(snap *domain.Snapshot) {
@@ -242,6 +289,9 @@ func (s *Service) GetIdea(userID, id string) (map[string]any, error) {
 		return nil, err
 	}
 	domain.NormalizeIdea(&idea)
+	if !canAccessIdea(idea, userID) {
+		return nil, Err(404, "not_found")
+	}
 	ideas, err := s.allIdeas()
 	if err != nil {
 		return nil, err
@@ -267,7 +317,7 @@ func (s *Service) GetIdea(userID, id string) (map[string]any, error) {
 	forks := make([]domain.Idea, 0)
 	similar := make([]domain.Idea, 0)
 	for _, i := range ideas {
-		if i.ParentIdeaID == id {
+		if i.ParentIdeaID == id && canAccessIdea(i, userID) {
 			forks = append(forks, i)
 		}
 		if i.ID != id && i.ParentIdeaID != id && i.Status != "draft" && shareTag(i.Tags, idea.Tags) {
@@ -320,7 +370,7 @@ func shareTag(a, b []string) bool {
 	return false
 }
 
-func (s *Service) IdeaContext(id, origin string) (domain.IdeaContext, error) {
+func (s *Service) IdeaContext(userID, id, origin string) (domain.IdeaContext, error) {
 	var idea domain.Idea
 	if err := s.db().First(&idea, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -329,6 +379,9 @@ func (s *Service) IdeaContext(id, origin string) (domain.IdeaContext, error) {
 		return domain.IdeaContext{}, err
 	}
 	domain.NormalizeIdea(&idea)
+	if !canAccessIdea(idea, userID) {
+		return domain.IdeaContext{}, Err(404, "not_found")
+	}
 	return domain.BuildIdeaContext(idea, origin), nil
 }
 
@@ -346,13 +399,18 @@ func (s *Service) ListAttempts(userID string, mine bool) ([]domain.AttemptListIt
 		return nil, err
 	}
 	ideaTitle := map[string]string{}
+	ideaVisible := map[string]bool{}
 	for _, i := range ideas {
 		ideaTitle[i.ID] = i.Title
+		ideaVisible[i.ID] = canAccessIdea(i, userID)
 	}
 	now := s.now()
 	out := make([]domain.AttemptListItem, 0, len(attempts))
 	for i := range attempts {
 		domain.NormalizeAttempt(&attempts[i])
+		if !mine && !ideaVisible[attempts[i].IdeaID] {
+			continue
+		}
 		out = append(out, domain.AttemptListItem{
 			Attempt:     attempts[i],
 			IdeaTitle:   ideaTitle[attempts[i].IdeaID],
@@ -362,7 +420,7 @@ func (s *Service) ListAttempts(userID string, mine bool) ([]domain.AttemptListIt
 	return out, nil
 }
 
-func (s *Service) GetAttempt(id string) (map[string]any, error) {
+func (s *Service) GetAttempt(userID, id string) (map[string]any, error) {
 	var attempt domain.Attempt
 	if err := s.db().First(&attempt, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -376,6 +434,9 @@ func (s *Service) GetAttempt(id string) (map[string]any, error) {
 		return nil, err
 	}
 	domain.NormalizeIdea(&idea)
+	if !canAccessIdea(idea, userID) {
+		return nil, Err(404, "not_found")
+	}
 	var owner domain.User
 	if err := s.db().First(&owner, "id = ?", attempt.OwnerID).Error; err != nil {
 		return nil, err
@@ -421,18 +482,23 @@ func (s *Service) ListWorks(userID string, mine bool) ([]domain.WorkListItem, er
 		return nil, err
 	}
 	title := map[string]string{}
+	visible := map[string]bool{}
 	for _, i := range ideas {
 		title[i.ID] = i.Title
+		visible[i.ID] = canAccessIdea(i, userID)
 	}
 	out := make([]domain.WorkListItem, 0, len(works))
 	for i := range works {
 		domain.NormalizeWork(&works[i])
+		if !mine && !visible[works[i].IdeaID] {
+			continue
+		}
 		out = append(out, domain.WorkListItem{Work: works[i], IdeaTitle: title[works[i].IdeaID]})
 	}
 	return out, nil
 }
 
-func (s *Service) GetWork(id string) (map[string]any, error) {
+func (s *Service) GetWork(userID, id string) (map[string]any, error) {
 	var work domain.Work
 	if err := s.db().First(&work, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -446,6 +512,9 @@ func (s *Service) GetWork(id string) (map[string]any, error) {
 		return nil, err
 	}
 	domain.NormalizeIdea(&idea)
+	if !canAccessIdea(idea, userID) {
+		return nil, Err(404, "not_found")
+	}
 	var attempt domain.Attempt
 	if err := s.db().First(&attempt, "id = ?", work.AttemptID).Error; err != nil {
 		return nil, err
@@ -458,6 +527,13 @@ func (s *Service) GetWork(id string) (map[string]any, error) {
 	for i := range forks {
 		domain.NormalizeIdea(&forks[i])
 	}
+	visibleForks := make([]domain.Idea, 0, len(forks))
+	for _, fork := range forks {
+		if canAccessIdea(fork, userID) {
+			visibleForks = append(visibleForks, fork)
+		}
+	}
+	forks = visibleForks
 	if forks == nil {
 		forks = []domain.Idea{}
 	}

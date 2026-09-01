@@ -1,4 +1,4 @@
-import { publishIdea } from "@/lib/ops";
+import { publishIdea, saveIdeaDraft } from "@/lib/ops";
 import { getCurrentUser } from "@/lib/auth";
 import { readDb } from "@/lib/db";
 import { ideaMetrics } from "@/lib/format";
@@ -11,8 +11,13 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").toLowerCase();
   const db = await readDb();
+  const me = await getCurrentUser();
   const ideas = db.ideas
-    .filter((i) => i.visibility === "public" && i.status !== "draft")
+    .filter(
+      (i) =>
+        (i.visibility === "public" && i.status !== "draft") ||
+        (me && i.status === "draft" && i.author.userId === me.id),
+    )
     .filter((i) => {
       if (!q) return true;
       return (
@@ -29,14 +34,15 @@ export async function POST(req: Request) {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const body = await req.json();
-  if (!body.user_confirmed) {
+  const asDraft = body.as_draft === true || body.status === "draft";
+  if (!asDraft && !body.user_confirmed) {
     return NextResponse.json(
       { error: "发布前必须向用户展示最终公开内容，并设置 user_confirmed=true。" },
       { status: 400 },
     );
   }
   try {
-    const result = await publishIdea(me.id, {
+    const input = {
       title: body.title,
       summary: body.summary ?? "",
       problem: body.problem,
@@ -46,10 +52,17 @@ export async function POST(req: Request) {
       desiredOutputs: body.desired_outputs ?? [],
       tags: body.tags ?? [],
       visibility: body.visibility ?? "public",
-      license: body.license,
+      license: body.license ?? {
+        implementation: true,
+        derivatives: true,
+        commercialUse: "with_attribution",
+      },
       existingAttempts: body.existing_attempts ?? [],
       viaAgent: true,
-    });
+    };
+    const result = asDraft
+      ? await saveIdeaDraft(me.id, input)
+      : await publishIdea(me.id, input);
     return NextResponse.json(result);
   } catch (e) {
     return NextResponse.json(

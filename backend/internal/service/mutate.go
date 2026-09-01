@@ -26,11 +26,15 @@ type PublishIdeaInput struct {
 	License          domain.License
 	ExistingAttempts []domain.ExistingAttemptRef
 	ViaAgent         bool
+	AsDraft          bool
 }
 
 func (s *Service) PublishIdea(ctx context.Context, userID string, in PublishIdeaInput) (map[string]any, error) {
-	if strings.TrimSpace(in.Title) == "" || strings.TrimSpace(in.Problem) == "" || strings.TrimSpace(in.WhyItMatters) == "" {
-		return nil, Err(400, "标题、问题和价值为必填")
+	if strings.TrimSpace(in.Title) == "" {
+		return nil, Err(400, "标题为必填")
+	}
+	if !in.AsDraft && (strings.TrimSpace(in.Summary) == "" || strings.TrimSpace(in.Problem) == "") {
+		return nil, Err(400, "发布前请填写简要描述和想解决的问题")
 	}
 	if in.Visibility == "" {
 		in.Visibility = "public"
@@ -52,6 +56,10 @@ func (s *Service) PublishIdea(ctx context.Context, userID string, in PublishIdea
 			DisplayName: "Agent · " + me.DisplayName,
 		}
 	}
+	status := "published"
+	if in.AsDraft {
+		status = "draft"
+	}
 	idea := domain.Idea{
 		ID:               id,
 		Title:            strings.TrimSpace(in.Title),
@@ -67,7 +75,7 @@ func (s *Service) PublishIdea(ctx context.Context, userID string, in PublishIdea
 		AuthorUserID:     me.ID,
 		License:          in.License,
 		Visibility:       in.Visibility,
-		Status:           "published",
+		Status:           status,
 		Graph: domain.Point{
 			X: (rand.Float64() - 0.5) * 180,
 			Y: (rand.Float64()-0.5)*180 + 40,
@@ -78,6 +86,9 @@ func (s *Service) PublishIdea(ctx context.Context, userID string, in PublishIdea
 	err = s.db().Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&idea).Error; err != nil {
 			return err
+		}
+		if in.AsDraft {
+			return nil
 		}
 		return tx.Create(&domain.Event{
 			ID:        idgen.New("evt_"),
@@ -92,7 +103,7 @@ func (s *Service) PublishIdea(ctx context.Context, userID string, in PublishIdea
 		return nil, err
 	}
 	s.invalidate(ctx)
-	return map[string]any{"idea_id": id, "url": "/ideas/" + id, "review_status": "published"}, nil
+	return map[string]any{"idea_id": id, "url": "/ideas/" + id, "review_status": status}, nil
 }
 
 func filterExisting(in []domain.ExistingAttemptRef) []domain.ExistingAttemptRef {
@@ -138,6 +149,9 @@ func (s *Service) AdoptIdea(ctx context.Context, userID string, in AdoptIdeaInpu
 		var idea domain.Idea
 		if err := tx.First(&idea, "id = ?", in.IdeaID).Error; err != nil {
 			return Err(404, "Idea 不存在")
+		}
+		if idea.Status == "draft" && idea.AuthorUserID != userID && idea.Author.UserID != userID {
+			return Err(403, "草稿仅作者本人可以创建项目")
 		}
 		var existing domain.Attempt
 		if err := tx.Where("idea_id = ? AND owner_id = ? AND status <> ?", in.IdeaID, userID, "abandoned").First(&existing).Error; err == nil {

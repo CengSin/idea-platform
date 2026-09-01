@@ -21,7 +21,7 @@ go run ./cmd/api
 | 发现 `/` | GET | `/api/v1/snapshot` | 图谱所需的全量快照 |
 | 侧栏未读 | GET | `/api/v1/me` | 当前用户、未读数 |
 | 我的想法 `/ideas` | GET | `/api/v1/ideas?mine=1` | 带 metrics |
-| 发布想法弹窗 | POST | `/api/v1/ideas` | 需 `user_confirmed=true` |
+| 新建想法弹窗 | POST | `/api/v1/ideas` | `as_draft=true` 保存草稿；直接发布需确认 |
 | 想法详情 `/ideas/:id` | GET | `/api/v1/ideas/:id` | idea + attempts + works + forks + similar + metrics |
 | 关注 | POST/DELETE | `/api/v1/ideas/:id/follow` | `{ "follow": true }` |
 | Agent Context | GET | `/api/v1/ideas/:id/context` | 结构化 Idea Context |
@@ -43,6 +43,8 @@ go run ./cmd/api
 | 健康检查 | GET | `/health` | mysql / redis / minio |
 
 接口请求体同时接受 camelCase 与 snake_case。Next.js 主应用在承接页生成 `AGENTS.md` 和分支专属 Token，由 Agent 自动调用进展与作品接口。
+
+草稿是整棵内容的发布边界：作者可以在草稿中继续承接、同步状态和保存作品，其他用户的快照及详情不会包含这些关联内容；发布想法后统一可见。MySQL 启动迁移会把历史空状态行明确设置为 `published`。
 
 发布作品时提供公开的 `external_url`，API 会自动读取页面的 `og:image` / `twitter:image` 作为封面，没有预览图时回退到网站图标；`cover_url` 仅用于显式覆盖。链接预览包含超时、重定向次数、响应大小和内网地址限制，解析失败时使用网站标示。
 

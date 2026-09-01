@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { readDbForRender } from "./db";
 import { getAccountPublic, requireCurrentUser } from "./auth";
+import { scopeDatabaseForUser } from "./content-access";
 import {
   attemptById,
   ideaById,
@@ -11,7 +12,7 @@ import {
 // Covers are resolved when a work is published; page reads never fetch external sites.
 export const getSnapshot = cache(async () => {
   const me = await requireCurrentUser();
-  const db = await readDbForRender();
+  const db = scopeDatabaseForUser(await readDbForRender(), me.id);
   return {
     db,
     me,

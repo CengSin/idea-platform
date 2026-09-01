@@ -148,6 +148,10 @@ func BuildIdeaContext(idea Idea, origin string) IdeaContext {
 }
 
 func NormalizeIdea(idea *Idea) {
+	// Rows created before draft support are already-public historical content.
+	if idea.Status == "" {
+		idea.Status = "published"
+	}
 	if idea.Constraints == nil {
 		idea.Constraints = []string{}
 	}
