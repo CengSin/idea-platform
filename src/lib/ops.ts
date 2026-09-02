@@ -111,20 +111,46 @@ function applyIdeaInput(idea: Idea, input: ReturnType<typeof cleanIdeaInput>) {
 }
 
 export async function updateIdeaDraft(userId: string, ideaId: string, input: IdeaInput) {
+  return updateOwnedIdea(userId, ideaId, input, true);
+}
+
+export async function updateIdea(userId: string, ideaId: string, input: IdeaInput) {
+  return updateOwnedIdea(userId, ideaId, input, false);
+}
+
+async function updateOwnedIdea(
+  userId: string,
+  ideaId: string,
+  input: IdeaInput,
+  draftOnly: boolean,
+) {
   const clean = cleanIdeaInput(input);
-  validateIdea(clean, false);
   const updatedAt = nowIso();
+  let reviewStatus: Idea["status"] = "draft";
   await mutateDb((db) => {
     const idea = db.ideas.find((item) => item.id === ideaId);
     if (!idea) throw new Error("想法不存在");
-    if (idea.author.userId !== userId) throw new Error("只能管理自己的草稿");
-    if (idea.status !== "draft") throw new Error("已发布的想法不能作为草稿修改");
+    if (idea.author.userId !== userId) throw new Error("只能更新自己发布的想法");
+    if (draftOnly && idea.status !== "draft") throw new Error("已发布的想法不能作为草稿修改");
+    validateIdea(clean, idea.status !== "draft");
     applyIdeaInput(idea, clean);
     idea.license = input.license;
     idea.visibility = input.visibility;
     idea.updatedAt = updatedAt;
+    reviewStatus = idea.status;
+    if (!draftOnly && idea.status !== "draft") {
+      const me = db.users.find((item) => item.id === userId);
+      db.events.unshift({
+        id: `evt_${nanoid(6)}`,
+        at: updatedAt,
+        actorId: userId,
+        actorName: me?.displayName ?? idea.author.displayName,
+        text: `更新了想法「${idea.title}」`,
+        ideaId,
+      });
+    }
   });
-  return { idea_id: ideaId, url: `/ideas/${ideaId}`, review_status: "draft" as const };
+  return { idea_id: ideaId, url: `/ideas/${ideaId}`, updated_at: updatedAt, review_status: reviewStatus };
 }
 
 export async function publishIdeaDraft(userId: string, ideaId: string) {

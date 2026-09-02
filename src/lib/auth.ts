@@ -11,6 +11,8 @@ import type { User } from "./types";
 
 export const SESSION_COOKIE = "idea_session";
 const SESSION_DAYS = 30;
+const AGENT_TOKEN_DAYS = 90;
+const AGENT_TOKEN_RENEW_BEFORE_DAYS = 30;
 const AUTH_FILE = "auth.json";
 
 type Account = {
@@ -169,12 +171,13 @@ export async function deleteSession(token?: string) {
 export async function issueAttemptAgentToken(userId: string, attemptId: string) {
   const token = `iat_${crypto.randomBytes(32).toString("base64url")}`;
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 90 * 86400000);
+  const expiresAt = new Date(now.getTime() + AGENT_TOKEN_DAYS * 86400000);
   await mutateAuthDb((db) => {
+    // A newly downloaded AGENTS.md must not break an older checkout that is
+    // still using this attempt. Expired grants are cleaned up; active grants
+    // remain independently revocable through the existing account reset flow.
     db.agentTokens = db.agentTokens.filter(
-      (item) =>
-        !(item.userId === userId && item.attemptId === attemptId) &&
-        new Date(item.expiresAt).getTime() > Date.now(),
+      (item) => new Date(item.expiresAt).getTime() > Date.now(),
     );
     db.agentTokens.push({
       tokenHash: crypto.createHash("sha256").update(token).digest("hex"),
@@ -196,13 +199,24 @@ export async function revokeAgentTokensForUser(userId: string) {
 async function authenticateAgentToken(token: string, attemptId?: string) {
   const hash = crypto.createHash("sha256").update(token).digest("hex");
   const db = await readAuthDb();
-  const grant = db.agentTokens.find(
+  let grant = db.agentTokens.find(
     (item) =>
       item.tokenHash === hash &&
       (!attemptId || item.attemptId === attemptId) &&
       new Date(item.expiresAt).getTime() > Date.now(),
   );
   if (!grant) return null;
+  const renewBefore = Date.now() + AGENT_TOKEN_RENEW_BEFORE_DAYS * 86400000;
+  if (new Date(grant.expiresAt).getTime() <= renewBefore) {
+    const expiresAt = new Date(Date.now() + AGENT_TOKEN_DAYS * 86400000).toISOString();
+    await mutateAuthDb((next) => {
+      const stored = next.agentTokens.find((item) => item.tokenHash === hash);
+      if (stored && new Date(stored.expiresAt).getTime() > Date.now()) {
+        stored.expiresAt = expiresAt;
+      }
+    });
+    grant = { ...grant, expiresAt };
+  }
   const account = db.accounts.find((item) => item.userId === grant.userId);
   return account ? { user: await ensureProfile(account), grant } : null;
 }

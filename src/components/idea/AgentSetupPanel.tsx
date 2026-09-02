@@ -61,7 +61,7 @@ export function AgentSetupPanel({ attemptId }: { attemptId: string }) {
           创建一个空文件夹，或进入准备开发的现有仓库。
         </Step>
         <Step icon={Download} number="2" title="放入 AGENTS.md">
-          将下载的文件放在项目根目录。旧配置可重新生成以获取最新接口说明，不要提交其中的 Token。
+          将下载的文件放在项目根目录。它会在每轮启动时获取最新接口能力；不要提交其中的 Token。
         </Step>
         <Step icon={Terminal} number="3" title="启动 Agent">
           在该目录启动你的 Agent，它会读取任务并自动回写进展。
@@ -78,7 +78,7 @@ export function AgentSetupPanel({ attemptId }: { attemptId: string }) {
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-active/20 bg-active/6 px-4 py-3">
           <div className="flex items-center gap-2 text-[12.5px] text-active">
             <Check className="h-4 w-4" />
-            已生成专属配置；重新生成会使上一枚 Token 失效
+            已生成专属配置；同一分支仍有效的旧 Token 会继续可用
             {expiresAt ? ` · 有效期至 ${new Date(expiresAt).toLocaleDateString("zh-CN")}` : ""}
           </div>
           <Button

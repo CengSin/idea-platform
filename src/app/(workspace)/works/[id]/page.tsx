@@ -3,6 +3,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { CoverImage } from "@/components/ui/CoverImage";
 import { WorkActions } from "@/components/idea/WorkActions";
+import { AgentUpgradePanel } from "@/components/idea/AgentUpgradePanel";
 import { formatDate, formatLicense, WORK_TYPE_LABEL } from "@/lib/format";
 import { getWorkBundle } from "@/lib/queries";
 import { ExternalLink } from "lucide-react";
@@ -56,6 +57,7 @@ export default async function WorkPage({
           </div>
           <aside className="space-y-4">
             {bundle.canManage ? <WorkActions work={work} /> : null}
+            {bundle.canManage ? <AgentUpgradePanel attemptId={attempt.id} /> : null}
             <div className="glass rounded-3xl p-5">
               <div className="text-[12px] tracking-[0.08em] text-muted">来源想法</div>
               <Link href={`/ideas/${idea.id}`} className="mt-2 block text-[16px] tracking-[-0.02em]">

@@ -42,17 +42,18 @@ go run ./cmd/api
 
 ### Agent API
 
-发布想法和确认承接由登录用户发起。承接创建后，承接页会生成专属 `AGENTS.md`，其中包含只允许操作该分支的 Bearer Token。
+发布想法和确认承接由登录用户发起。承接创建后，承接页会生成专属 `AGENTS.md`，其中包含只允许操作该分支的 Bearer Token。Agent 每轮启动会读取 Bootstrap API 获取最新能力和接口约定；有效 Token 在临近到期且持续使用时自动续期，重新生成配置不会立即吊销同一分支仍有效的旧 Token。
 
 所有写操作都要求 `user_confirmed: true`。更新承接、发布作品，以及 Agent 修改或删除作品需要 `Authorization: Bearer <attempt-token>`。作品详情页的编辑和删除入口仅向作品所属承接的所有者显示；网页操作使用登录会话，服务端仍会检查所有权。
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | `POST` | `/api/v1/ideas` | 创建想法；`as_draft: true` 保存草稿 |
-| `PATCH` | `/api/v1/ideas/:id` | 编辑草稿；`publish: true` 确认发布 |
+| `PATCH` | `/api/v1/ideas/:id` | 编辑草稿；想法作者可授权所属分支 Agent 更新；`publish: true` 仅限网页确认 |
 | `DELETE` | `/api/v1/ideas/:id` | 删除自己的草稿及关联内容 |
 | `POST` | `/api/v1/attempts` | 承接想法 |
 | `PATCH` | `/api/v1/attempts/:id` | 更新承接进展 |
+| `GET` | `/api/v1/attempts/:id/bootstrap` | 获取最新 Agent 能力、接口约定与分支上下文 |
 | `POST` | `/api/v1/works` | 发布作品 |
 | `PATCH` | `/api/v1/works/:id` | 修改自己分支的作品，未传字段保持不变 |
 | `DELETE` | `/api/v1/works/:id` | 确认后删除自己分支的作品 |
@@ -64,7 +65,7 @@ go run ./cmd/api
 
 修改、删除均须发送 JSON，包含严格的布尔值 `user_confirmed: true`。成功返回 `work_id`、`updated_at`、`attempt_id`、`attempt_status`、`graph_status`；修改还返回 `work`，删除返回 `deleted: true`。错误状态为 400（参数无效）、401（凭证无效）、403（非所有者或 Token 分支不匹配）、404（作品不存在）、415（Content-Type 错误）。
 
-删除会清理作品引用及其动态、通知，保留来源想法、承接和衍生想法，不会删除外部站点或仓库。删去分支最后一个已发布作品时，原为 `published` 的承接回到 `testing`；暂停或放弃状态不变。每条承接生成的 `AGENTS.md` 包含作品 ID 列表、修改/删除的功能说明、curl 示例和权限约束。旧文件需在承接页重新生成（原 Token 随之失效）。
+删除会清理作品引用及其动态、通知，保留来源想法、承接和衍生想法，不会删除外部站点或仓库。删去分支最后一个已发布作品时，原为 `published` 的承接回到 `testing`；暂停或放弃状态不变。每条承接生成的 `AGENTS.md` 包含 Bootstrap、作品管理和作者更新想法的接口说明。老项目可从承接页或所属作品详情页下载最新文件，也可复制更新提示词交给 Agent 自动替换旧配置。
 
 ### 公开访问
 
@@ -120,17 +121,18 @@ Listens on [http://localhost:8081](http://localhost:8081) by default. See [backe
 
 ### Agent API
 
-Publishing an idea and confirming an adoption are user-initiated. After an attempt is created, the attempt page generates an `AGENTS.md` with a Bearer token that can only mutate that branch.
+Publishing an idea and confirming an adoption are user-initiated. After an attempt is created, the attempt page generates an `AGENTS.md` with a Bearer token that can only mutate that branch. Agents fetch the Bootstrap API at the start of each run for current capabilities and contracts. Active tokens renew near expiry, and generating a new configuration no longer immediately revokes other valid tokens for the branch.
 
 All write operations require `user_confirmed: true`. Agent attempt updates and work publication, editing and deletion require `Authorization: Bearer <attempt-token>`. Browser edits/deletes use the signed-in session. Both paths enforce branch ownership on the server.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/v1/ideas` | Create an idea; use `as_draft: true` to save a draft |
-| `PATCH` | `/api/v1/ideas/:id` | Edit or publish an owned draft |
+| `PATCH` | `/api/v1/ideas/:id` | Edit an owned idea; publishing remains a browser-confirmed action |
 | `DELETE` | `/api/v1/ideas/:id` | Delete an owned draft and its related content |
 | `POST` | `/api/v1/attempts` | Adopt an idea |
 | `PATCH` | `/api/v1/attempts/:id` | Update attempt progress |
+| `GET` | `/api/v1/attempts/:id/bootstrap` | Read current agent capabilities, contracts, and branch context |
 | `POST` | `/api/v1/works` | Publish a work |
 | `PATCH` | `/api/v1/works/:id` | Edit a work owned by the current branch owner |
 | `DELETE` | `/api/v1/works/:id` | Delete an owned work after confirmation |
@@ -138,7 +140,7 @@ All write operations require `user_confirmed: true`. Agent attempt updates and w
 
 When publishing a work, pass a public `external_url`. The platform reads `og:image` / `twitter:image` as the cover, then falls back to the site icon; `cover_url` is only for an explicit override.
 
-PATCH accepts title, summary, type, external/repository/cover URLs and a complete license object. Omitted fields are preserved; identity, attribution, publication time and counters cannot be edited. DELETE removes the work and dead references while preserving the idea, branch, derived ideas and external resources. Removing the last published work changes a published branch to `testing`. All generated `AGENTS.md` files include these contracts and examples; regenerate previously downloaded files to receive the update (this rotates the branch token).
+PATCH accepts title, summary, type, external/repository/cover URLs and a complete license object. Omitted fields are preserved; identity, attribution, publication time and counters cannot be edited. DELETE removes the work and dead references while preserving the idea, branch, derived ideas and external resources. Removing the last published work changes a published branch to `testing`. Existing projects can download the latest `AGENTS.md` or copy an agent update prompt from their attempt or any owned work detail page.
 
 ### Public access
 

@@ -54,6 +54,16 @@ async function request(method, id, body, expected, token = "owner-token", extra 
   assert.equal(response.status, expected, `${method} ${id}: ${JSON.stringify(result)}`);
   return result;
 }
+async function apiRequest(method, pathname, body, expected, token = "owner-token", extra = {}) {
+  const response = await fetch(`${base}${pathname}`, {
+    method,
+    headers: { ...(body === undefined ? {} : { "Content-Type": "application/json" }), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra },
+    ...(body === undefined ? {} : { body: typeof body === "string" ? body : JSON.stringify(body) }),
+  });
+  const result = await response.json();
+  assert.equal(response.status, expected, `${method} ${pathname}: ${JSON.stringify(result)}`);
+  return result;
+}
 try {
   const deadline = Date.now() + 60000;
   for (;;) {
@@ -68,6 +78,16 @@ try {
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
   }
+  const bootstrap = await apiRequest("GET", "/api/v1/attempts/branch/bootstrap", undefined, 200);
+  assert.equal(bootstrap.protocol_version, 2);
+  assert.equal(bootstrap.capabilities.update_idea, true);
+  assert.deepEqual(bootstrap.current.work_ids, ["work", "second"]);
+  await apiRequest("GET", "/api/v1/attempts/branch/bootstrap", undefined, 401, "expired-token");
+  await apiRequest("PATCH", "/api/v1/ideas/idea", { user_confirmed: false, summary: "未确认" }, 400);
+  await apiRequest("PATCH", "/api/v1/ideas/idea", { user_confirmed: true, summary: "由 Agent 更新的想法" }, 200);
+  await apiRequest("PATCH", "/api/v1/ideas/idea", { user_confirmed: true, publish: true }, 403);
+  await apiRequest("PATCH", "/api/v1/ideas/idea", { user_confirmed: true, summary: "越权" }, 403, "stranger-token");
+  await apiRequest("PATCH", "/api/v1/ideas/ui-idea", { user_confirmed: true, summary: "跨分支" }, 403);
   const confirmed = { user_confirmed: true };
   for (const method of ["PATCH", "DELETE"]) {
     const body = { ...confirmed, ...(method === "PATCH" ? { title: "updated" } : {}) };
@@ -103,11 +123,14 @@ try {
   assert.equal(last.attempt_status, "testing");
   assert.notEqual(last.graph_status, "realized");
   const stored = JSON.parse(await readFile(path.join(dir, "data/db.json"), "utf8"));
+  const storedAuth = JSON.parse(await readFile(path.join(dir, "data/auth.json"), "utf8"));
+  assert.ok(new Date(storedAuth.agentTokens.find((item) => item.tokenHash === hash("owner-token")).expiresAt).getTime() > Date.now() + 80 * 86400000);
+  assert.equal(stored.ideas.find((item) => item.id === "idea").summary, "由 Agent 更新的想法");
   assert.deepEqual(stored.attempts.find((item) => item.id === "branch").workIds, []);
   assert.ok(!stored.events.some((event) => event.workId === "work"));
   assert.ok(!stored.notifications.some((item) => item.href === "/works/work"));
   assert.equal(stored.works.length, 1);
-  console.log("PASS: API auth, ownership, branch scope, validation, partial edits, session/CSRF checks, concurrent edits, deletion and graph cleanup.");
+  console.log("PASS: bootstrap, rolling token renewal, idea updates, API auth, ownership, branch scope, validation, partial edits, session/CSRF checks, concurrent edits, deletion and graph cleanup.");
   if (process.argv.includes("--serve")) {
     console.log(`Disposable UI fixture: ${base}/works/ui-work (owner@work-test.example / Local-work-test-123!)`);
     console.log(`Fixture directory: ${dir}`);

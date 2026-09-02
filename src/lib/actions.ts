@@ -6,7 +6,7 @@ import {
   requireCurrentUser,
   revokeAgentTokensForUser,
 } from "./auth";
-import { buildAgentsMd } from "./agent-setup";
+import { buildAgentsMd, buildAgentsUpdatePrompt } from "./agent-setup";
 import { readDb } from "./db";
 import { attemptById, ideaById } from "./format";
 import {
@@ -94,16 +94,18 @@ export async function generateAgentsMdAction(input: {
   }
 
   const grant = await issueAttemptAgentToken(me.id, attempt.id);
+  const content = buildAgentsMd({
+    idea,
+    attempt,
+    baseUrl,
+    token: grant.token,
+    tokenExpiresAt: grant.expiresAt,
+  });
   return {
     filename: "AGENTS.md",
     expiresAt: grant.expiresAt,
-    content: buildAgentsMd({
-      idea,
-      attempt,
-      baseUrl,
-      token: grant.token,
-      tokenExpiresAt: grant.expiresAt,
-    }),
+    content,
+    updatePrompt: buildAgentsUpdatePrompt(content),
   };
 }
 
