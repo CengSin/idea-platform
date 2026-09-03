@@ -18,9 +18,19 @@ export function IdeaOverview({ db, ideas, metricsById, onSelect, list = false }:
   onSelect: (idea: Idea) => void;
   list?: boolean;
 }) {
+  const visibleIds = new Set(ideas.map((idea) => idea.id));
+  const roots = ideas.filter((idea) => !idea.parentIdeaId || !visibleIds.has(idea.parentIdeaId));
+  const childrenByParent = new Map<string, Idea[]>();
+  for (const idea of ideas) {
+    if (!idea.parentIdeaId || !visibleIds.has(idea.parentIdeaId)) continue;
+    const children = childrenByParent.get(idea.parentIdeaId) ?? [];
+    children.push(idea);
+    childrenByParent.set(idea.parentIdeaId, children);
+  }
+
   return (
-    <div className={`discovery-projects ${list ? "is-list" : "is-map"} ${ideas.length > 6 ? "is-dense" : ""}`} data-count={ideas.length}>
-      {ideas.map((idea) => {
+    <div className={`discovery-projects ${list ? "is-list" : "is-map"} ${roots.length > 6 ? "is-dense" : ""}`} data-count={roots.length}>
+      {roots.map((idea) => {
         const metrics = metricsById.get(idea.id)!;
         const works = db.works
           .filter((work) => work.ideaId === idea.id && work.status === "published")
@@ -33,8 +43,6 @@ export function IdeaOverview({ db, ideas, metricsById, onSelect, list = false }:
         const workAttempt = work ? attempts.find((attempt) => attempt.id === work.attemptId) : undefined;
         const attempt = active ?? workAttempt ?? attempts[0];
         const owner = attempt ? userById(db, attempt.ownerId) : undefined;
-        const parent = db.ideas.find((item) => item.id === idea.parentIdeaId && item.status !== "draft" && item.status !== "archived");
-
         return (
           <article key={idea.id} className="discovery-project" aria-label={idea.title}>
             <div className="discovery-idea glass">
@@ -61,8 +69,6 @@ export function IdeaOverview({ db, ideas, metricsById, onSelect, list = false }:
                 </button>
               </div>
             </div>
-
-            {parent ? <button type="button" className="discovery-parent" onClick={() => onSelect(parent)}><GitBranch aria-hidden="true" className="h-3.5 w-3.5" /><span>衍生自 {parent.title}</span></button> : null}
 
             {attempt || work ? (
               <div className="discovery-branches">
@@ -92,7 +98,59 @@ export function IdeaOverview({ db, ideas, metricsById, onSelect, list = false }:
                 <GitBranch aria-hidden="true" className="h-4 w-4" />{metrics.totalAttemptCount === 0 ? "第一条实现路径，等你开启" : "看看这个想法的实现路径"}<ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
               </button>
             )}
+            <DerivedIdeaTree
+              db={db}
+              parentId={idea.id}
+              childrenByParent={childrenByParent}
+              metricsById={metricsById}
+              onSelect={onSelect}
+            />
           </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function DerivedIdeaTree({ db, parentId, childrenByParent, metricsById, onSelect }: {
+  db: Database;
+  parentId: string;
+  childrenByParent: Map<string, Idea[]>;
+  metricsById: Map<string, IdeaMetrics>;
+  onSelect: (idea: Idea) => void;
+}) {
+  const children = childrenByParent.get(parentId) ?? [];
+  if (!children.length) return null;
+
+  return (
+    <div className="discovery-derived-tree" aria-label="子想法">
+      {children.map((idea) => {
+        const metrics = metricsById.get(idea.id)!;
+        const sourceWork = idea.sourceWorkId
+          ? db.works.find((work) => work.id === idea.sourceWorkId)
+          : undefined;
+        return (
+          <div key={idea.id} className="discovery-derived-branch">
+            <button
+              type="button"
+              data-idea-id={idea.id}
+              className="discovery-derived-node glass"
+              onClick={() => onSelect(idea)}
+              aria-label={`展开子想法 ${idea.title}`}
+            >
+              <span className={`idea-shell discovery-derived-orb ${idea.status === "dormant" ? "is-dormant" : ""}`} aria-hidden="true">
+                <span className="idea-bloom" />
+                <span className="idea-orb"><SproutIcon className="idea-core" /></span>
+              </span>
+              <span className="min-w-0 flex-1 text-left">
+                <span className="discovery-derived-kicker">子想法{sourceWork ? ` · 来自作品「${sourceWork.title}」` : ""}</span>
+                <span className="discovery-derived-title">{idea.title}</span>
+                <span className="discovery-derived-meta">{metrics.activeAttemptCount} 个进行中 · {metrics.workCount} 个作品</span>
+              </span>
+              <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-muted" />
+            </button>
+            <DerivedIdeaTree db={db} parentId={idea.id} childrenByParent={childrenByParent} metricsById={metricsById} onSelect={onSelect} />
+          </div>
         );
       })}
     </div>

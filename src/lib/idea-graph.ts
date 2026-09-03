@@ -9,6 +9,23 @@ export interface IdeaGrowthPath {
   sourceWork?: Work;
 }
 
+export function ideasWithAncestors(ideas: Idea[], matches: Idea[]) {
+  const byId = new Map(ideas.map((idea) => [idea.id, idea]));
+  const included = new Set(matches.map((idea) => idea.id));
+  for (const match of matches) {
+    let parentId = match.parentIdeaId;
+    const seen = new Set<string>();
+    while (parentId && !seen.has(parentId)) {
+      seen.add(parentId);
+      const parent = byId.get(parentId);
+      if (!parent) break;
+      included.add(parent.id);
+      parentId = parent.parentIdeaId;
+    }
+  }
+  return ideas.filter((idea) => included.has(idea.id));
+}
+
 export function ideaGrowthPath(db: Database, ideaId: string): IdeaGrowthPath {
   const selectedIdea = db.ideas.find((idea) => idea.id === ideaId);
   const attempts = db.attempts.filter(

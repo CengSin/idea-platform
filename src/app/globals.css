@@ -294,6 +294,17 @@ a {
 .discovery-work-caption p { margin-top: 4px; font-size: 10px; color: var(--color-muted); }
 .discovery-work-caption > svg { color: var(--color-muted); }
 .discovery-branches > .discovery-work:first-child { margin-top: 20px; }
+.discovery-derived-tree { position: relative; display: grid; gap: 10px; margin: 16px 4px 0 42px; padding-left: 18px; }
+.discovery-derived-tree::before { content: ""; position: absolute; top: 0; bottom: 24px; left: 0; width: 1px; background: linear-gradient(var(--color-artifact), rgba(232, 184, 106, .18)); }
+.discovery-derived-branch { position: relative; min-width: 0; }
+.discovery-derived-branch::before { content: ""; position: absolute; left: -18px; top: 31px; width: 12px; height: 1px; background: var(--color-idea); opacity: .7; }
+.discovery-derived-node { display: flex; width: 100%; min-width: 0; align-items: center; gap: 11px; border-radius: 16px; padding: 11px 12px; }
+.discovery-derived-orb { width: 28px; height: 28px; flex-shrink: 0; }
+.discovery-derived-orb .idea-bloom { opacity: .45; }
+.discovery-derived-kicker { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-idea); font-size: 9px; letter-spacing: .025em; }
+.discovery-derived-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 3px; color: var(--color-artifact); font-size: 13px; font-weight: 500; }
+.discovery-derived-meta { display: block; margin-top: 3px; color: var(--color-muted); font-size: 9px; }
+.discovery-derived-tree .discovery-derived-tree { margin: 10px 0 0 18px; }
 .discovery-parent { display: flex; align-items: center; gap: 6px; color: var(--color-idea); font-size: 11px; padding-top: 10px; max-width: 100%; }
 .discovery-parent span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .discovery-invitation { display: flex; align-items: center; gap: 8px; margin: 18px 8px 0; font-size: 12px; color: var(--color-muted); min-height: 32px; text-align: left; }
@@ -353,6 +364,7 @@ a {
   .is-list .discovery-branches::before, .is-list .discovery-attempt { display: none; }
   .is-list .discovery-work-cover { height: 104px; }
   .is-list .discovery-parent { grid-column: 1 / -1; }
+  .is-list .discovery-derived-tree { grid-column: 1 / -1; }
 }
 @container (min-width: 760px) {
   .discovery-projects.is-map { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
@@ -363,7 +375,7 @@ a {
 }
 @media (hover: hover) and (pointer: fine) {
   .discovery-idea:focus-within, .discovery-idea:hover { border-color: rgba(232, 184, 106, .35); }
-  .discovery-project h2 button:hover, .discovery-project-footer button:hover { color: #ffe0ad; }
+  .discovery-project h2 button:hover, .discovery-project-footer button:hover, .discovery-derived-node:hover .discovery-derived-title { color: #ffe0ad; }
   button.discovery-event:hover { background: rgba(255, 228, 196, .035); }
   .discovery-digest-footer:hover, .discovery-invitation:hover { color: var(--color-artifact); }
 }

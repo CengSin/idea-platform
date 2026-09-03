@@ -17,7 +17,7 @@ import {
   userById,
   WORK_TYPE_LABEL,
 } from "@/lib/format";
-import { ideaGrowthPath } from "@/lib/idea-graph";
+import { ideaGrowthPath, ideasWithAncestors } from "@/lib/idea-graph";
 import { type Database, type Idea } from "@/lib/types";
 import { ArrowLeft, Plus, Search, SlidersHorizontal, Users, X } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
@@ -107,6 +107,7 @@ export function IdeaGraph({
 
   const isFocus = view === "graph" && Boolean(selected);
   const filteredIdeas = ideas.filter(match);
+  const overviewIdeas = q || tag ? ideasWithAncestors(ideas, filteredIdeas) : ideas;
 
   const metrics = selected ? metricsById.get(selected.id)! : null;
   const selectedRadius = metrics
@@ -697,7 +698,7 @@ export function IdeaGraph({
                   </div> : null}
                 </div>
               </header>
-              {filteredIdeas.length > 0 ? <IdeaOverview db={db} ideas={filteredIdeas} metricsById={metricsById} onSelect={selectIdea} list={view === "list"} /> : (
+              {filteredIdeas.length > 0 ? <IdeaOverview db={db} ideas={overviewIdeas} metricsById={metricsById} onSelect={selectIdea} list={view === "list"} /> : (
                 <div className="discovery-no-results" role="status">
                   <Search aria-hidden="true" className="h-6 w-6 text-idea" />
                   <h2>还没有找到这个想法</h2>

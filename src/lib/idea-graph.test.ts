@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ideaGrowthPath } from "./idea-graph.ts";
+import { ideaGrowthPath, ideasWithAncestors } from "./idea-graph.ts";
 import type { Database } from "./types.ts";
 
 function database(): Database {
@@ -144,4 +144,15 @@ test("a derived idea growth path keeps its visible ancestry", () => {
   assert.equal(path.parentIdea?.id, "main");
   assert.equal(path.sourceAttempt?.id, "main-branch");
   assert.equal(path.sourceWork?.id, "main-work");
+});
+
+test("filtered derived ideas retain their parent as overview context", () => {
+  const db = database();
+  const parent = { ...db.ideas[0], id: "main", parentIdeaId: undefined, sourceWorkId: undefined };
+  db.ideas.push(parent);
+
+  assert.deepEqual(
+    ideasWithAncestors(db.ideas, [db.ideas[0]]).map((idea) => idea.id),
+    ["derived", "main"],
+  );
 });
