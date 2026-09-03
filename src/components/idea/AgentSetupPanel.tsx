@@ -59,8 +59,10 @@ export function AgentSetupPanel({ attemptId, derived }: { attemptId: string; der
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-3">
-        <Step icon={FolderPlus} number="1" title="新建项目文件夹">
-          创建一个空文件夹，或进入准备开发的现有仓库。
+        <Step icon={FolderPlus} number="1" title={derived ? "进入原项目目录" : "新建项目文件夹"}>
+          {derived
+            ? "找到产生这个子想法的现有项目，在原项目目录中继续；需要隔离开发时再创建 Git 分支。"
+            : "创建一个空文件夹，或进入准备开发的现有仓库。"}
         </Step>
         <Step icon={derived ? Copy : Download} number="2" title={derived ? "复制连接提示词" : "放入 AGENTS.md"}>
           {derived
