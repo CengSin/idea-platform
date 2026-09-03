@@ -24,6 +24,7 @@ type DataDump struct {
 	Events        *[]domain.Event        `json:"events"`
 	Notifications *[]domain.Notification `json:"notifications"`
 	Follows       *[]domain.Follow       `json:"follows"`
+	AgentConfig   *domain.AgentConfig    `json:"agentConfig"`
 	Auth          *domain.AuthDump       `json:"auth"`
 }
 
@@ -54,6 +55,7 @@ func (s *Service) ExportDump(ctx context.Context) (*DataDump, error) {
 	events := []domain.Event{}
 	notifications := []domain.Notification{}
 	follows := []domain.Follow{}
+	agentConfig := domain.AgentConfig{}
 	auth := domain.AuthDump{Version: 1}
 
 	if err := s.db().WithContext(ctx).Find(&users).Error; err != nil {
@@ -75,6 +77,9 @@ func (s *Service) ExportDump(ctx context.Context) (*DataDump, error) {
 		return nil, err
 	}
 	if err := s.db().WithContext(ctx).Find(&follows).Error; err != nil {
+		return nil, err
+	}
+	if err := s.db().WithContext(ctx).First(&agentConfig, 1).Error; err != nil && err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 	if err := s.db().WithContext(ctx).Find(&auth.Accounts).Error; err != nil {
@@ -116,6 +121,7 @@ func (s *Service) ExportDump(ctx context.Context) (*DataDump, error) {
 	dump.Events = &events
 	dump.Notifications = &notifications
 	dump.Follows = &follows
+	dump.AgentConfig = &agentConfig
 	dump.Auth = &auth
 	return dump, nil
 }
@@ -182,6 +188,15 @@ func (s *Service) ImportDump(ctx context.Context, dump *DataDump, replace bool) 
 		if dump.Follows != nil {
 			if err := replaceAndCreate(tx, replace, &domain.Follow{}, *dump.Follows, nil, "follows"); err != nil {
 				return err
+			}
+		}
+		if dump.AgentConfig != nil {
+			if err := tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&domain.AgentConfig{}).Error; err != nil {
+				return fmt.Errorf("agent config: %w", err)
+			}
+			dump.AgentConfig.ID = 1
+			if err := tx.Create(dump.AgentConfig).Error; err != nil {
+				return fmt.Errorf("agent config: %w", err)
 			}
 		}
 		if dump.Auth != nil {

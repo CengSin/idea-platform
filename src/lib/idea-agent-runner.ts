@@ -5,18 +5,10 @@ import { getAccountPublic } from "./auth";
 import { mutateDb, readDb } from "./db";
 import { pendingAgentEmails, recordAgentEmail, scanCompletedWorks } from "./idea-agent";
 import { sendAgentIterationEmail } from "./idea-agent-mailer";
-
-export function ideaAgentConfiguration() {
-  return {
-    cronSecret: Boolean((process.env.CRON_SECRET ?? "").trim()),
-    resendApiKey: Boolean((process.env.RESEND_API_KEY ?? "").trim()),
-    emailFrom: Boolean((process.env.IDEA_AGENT_EMAIL_FROM ?? "").trim()),
-    siteUrl: Boolean((process.env.NEXT_PUBLIC_SITE_URL ?? "").trim()),
-    adminAllowlist: Boolean((process.env.ADMIN_EMAILS ?? "").trim()),
-  };
-}
+import { getEffectiveAgentConfig } from "./agent-config";
 
 export async function runIdeaAgentScan(input: { siteUrl?: string } = {}) {
+  const config = await getEffectiveAgentConfig();
   const at = new Date().toISOString();
   const requestedLimit = Number(process.env.IDEA_AGENT_SCAN_LIMIT ?? 20);
   const limit = Number.isFinite(requestedLimit) ? Math.min(50, Math.max(1, requestedLimit)) : 20;
@@ -45,6 +37,8 @@ export async function runIdeaAgentScan(input: { siteUrl?: string } = {}) {
         displayName: account.displayName,
         batch,
         siteUrl,
+        apiKey: config.resendApiKey,
+        from: config.emailFrom,
       });
       if (result.status === "unconfigured") {
         email.unconfigured += 1;

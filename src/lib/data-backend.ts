@@ -42,6 +42,7 @@ export function asDatabase(dump: DataDump): Database {
     events: dump.events ?? [],
     notifications: dump.notifications ?? [],
     follows: dump.follows ?? [],
+    agentConfig: dump.agentConfig ?? {},
   };
 }
 

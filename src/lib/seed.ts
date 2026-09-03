@@ -10,5 +10,6 @@ export function createSeed(): Database {
     events: [],
     notifications: [],
     follows: [],
+    agentConfig: {},
   };
 }

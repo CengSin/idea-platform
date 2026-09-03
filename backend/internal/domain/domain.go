@@ -231,6 +231,17 @@ type Follow struct {
 
 func (Follow) TableName() string { return "follows" }
 
+type AgentConfig struct {
+	ID            uint   `json:"-" gorm:"primaryKey"`
+	OpenAIBaseURL string `json:"openaiBaseUrl,omitempty" gorm:"type:text"`
+	OpenAIAPIKey  string `json:"openaiApiKey,omitempty" gorm:"type:text"`
+	CronSecret    string `json:"cronSecret,omitempty" gorm:"type:text"`
+	ResendAPIKey  string `json:"resendApiKey,omitempty" gorm:"type:text"`
+	EmailFrom     string `json:"emailFrom,omitempty" gorm:"type:text"`
+}
+
+func (AgentConfig) TableName() string { return "agent_config" }
+
 type IdeaMetrics struct {
 	WatchingCount      int `json:"watchingCount"`
 	ActiveAttemptCount int `json:"activeAttemptCount"`

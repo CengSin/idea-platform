@@ -9,6 +9,7 @@ import type {
   User,
   Work,
   ActivityEvent,
+  AgentRuntimeConfig,
 } from "./types.ts";
 
 const CONTENT_REVISION_KEY = "content_revision";
@@ -123,6 +124,14 @@ CREATE TABLE IF NOT EXISTS follows (
   user_id TEXT NOT NULL,
   idea_id TEXT NOT NULL,
   PRIMARY KEY (user_id, idea_id)
+);
+CREATE TABLE IF NOT EXISTS agent_config (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  openai_base_url TEXT,
+  openai_api_key TEXT,
+  cron_secret TEXT,
+  resend_api_key TEXT,
+  email_from TEXT
 );
 CREATE TABLE IF NOT EXISTS accounts (
   user_id TEXT PRIMARY KEY,
@@ -381,6 +390,17 @@ function decodeFollow(row: Row): Follow {
   return { userId: str(row.user_id), ideaId: str(row.idea_id) };
 }
 
+function decodeAgentConfig(row?: Row): AgentRuntimeConfig {
+  if (!row) return {};
+  return {
+    openaiBaseUrl: optStr(row.openai_base_url),
+    openaiApiKey: optStr(row.openai_api_key),
+    cronSecret: optStr(row.cron_secret),
+    resendApiKey: optStr(row.resend_api_key),
+    emailFrom: optStr(row.email_from),
+  };
+}
+
 function decodeAccount(row: Row): Account {
   return {
     userId: str(row.user_id),
@@ -400,6 +420,7 @@ export function databaseFromRows(input: {
   events: Row[];
   notifications: Row[];
   follows: Row[];
+  agentConfig?: Row[];
 }): Database {
   return asDatabase({
     version: 3,
@@ -410,6 +431,7 @@ export function databaseFromRows(input: {
     events: input.events.map(decodeEvent),
     notifications: input.notifications.map(decodeNotification),
     follows: input.follows.map(decodeFollow),
+    agentConfig: decodeAgentConfig(input.agentConfig?.[0]),
   });
 }
 
@@ -445,6 +467,7 @@ function contentInserts(db: Database): InStatement[] {
     "DELETE FROM events",
     "DELETE FROM notifications",
     "DELETE FROM follows",
+    "DELETE FROM agent_config",
   ];
   for (const user of db.users) {
     stmts.push({
@@ -586,6 +609,19 @@ function contentInserts(db: Database): InStatement[] {
       args: [follow.userId, follow.ideaId],
     });
   }
+  if (db.agentConfig && Object.values(db.agentConfig).some(Boolean)) {
+    stmts.push({
+      sql: `INSERT INTO agent_config (id, openai_base_url, openai_api_key, cron_secret, resend_api_key, email_from)
+            VALUES (1, ?, ?, ?, ?, ?)`,
+      args: [
+        db.agentConfig.openaiBaseUrl ?? null,
+        db.agentConfig.openaiApiKey ?? null,
+        db.agentConfig.cronSecret ?? null,
+        db.agentConfig.resendApiKey ?? null,
+        db.agentConfig.emailFrom ?? null,
+      ],
+    });
+  }
   return stmts;
 }
 
@@ -679,7 +715,7 @@ export async function readTursoContent(): Promise<{ value: DataDump | null; etag
   const revision = await readRevision(CONTENT_REVISION_KEY);
   if (revision == null) return { value: null };
   const db = tursoClient();
-  const [users, ideas, attempts, works, events, notifications, follows] = await Promise.all([
+  const [users, ideas, attempts, works, events, notifications, follows, agentConfig] = await Promise.all([
     db.execute("SELECT * FROM users"),
     db.execute("SELECT * FROM ideas"),
     db.execute("SELECT * FROM attempts"),
@@ -687,6 +723,7 @@ export async function readTursoContent(): Promise<{ value: DataDump | null; etag
     db.execute("SELECT * FROM events ORDER BY at DESC"),
     db.execute("SELECT * FROM notifications"),
     db.execute("SELECT * FROM follows"),
+    db.execute("SELECT * FROM agent_config WHERE id = 1"),
   ]);
   return {
     value: databaseFromRows({
@@ -697,6 +734,7 @@ export async function readTursoContent(): Promise<{ value: DataDump | null; etag
       events: events.rows,
       notifications: notifications.rows,
       follows: follows.rows,
+      agentConfig: agentConfig.rows,
     }),
     etag: revision,
   };

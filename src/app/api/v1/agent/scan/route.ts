@@ -1,12 +1,13 @@
 import { isAuthorizedAgentScan } from "@/lib/idea-agent";
 import { runIdeaAgentScan } from "@/lib/idea-agent-runner";
 import { NextResponse } from "next/server";
+import { getEffectiveAgentConfig } from "@/lib/agent-config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function run(req: Request) {
-  const secret = (process.env.CRON_SECRET ?? "").trim();
+  const { cronSecret: secret } = await getEffectiveAgentConfig();
   if (!secret) return NextResponse.json({ error: "CRON_SECRET 未配置" }, { status: 503 });
   if (!isAuthorizedAgentScan(req.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

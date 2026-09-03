@@ -39,3 +39,18 @@ test("parseDatabaseDump rejects an unsupported version instead of seeding over i
     /unsupported db.json version: 2/,
   );
 });
+
+test("parseDatabaseDump preserves private agent configuration", () => {
+  const parsed = parseDatabaseDump({
+    version: 3,
+    users: [],
+    ideas: [],
+    attempts: [],
+    works: [],
+    events: [],
+    notifications: [],
+    follows: [],
+    agentConfig: { openaiBaseUrl: "https://api.example.com/v1", openaiApiKey: "sk-private" },
+  });
+  assert.equal(parsed?.agentConfig?.openaiApiKey, "sk-private");
+});

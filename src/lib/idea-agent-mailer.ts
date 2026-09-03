@@ -7,9 +7,11 @@ export async function sendAgentIterationEmail(input: {
   displayName: string;
   batch: AgentScanBatch;
   siteUrl: string;
+  apiKey?: string;
+  from?: string;
 }) {
-  const apiKey = (process.env.RESEND_API_KEY ?? "").trim();
-  const from = (process.env.IDEA_AGENT_EMAIL_FROM ?? "").trim();
+  const apiKey = (input.apiKey ?? process.env.RESEND_API_KEY ?? "").trim();
+  const from = (input.from ?? process.env.IDEA_AGENT_EMAIL_FROM ?? "").trim();
   if (!apiKey || !from) return { status: "unconfigured" as const };
 
   const message = renderAgentEmail({

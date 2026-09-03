@@ -1,20 +1,13 @@
 import { AgentRunControl } from "@/components/admin/AgentRunControl";
+import { AgentConfigForm } from "@/components/admin/AgentConfigForm";
 import { PageFrame } from "@/components/chrome/PageFrame";
 import { Chip } from "@/components/ui/Chip";
 import Link from "@/components/ui/NavigationLink";
 import { requireAdminUser } from "@/lib/admin";
 import { getIdeaAgentAdminDashboard } from "@/lib/idea-agent-admin";
-import { Bot, CheckCircle2, KeyRound, Mail, ShieldCheck, TimerReset, XCircle } from "lucide-react";
+import { Bot, KeyRound, Mail, ShieldCheck, TimerReset } from "lucide-react";
 
 export const dynamic = "force-dynamic";
-
-const configLabels = {
-  adminAllowlist: "管理员白名单",
-  cronSecret: "定时任务密钥",
-  resendApiKey: "Resend API",
-  emailFrom: "发件人",
-  siteUrl: "站点地址",
-};
 
 const emailLabels: Record<string, string> = {
   not_scanned: "未扫描",
@@ -36,21 +29,13 @@ export default async function IdeaAgentAdminPage() {
             <ShieldCheck className="h-4 w-4" /> 管理员
           </div>
           <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.04em]">Idea Agent 控制台</h1>
-          <p className="mt-2 text-[13.5px] text-muted">查看配置、扫描队列和邮件状态；密钥值永远不会在页面中显示。</p>
+          <p className="mt-2 text-[13.5px] text-muted">配置 Agent、定时扫描和邮件服务，并查看运行状态。</p>
         </div>
         <Chip tone="active">{account.email}</Chip>
       </div>
 
-      <section className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {Object.entries(dashboard.configuration).map(([key, configured]) => (
-          <div key={key} className="glass rounded-2xl p-4">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[12px] text-muted">{configLabels[key as keyof typeof configLabels]}</span>
-              {configured ? <CheckCircle2 className="h-4 w-4 text-active" /> : <XCircle className="h-4 w-4 text-blocked" />}
-            </div>
-            <div className="mt-3 text-[14px]">{configured ? "已配置" : "未配置"}</div>
-          </div>
-        ))}
+      <section className="mt-7">
+        <AgentConfigForm configuration={dashboard.configuration} />
       </section>
 
       <section className="mt-5 grid gap-4 xl:grid-cols-[1.4fr_0.6fr]">

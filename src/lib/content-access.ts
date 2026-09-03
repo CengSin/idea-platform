@@ -21,6 +21,7 @@ export function workForViewer(db: Database, work: Work, userId?: string): Work {
  * included in the author's request-scoped snapshot until the idea is published.
  */
 export function scopeDatabaseForUser(db: Database, userId: string): Database {
+  const { agentConfig: _privateAgentConfig, ...visibleDb } = db;
   const ideas = db.ideas.filter((idea) => canAccessIdea(idea, userId));
   const ideaIds = new Set(ideas.map((idea) => idea.id));
   const attempts = db.attempts.filter((attempt) => ideaIds.has(attempt.ideaId));
@@ -31,7 +32,7 @@ export function scopeDatabaseForUser(db: Database, userId: string): Database {
   const workIds = new Set(works.map((work) => work.id));
 
   return {
-    ...db,
+    ...visibleDb,
     ideas,
     attempts,
     works,

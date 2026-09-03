@@ -97,6 +97,14 @@ test("databaseFromRows restores nested JSON and optional fields", () => {
       }),
     ],
     follows: [row({ user_id: "user_38c0e310a872", idea_id: "idea_1" })],
+    agentConfig: [row({
+      id: 1,
+      openai_base_url: "https://api.example.com/v1",
+      openai_api_key: "sk-private",
+      cron_secret: "cron-private",
+      resend_api_key: "re_private",
+      email_from: "Agent <agent@example.com>",
+    })],
   });
 
   assert.equal(db.users[0]?.displayName, "cengsin");
@@ -108,6 +116,8 @@ test("databaseFromRows restores nested JSON and optional fields", () => {
   assert.equal(db.notifications[0]?.userId, "user_38c0e310a872");
   assert.equal(db.works[0]?.iteration?.email.status, "pending");
   assert.deepEqual(db.follows[0], { userId: "user_38c0e310a872", ideaId: "idea_1" });
+  assert.equal(db.agentConfig?.openaiBaseUrl, "https://api.example.com/v1");
+  assert.equal(db.agentConfig?.cronSecret, "cron-private");
 });
 
 test("authFromRows restores the login account", () => {

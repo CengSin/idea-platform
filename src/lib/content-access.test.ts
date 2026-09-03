@@ -61,6 +61,13 @@ test("a draft and its complete project tree are only present in the author's sna
   assert.deepEqual(mine.notifications.map((item) => item.id), ["global", "mine"]);
 });
 
+test("runtime agent secrets are never included in a user snapshot", () => {
+  const db = fixture();
+  db.agentConfig = { openaiApiKey: "sk-private", cronSecret: "cron-private" };
+  const snapshot = scopeDatabaseForUser(db, "user-a");
+  assert.equal(snapshot.agentConfig, undefined);
+});
+
 test("publishing the idea releases its existing project and work tree together", () => {
   const db = fixture();
   assert.equal(scopeDatabaseForUser(db, "viewer").ideas.some((item) => item.id === "draft-a"), false);

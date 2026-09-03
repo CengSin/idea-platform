@@ -51,6 +51,7 @@ func Open(cfg config.Config) (*Store, error) {
 		&domain.Event{},
 		&domain.Notification{},
 		&domain.Follow{},
+		&domain.AgentConfig{},
 		&domain.Account{},
 		&domain.Session{},
 		&domain.AgentToken{},

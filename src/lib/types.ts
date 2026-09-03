@@ -209,6 +209,14 @@ export interface Follow {
   ideaId: string;
 }
 
+export interface AgentRuntimeConfig {
+  openaiBaseUrl?: string;
+  openaiApiKey?: string;
+  cronSecret?: string;
+  resendApiKey?: string;
+  emailFrom?: string;
+}
+
 export interface IdeaMetrics {
   watchingCount: number;
   activeAttemptCount: number;
@@ -245,6 +253,7 @@ export interface Database {
   events: ActivityEvent[];
   notifications: Notification[];
   follows: Follow[];
+  agentConfig?: AgentRuntimeConfig;
 }
 
 export const STALL_AFTER_DAYS = 21;

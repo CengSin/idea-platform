@@ -1,10 +1,10 @@
 import "server-only";
 
 import { readDb } from "./db";
-import { ideaAgentConfiguration } from "./idea-agent-runner";
+import { getAgentConfigView } from "./agent-config";
 
 export async function getIdeaAgentAdminDashboard() {
-  const db = await readDb();
+  const [db, configuration] = await Promise.all([readDb(), getAgentConfigView()]);
   const completedWorks = db.works.filter((work) => {
     const attempt = db.attempts.find((item) => item.id === work.attemptId);
     return work.status === "published" && attempt?.status === "published";
@@ -28,7 +28,7 @@ export async function getIdeaAgentAdminDashboard() {
     }));
 
   return {
-    configuration: ideaAgentConfiguration(),
+    configuration,
     metrics: {
       completedWorks: completedWorks.length,
       waitingForScan: completedWorks.filter(

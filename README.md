@@ -71,9 +71,9 @@ go run ./cmd/api
 
 生产部署每天通过 Vercel Cron 请求 `GET /api/v1/agent/scan`。接口只扫描状态为已发布、所属承接已完成且未关闭后续迭代的作品，并为每个作品生成 3 条私有候选。作者在作品页接受后，候选才会成为公开的衍生 Idea；随后可沿用现有承接页生成 Agent 配置并实现。忽略候选不会产生公开内容，关闭迭代也不会删除已有 Idea 或作品。
 
-定时接口必须配置 `CRON_SECRET`。邮件使用 Resend REST API，还需配置 `RESEND_API_KEY` 和已验证发件人 `IDEA_AGENT_EMAIL_FROM`；未配置邮件时建议仍会保存为站内通知，并在配置完成后的下一次扫描重试发送。`IDEA_AGENT_SCAN_LIMIT` 默认每轮处理 20 个作品，最大 50。
+定时接口必须配置 `CRON_SECRET`。邮件使用 Resend REST API，还需配置 `RESEND_API_KEY` 和已验证发件人 `IDEA_AGENT_EMAIL_FROM`；未配置邮件时建议仍会保存为站内通知，并在配置完成后的下一次扫描重试发送。OpenAI 兼容服务可通过 `OPENAI_BASE_URL` 和 `OPENAI_API_KEY` 配置。`IDEA_AGENT_SCAN_LIMIT` 默认每轮处理 20 个作品，最大 50。
 
-管理后台位于 `/admin`。先通过普通注册流程创建账户，再把邮箱加入逗号分隔的 `ADMIN_EMAILS` 环境变量；重新部署后，该账户会在侧栏看到“管理”入口。后台只显示密钥是否配置，不会回显密钥值，并可查看队列、邮件失败与关闭状态或手动运行一次扫描。私有 Agent 建议只会返回给作品所属承接的作者；公开目录、其他用户页面和通用 API 会剥离 `work.iteration`。
+管理后台位于 `/admin`。先通过普通注册流程创建账户，再把邮箱加入逗号分隔的 `ADMIN_EMAILS` 环境变量；重新部署后，该账户会在侧栏看到“管理”入口。后台可直接维护 OpenAI Base URL / API Key、定时任务密钥、Resend API Key 和发件人，保存值优先于同名环境变量。密钥可覆盖或清除，但不会回显明文。后台还可查看队列、邮件失败与关闭状态或手动运行一次扫描。私有 Agent 建议只会返回给作品所属承接的作者；公开目录、其他用户页面和通用 API 会剥离 `work.iteration`。
 
 ### 公开访问
 

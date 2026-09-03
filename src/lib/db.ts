@@ -12,6 +12,7 @@ function clone<T>(value: T): T {
 }
 
 function normalizeDb(db: Database) {
+  db.agentConfig ??= {};
   for (const user of db.users) {
     user.projectLinks ??= [];
   }
