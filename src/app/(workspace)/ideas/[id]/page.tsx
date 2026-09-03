@@ -6,9 +6,11 @@ import { Lineage } from "@/components/idea/Lineage";
 import { WorkGallery } from "@/components/idea/WorkGallery";
 import { Chip } from "@/components/ui/Chip";
 import { IDEA_STATUS_LABEL } from "@/lib/format";
+import { NEXT_IDEA_STAGE_LABEL } from "@/lib/next-ideas";
 import { getIdeaBundle } from "@/lib/queries";
 import Link from "@/components/ui/NavigationLink";
 import { notFound } from "next/navigation";
+import { GitBranch } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,7 @@ export default async function IdeaDetailPage({
   const { id } = await params;
   const bundle = await getIdeaBundle(id);
   if (!bundle) notFound();
-  const { idea, attempts, works, forks, similar, author, metrics, following, myAttempt, db, currentUserId } =
+  const { idea, attempts, works, forks, similar, author, metrics, following, myAttempt, db, currentUserId, sourceWork, nextIdeaStage } =
     bundle;
   const isOwner = idea.author.userId === currentUserId;
 
@@ -37,6 +39,26 @@ export default async function IdeaDetailPage({
         }
       >
         {idea.status === "draft" && isOwner ? <DraftIdeaActions idea={idea} /> : null}
+        {sourceWork && nextIdeaStage ? (
+          <div className="glass mb-6 flex flex-col gap-3 rounded-2xl px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-idea/10 text-idea">
+                <GitBranch className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 text-[13px] text-muted">
+                这是从作品
+                {" "}
+                <Link href={`/works/${sourceWork.id}`} className="text-artifact hover:text-idea">
+                  「{sourceWork.title}」
+                </Link>
+                {" "}长出的下一步公开想法
+              </div>
+            </div>
+            <Chip tone={nextIdeaStage === "result" ? "artifact" : nextIdeaStage === "growing" ? "active" : "idea"}>
+              {NEXT_IDEA_STAGE_LABEL[nextIdeaStage]}
+            </Chip>
+          </div>
+        ) : null}
         <IdeaHeader
           idea={idea}
           author={author}

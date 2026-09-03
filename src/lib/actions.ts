@@ -13,12 +13,15 @@ import {
   addProjectLink,
   adoptIdea,
   clearContent,
+  createNextIdea,
+  deleteNextIdea,
   followIdea,
   markNotificationsRead,
   publishIdea,
   publishIdeaDraft,
   removeProjectLink,
   saveIdeaDraft,
+  updateNextIdea,
   updateIdeaDraft,
   deleteIdeaDraft,
 } from "./ops";
@@ -68,6 +71,33 @@ export async function deleteIdeaDraftAction(ideaId: string) {
 export async function adoptIdeaAction(input: Parameters<typeof adoptIdea>[1]) {
   const me = await requireCurrentUser();
   const result = await adoptIdea(me.id, input);
+  refresh();
+  return result;
+}
+
+export async function createNextIdeaAction(
+  workId: string,
+  input: Parameters<typeof createNextIdea>[2],
+) {
+  const me = await requireCurrentUser();
+  const result = await createNextIdea(me.id, workId, input);
+  refresh();
+  return result;
+}
+
+export async function updateNextIdeaAction(
+  ideaId: string,
+  input: Parameters<typeof updateNextIdea>[2],
+) {
+  const me = await requireCurrentUser();
+  const result = await updateNextIdea(me.id, ideaId, input);
+  refresh();
+  return result;
+}
+
+export async function deleteNextIdeaAction(ideaId: string) {
+  const me = await requireCurrentUser();
+  const result = await deleteNextIdea(me.id, ideaId);
   refresh();
   return result;
 }

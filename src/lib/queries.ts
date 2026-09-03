@@ -9,6 +9,7 @@ import {
   userById,
   workById,
 } from "./format";
+import { nextIdeaStage } from "./next-ideas";
 // Covers are resolved when a work is published; page reads never fetch external sites.
 export const getSnapshot = cache(async () => {
   const me = await requireCurrentUser();
@@ -43,6 +44,7 @@ export async function getIdeaBundle(id: string) {
   const myAttempt = attempts.find(
     (a) => a.ownerId === me.id && a.status !== "abandoned",
   );
+  const sourceWork = idea.sourceWorkId ? workById(db, idea.sourceWorkId) : undefined;
   return {
     db,
     idea,
@@ -54,6 +56,8 @@ export async function getIdeaBundle(id: string) {
     metrics: ideaMetrics(db, id),
     following,
     myAttempt,
+    sourceWork,
+    nextIdeaStage: sourceWork ? nextIdeaStage(db, idea.id) : undefined,
     me,
     currentUserId: me.id,
   };
@@ -110,12 +114,28 @@ export async function getWorkBundle(id: string) {
   const { db, me } = await getSnapshot();
   const work = workById(db, id);
   if (!work) return null;
+  const nextIdeas = db.ideas
+    .filter((idea) => idea.sourceWorkId === id && idea.visibility === "public" && idea.status !== "draft" && idea.status !== "archived")
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((idea) => ({
+      idea,
+      stage: nextIdeaStage(db, idea.id),
+      attemptCount: db.attempts.filter(
+        (attempt) => attempt.ideaId === idea.id && attempt.status !== "abandoned" && attempt.status !== "considering",
+      ).length,
+      workCount: db.works.filter((work) => work.ideaId === idea.id && work.status === "published").length,
+      canManage: idea.author.userId === me.id,
+      canDelete: !db.attempts.some((attempt) => attempt.ideaId === idea.id) &&
+        !db.works.some((derivedWork) => derivedWork.ideaId === idea.id),
+    }));
   return {
     db,
     work,
     idea: ideaById(db, work.ideaId)!,
     attempt: attemptById(db, work.attemptId)!,
-    forks: db.ideas.filter((i) => i.sourceWorkId === id),
+    forks: nextIdeas.map((item) => item.idea),
+    nextIdeas,
     canManage: db.attempts.some((attempt) => attempt.id === work.attemptId && attempt.ownerId === me.id),
+    currentUserId: me.id,
   };
 }

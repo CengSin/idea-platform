@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { CoverImage } from "@/components/ui/CoverImage";
 import { WorkActions } from "@/components/idea/WorkActions";
 import { AgentUpgradePanel } from "@/components/idea/AgentUpgradePanel";
+import { NextIdeas } from "@/components/idea/NextIdeas";
 import { formatDate, formatLicense, WORK_TYPE_LABEL } from "@/lib/format";
 import { getWorkBundle } from "@/lib/queries";
 import { ExternalLink } from "lucide-react";
@@ -20,7 +21,7 @@ export default async function WorkPage({
   const { id } = await params;
   const bundle = await getWorkBundle(id);
   if (!bundle) notFound();
-  const { work, idea, attempt, forks } = bundle;
+  const { work, idea, attempt, nextIdeas } = bundle;
 
   return (
       <PageFrame
@@ -88,20 +89,14 @@ export default async function WorkPage({
               </ul>
               <p className="mt-4 text-[12.5px] text-muted">{formatLicense(work.license)}</p>
             </div>
-            {forks.length ? (
-              <div className="glass rounded-3xl p-5">
-                <div className="text-[12px] tracking-[0.08em] text-muted">由作品衍生</div>
-                <ul className="mt-3 space-y-2 text-[13.5px]">
-                  {forks.map((f) => (
-                    <li key={f.id}>
-                      <Link href={`/ideas/${f.id}`}>{f.title}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
           </aside>
         </div>
+        <NextIdeas
+          workId={work.id}
+          workTitle={work.title}
+          items={nextIdeas}
+          canCreate={bundle.canManage}
+        />
       </PageFrame>
   );
 }

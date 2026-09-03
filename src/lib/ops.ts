@@ -5,6 +5,12 @@ import { buildAdoptionPrompt, recomputeIdeaStatus } from "./format";
 import { isPlaceholderCover } from "./cover";
 import { resolveLinkPreview } from "./link-preview";
 import { applyWorkDelete, applyWorkUpdate, ownedWork, parseWorkPatch } from "./work-management";
+import {
+  createNextIdeaRecord,
+  deleteNextIdeaRecord,
+  updateNextIdeaRecord,
+  type NextIdeaInput,
+} from "./next-ideas";
 import { type AttemptStatus, type Visibility } from "./types";
 import type { Idea, License, WorkType } from "./types";
 
@@ -96,6 +102,58 @@ export async function publishIdea(userId: string, input: IdeaInput) {
 
 export async function saveIdeaDraft(userId: string, input: IdeaInput) {
   return createIdea(userId, input, "draft");
+}
+
+export async function createNextIdea(userId: string, workId: string, input: NextIdeaInput) {
+  const id = `idea_${nanoid(8)}`;
+  const at = nowIso();
+  await mutateDb((db) => {
+    const idea = createNextIdeaRecord(db, userId, workId, input, id, at);
+    const me = db.users.find((item) => item.id === userId)!;
+    db.events.unshift({
+      id: `evt_${nanoid(6)}`,
+      at,
+      actorId: me.id,
+      actorName: me.displayName,
+      text: `从作品中发布了下一步「${idea.title}」`,
+      ideaId: idea.id,
+      workId,
+    });
+  });
+  return { idea_id: id, url: `/ideas/${id}`, review_status: "published" as const };
+}
+
+export async function updateNextIdea(
+  userId: string,
+  ideaId: string,
+  input: NextIdeaInput,
+) {
+  const at = nowIso();
+  let workId = "";
+  await mutateDb((db) => {
+    const idea = updateNextIdeaRecord(db, userId, ideaId, input, at);
+    workId = idea.sourceWorkId!;
+    const me = db.users.find((item) => item.id === userId)!;
+    db.events.unshift({
+      id: `evt_${nanoid(6)}`,
+      at,
+      actorId: me.id,
+      actorName: me.displayName,
+      text: `更新了下一步「${idea.title}」`,
+      ideaId,
+      workId,
+    });
+  });
+  return { idea_id: ideaId, url: `/ideas/${ideaId}`, work_id: workId, updated_at: at };
+}
+
+export async function deleteNextIdea(userId: string, ideaId: string) {
+  let workId = "";
+  await mutateDb((db) => {
+    const idea = deleteNextIdeaRecord(db, userId, ideaId);
+    workId = idea.sourceWorkId!;
+  });
+  return { idea_id: ideaId, work_id: workId, deleted: true };
 }
 
 function applyIdeaInput(idea: Idea, input: ReturnType<typeof cleanIdeaInput>) {
