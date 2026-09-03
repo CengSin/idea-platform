@@ -5,6 +5,7 @@ import { CoverImage } from "@/components/ui/CoverImage";
 import { WorkActions } from "@/components/idea/WorkActions";
 import { AgentUpgradePanel } from "@/components/idea/AgentUpgradePanel";
 import { NextIdeas } from "@/components/idea/NextIdeas";
+import { IdeaAgentPanel } from "@/components/idea/IdeaAgentPanel";
 import { formatDate, formatLicense, WORK_TYPE_LABEL } from "@/lib/format";
 import { getWorkBundle } from "@/lib/queries";
 import { ExternalLink } from "lucide-react";
@@ -91,6 +92,7 @@ export default async function WorkPage({
             </div>
           </aside>
         </div>
+        {bundle.canManage ? <IdeaAgentPanel work={work} /> : null}
         <NextIdeas
           workId={work.id}
           workTitle={work.title}

@@ -26,6 +26,8 @@ export type WorkType =
   | "hardware"
   | "other";
 export type WorkStatus = "draft" | "published" | "archived";
+export type AgentSuggestionStatus = "pending" | "accepted" | "dismissed";
+export type AgentEmailStatus = "pending" | "sent" | "failed" | "skipped";
 export type ActorKind = "user" | "agent";
 export type CommercialUse = "yes" | "with_attribution" | "no";
 export type NotificationKind =
@@ -155,6 +157,29 @@ export interface Work {
   saves: number;
   citations: number;
   graph?: { x: number; y: number };
+  iteration?: WorkIteration;
+}
+
+export interface AgentSuggestion {
+  id: string;
+  title: string;
+  summary: string;
+  problem: string;
+  whyItMatters: string;
+  status: AgentSuggestionStatus;
+  createdAt: string;
+  acceptedIdeaId?: string;
+}
+
+export interface WorkIteration {
+  status: "open" | "closed";
+  suggestions: AgentSuggestion[];
+  scannedAt?: string;
+  email: {
+    status: AgentEmailStatus;
+    lastAttemptAt?: string;
+    sentAt?: string;
+  };
 }
 
 export interface ActivityEvent {
@@ -170,6 +195,7 @@ export interface ActivityEvent {
 
 export interface Notification {
   id: string;
+  userId?: string;
   at: string;
   title: string;
   body: string;

@@ -182,6 +182,9 @@ func NormalizeWork(w *Work) {
 	if w.Credits == nil {
 		w.Credits = []Credit{}
 	}
+	if w.Iteration != nil && w.Iteration.Suggestions == nil {
+		w.Iteration.Suggestions = []AgentSuggestion{}
+	}
 }
 
 func NormalizeUser(u *User) {

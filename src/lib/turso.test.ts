@@ -80,12 +80,14 @@ test("databaseFromRows restores nested JSON and optional fields", () => {
         views: 0,
         saves: 0,
         citations: 0,
+        iteration: '{"status":"open","suggestions":[],"scannedAt":"2026-09-03T00:00:00.000Z","email":{"status":"pending"}}',
       }),
     ],
     events: [],
     notifications: [
       row({
         id: "n1",
+        user_id: "user_38c0e310a872",
         at: "2026-08-29T05:03:15.421Z",
         title: "hello",
         body: "body",
@@ -103,6 +105,8 @@ test("databaseFromRows restores nested JSON and optional fields", () => {
   assert.equal(db.attempts[0]?.featuredOnGraph, true);
   assert.equal(db.attempts[0]?.projectDescription, "desc");
   assert.equal(db.notifications[0]?.read, true);
+  assert.equal(db.notifications[0]?.userId, "user_38c0e310a872");
+  assert.equal(db.works[0]?.iteration?.email.status, "pending");
   assert.deepEqual(db.follows[0], { userId: "user_38c0e310a872", ideaId: "idea_1" });
 });
 

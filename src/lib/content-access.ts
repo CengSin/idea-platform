@@ -34,6 +34,9 @@ export function scopeDatabaseForUser(db: Database, userId: string): Database {
         (!event.attemptId || attemptIds.has(event.attemptId)) &&
         (!event.workId || workIds.has(event.workId)),
     ),
+    notifications: db.notifications.filter(
+      (notification) => !notification.userId || notification.userId === userId,
+    ),
     follows: db.follows.filter(
       (follow) => follow.userId === userId && ideaIds.has(follow.ideaId),
     ),

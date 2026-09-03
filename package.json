@@ -8,7 +8,7 @@
     "start": "next start --port 3001",
     "tunnel": "bash scripts/tunnel.sh",
     "dev:public": "bash scripts/tunnel.sh --dev",
-    "test": "node --experimental-strip-types --test src/lib/cover.test.ts src/lib/content-access.test.ts src/lib/data-backend.test.ts src/lib/turso.test.ts src/lib/public-catalog.test.ts src/lib/work-management.test.ts src/lib/next-ideas.test.ts src/lib/idea-graph.test.ts src/lib/idea-lineage.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/cover.test.ts src/lib/content-access.test.ts src/lib/data-backend.test.ts src/lib/turso.test.ts src/lib/public-catalog.test.ts src/lib/work-management.test.ts src/lib/next-ideas.test.ts src/lib/idea-agent.test.ts src/lib/idea-graph.test.ts src/lib/idea-lineage.test.ts",
     "test:work-api": "node scripts/test-work-api.mjs",
     "migrate:turso": "node --experimental-strip-types scripts/migrate-to-turso.ts"
   },

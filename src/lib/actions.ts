@@ -11,16 +11,19 @@ import { readDb } from "./db";
 import { attemptById, ideaById } from "./format";
 import {
   addProjectLink,
+  acceptAgentSuggestion,
   adoptIdea,
   clearContent,
   createNextIdea,
   deleteNextIdea,
+  dismissAgentSuggestion,
   followIdea,
   markNotificationsRead,
   publishIdea,
   publishIdeaDraft,
   removeProjectLink,
   saveIdeaDraft,
+  setWorkIterationStatus,
   updateNextIdea,
   updateIdeaDraft,
   deleteIdeaDraft,
@@ -102,6 +105,27 @@ export async function deleteNextIdeaAction(ideaId: string) {
   return result;
 }
 
+export async function acceptAgentSuggestionAction(workId: string, suggestionId: string) {
+  const me = await requireCurrentUser();
+  const result = await acceptAgentSuggestion(me.id, workId, suggestionId);
+  refresh();
+  return result;
+}
+
+export async function dismissAgentSuggestionAction(workId: string, suggestionId: string) {
+  const me = await requireCurrentUser();
+  const result = await dismissAgentSuggestion(me.id, workId, suggestionId);
+  refresh();
+  return result;
+}
+
+export async function setWorkIterationStatusAction(workId: string, status: "open" | "closed") {
+  const me = await requireCurrentUser();
+  const result = await setWorkIterationStatus(me.id, workId, status);
+  refresh();
+  return result;
+}
+
 export async function generateAgentSetupAction(input: {
   attemptId: string;
   baseUrl: string;
@@ -148,8 +172,8 @@ export async function followIdeaAction(ideaId: string, follow: boolean) {
 }
 
 export async function markNotificationsReadAction() {
-  await requireCurrentUser();
-  await markNotificationsRead();
+  const me = await requireCurrentUser();
+  await markNotificationsRead(me.id);
   refresh();
 }
 

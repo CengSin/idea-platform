@@ -32,6 +32,12 @@ function normalizeDb(db: Database) {
       at > latest ? at : latest,
     );
   }
+  for (const work of db.works) {
+    if (work.iteration) {
+      work.iteration.suggestions ??= [];
+      work.iteration.email ??= { status: "pending" };
+    }
+  }
   return db;
 }
 

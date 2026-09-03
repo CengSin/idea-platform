@@ -38,7 +38,11 @@ function fixture(): Database {
       actorName: attempt.ownerId, text: "private event", ideaId: attempt.ideaId,
       attemptId: attempt.id, workId: `work-${attempt.ideaId}`,
     })),
-    notifications: [],
+    notifications: [
+      { id: "global", at: draft.createdAt, title: "全局", body: "", read: false, href: "/", kind: "agent" },
+      { id: "mine", userId: "user-a", at: draft.createdAt, title: "我的", body: "", read: false, href: "/", kind: "agent" },
+      { id: "other", userId: "user-b", at: draft.createdAt, title: "他人", body: "", read: false, href: "/", kind: "agent" },
+    ],
     follows: [
       { userId: "user-a", ideaId: draft.id },
       { userId: "user-b", ideaId: published.id },
@@ -54,6 +58,7 @@ test("a draft and its complete project tree are only present in the author's sna
   assert.deepEqual(mine.works.map((item) => item.ideaId), ["draft-a", "published"]);
   assert.equal(JSON.stringify(mine).includes("draft-b"), false);
   assert.deepEqual(mine.follows, [{ userId: "user-a", ideaId: "draft-a" }]);
+  assert.deepEqual(mine.notifications.map((item) => item.id), ["global", "mine"]);
 });
 
 test("publishing the idea releases its existing project and work tree together", () => {

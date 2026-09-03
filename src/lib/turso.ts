@@ -96,7 +96,8 @@ CREATE TABLE IF NOT EXISTS works (
   views INTEGER NOT NULL DEFAULT 0,
   saves INTEGER NOT NULL DEFAULT 0,
   citations INTEGER NOT NULL DEFAULT 0,
-  graph TEXT
+  graph TEXT,
+  iteration TEXT
 );
 CREATE TABLE IF NOT EXISTS events (
   id TEXT PRIMARY KEY,
@@ -110,6 +111,7 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE TABLE IF NOT EXISTS notifications (
   id TEXT PRIMARY KEY,
+  user_id TEXT,
   at TEXT NOT NULL,
   title TEXT NOT NULL,
   body TEXT NOT NULL,
@@ -169,6 +171,18 @@ export function tursoClient(): Client {
 async function ensureSchema() {
   if (schemaReady) return;
   await tursoClient().executeMultiple(SCHEMA);
+  for (const sql of [
+    "ALTER TABLE works ADD COLUMN iteration TEXT",
+    "ALTER TABLE notifications ADD COLUMN user_id TEXT",
+  ]) {
+    try {
+      await tursoClient().execute(sql);
+    } catch (error) {
+      if (!/duplicate column name/i.test(error instanceof Error ? error.message : String(error))) {
+        throw error;
+      }
+    }
+  }
   schemaReady = true;
 }
 
@@ -326,6 +340,8 @@ function decodeWork(row: Row): Work {
   if (publishedAt) work.publishedAt = publishedAt;
   const graph = parseJson<Work["graph"] | null>(row.graph, null);
   if (graph) work.graph = graph;
+  const iteration = parseJson<Work["iteration"] | null>(row.iteration, null);
+  if (iteration) work.iteration = iteration;
   return work;
 }
 
@@ -347,7 +363,7 @@ function decodeEvent(row: Row): ActivityEvent {
 }
 
 function decodeNotification(row: Row): Notification {
-  return {
+  const notification: Notification = {
     id: str(row.id),
     at: str(row.at),
     title: str(row.title),
@@ -356,6 +372,9 @@ function decodeNotification(row: Row): Notification {
     href: str(row.href),
     kind: str(row.kind) as Notification["kind"],
   };
+  const userId = optStr(row.user_id);
+  if (userId) notification.userId = userId;
+  return notification;
 }
 
 function decodeFollow(row: Row): Follow {
@@ -505,8 +524,8 @@ function contentInserts(db: Database): InStatement[] {
   for (const work of db.works) {
     stmts.push({
       sql: `INSERT INTO works (id, attempt_id, idea_id, title, summary, type, cover_url, external_url,
-            repository_url, status, credits, license, published_at, views, saves, citations, graph)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            repository_url, status, credits, license, published_at, views, saves, citations, graph, iteration)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         work.id,
         work.attemptId,
@@ -525,6 +544,7 @@ function contentInserts(db: Database): InStatement[] {
         work.saves,
         work.citations,
         work.graph ? jsonText(work.graph) : null,
+        work.iteration ? jsonText(work.iteration) : null,
       ],
     });
   }
@@ -546,10 +566,11 @@ function contentInserts(db: Database): InStatement[] {
   }
   for (const notification of db.notifications) {
     stmts.push({
-      sql: `INSERT INTO notifications (id, at, title, body, is_read, href, kind)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO notifications (id, user_id, at, title, body, is_read, href, kind)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         notification.id,
+        notification.userId ?? null,
         notification.at,
         notification.title,
         notification.body,
