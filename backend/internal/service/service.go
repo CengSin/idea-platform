@@ -131,6 +131,13 @@ func canAccessIdea(idea domain.Idea, userID string) bool {
 	return idea.Status != "draft" || idea.AuthorUserID == userID || idea.Author.UserID == userID
 }
 
+func workForUser(work domain.Work, ownerID, userID string) domain.Work {
+	if ownerID != userID {
+		work.Iteration = nil
+	}
+	return work
+}
+
 func scopeSnapshot(snap *domain.Snapshot, userID string) {
 	ideaIDs := map[string]bool{}
 	ideas := make([]domain.Idea, 0, len(snap.Ideas))
@@ -141,18 +148,20 @@ func scopeSnapshot(snap *domain.Snapshot, userID string) {
 		}
 	}
 	attemptIDs := map[string]bool{}
+	attemptOwners := map[string]string{}
 	attempts := make([]domain.Attempt, 0, len(snap.Attempts))
 	for _, attempt := range snap.Attempts {
 		if ideaIDs[attempt.IdeaID] {
 			attempts = append(attempts, attempt)
 			attemptIDs[attempt.ID] = true
+			attemptOwners[attempt.ID] = attempt.OwnerID
 		}
 	}
 	workIDs := map[string]bool{}
 	works := make([]domain.Work, 0, len(snap.Works))
 	for _, work := range snap.Works {
 		if ideaIDs[work.IdeaID] && attemptIDs[work.AttemptID] {
-			works = append(works, work)
+			works = append(works, workForUser(work, attemptOwners[work.AttemptID], userID))
 			workIDs[work.ID] = true
 		}
 	}
@@ -303,6 +312,10 @@ func (s *Service) GetIdea(userID, id string) (map[string]any, error) {
 	for i := range attempts {
 		domain.NormalizeAttempt(&attempts[i])
 	}
+	attemptOwners := map[string]string{}
+	for _, attempt := range attempts {
+		attemptOwners[attempt.ID] = attempt.OwnerID
+	}
 	var works []domain.Work
 	if err := s.db().Where("idea_id = ?", id).Find(&works).Error; err != nil {
 		return nil, err
@@ -311,7 +324,7 @@ func (s *Service) GetIdea(userID, id string) (map[string]any, error) {
 	for i := range works {
 		domain.NormalizeWork(&works[i])
 		if works[i].Status == "published" {
-			published = append(published, works[i])
+			published = append(published, workForUser(works[i], attemptOwners[works[i].AttemptID], userID))
 		}
 	}
 	forks := make([]domain.Idea, 0)
@@ -448,6 +461,7 @@ func (s *Service) GetAttempt(userID, id string) (map[string]any, error) {
 	}
 	for i := range works {
 		domain.NormalizeWork(&works[i])
+		works[i] = workForUser(works[i], attempt.OwnerID, userID)
 	}
 	if works == nil {
 		works = []domain.Work{}
@@ -487,12 +501,21 @@ func (s *Service) ListWorks(userID string, mine bool) ([]domain.WorkListItem, er
 		title[i.ID] = i.Title
 		visible[i.ID] = canAccessIdea(i, userID)
 	}
+	attempts, err := s.allAttempts()
+	if err != nil {
+		return nil, err
+	}
+	attemptOwners := map[string]string{}
+	for _, attempt := range attempts {
+		attemptOwners[attempt.ID] = attempt.OwnerID
+	}
 	out := make([]domain.WorkListItem, 0, len(works))
 	for i := range works {
 		domain.NormalizeWork(&works[i])
 		if !mine && !visible[works[i].IdeaID] {
 			continue
 		}
+		works[i] = workForUser(works[i], attemptOwners[works[i].AttemptID], userID)
 		out = append(out, domain.WorkListItem{Work: works[i], IdeaTitle: title[works[i].IdeaID]})
 	}
 	return out, nil
@@ -520,6 +543,7 @@ func (s *Service) GetWork(userID, id string) (map[string]any, error) {
 		return nil, err
 	}
 	domain.NormalizeAttempt(&attempt)
+	work = workForUser(work, attempt.OwnerID, userID)
 	var forks []domain.Idea
 	if err := s.db().Where("source_work_id = ?", id).Find(&forks).Error; err != nil {
 		return nil, err

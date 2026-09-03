@@ -1,5 +1,5 @@
 import { getAgentRequestIdentity, getCurrentUser } from "@/lib/auth";
-import { canAccessIdea } from "@/lib/content-access";
+import { canAccessIdea, workForViewer } from "@/lib/content-access";
 import { readDb } from "@/lib/db";
 import { ideaById, ideaMetrics } from "@/lib/format";
 import { deleteIdeaDraft, publishIdeaDraft, updateIdea, updateIdeaDraft } from "@/lib/ops";
@@ -27,7 +27,13 @@ export async function GET(
     idea,
     metrics: ideaMetrics(db, id),
     attempts: db.attempts.filter((a) => a.ideaId === id),
-    works: db.works.filter((w) => w.ideaId === id),
+    works: db.works.filter((w) => w.ideaId === id).map((work) =>
+      workForViewer(
+        db,
+        work,
+        agent && work.attemptId !== agent.grant.attemptId ? undefined : me?.id,
+      ),
+    ),
   });
 }
 

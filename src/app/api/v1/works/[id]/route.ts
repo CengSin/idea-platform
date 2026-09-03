@@ -3,7 +3,7 @@ import { attemptById, ideaById, workById } from "@/lib/format";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAgentRequestIdentity, getCurrentUser } from "@/lib/auth";
-import { canAccessIdea } from "@/lib/content-access";
+import { canAccessIdea, workForViewer } from "@/lib/content-access";
 import { deleteWork, updateWork } from "@/lib/ops";
 import { WorkMutationError, workRequestBody } from "@/lib/work-management";
 
@@ -62,7 +62,7 @@ export async function GET(
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   return NextResponse.json({
-    work,
+    work: workForViewer(db, work, me?.id),
     attribution: {
       idea_id: idea?.id,
       idea_title: idea?.title,

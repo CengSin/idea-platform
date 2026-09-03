@@ -1,4 +1,4 @@
-import type { Database, Idea } from "./types";
+import type { Database, Idea, Work } from "./types";
 
 export function isIdeaOwner(idea: Idea, userId: string) {
   return idea.author.userId === userId;
@@ -6,6 +6,13 @@ export function isIdeaOwner(idea: Idea, userId: string) {
 
 export function canAccessIdea(idea: Idea, userId?: string) {
   return idea.status !== "draft" || Boolean(userId && isIdeaOwner(idea, userId));
+}
+
+export function workForViewer(db: Database, work: Work, userId?: string): Work {
+  const attempt = db.attempts.find((item) => item.id === work.attemptId);
+  if (userId && attempt?.ownerId === userId) return work;
+  const { iteration: _privateIteration, ...visibleWork } = work;
+  return visibleWork;
 }
 
 /**
@@ -18,9 +25,9 @@ export function scopeDatabaseForUser(db: Database, userId: string): Database {
   const ideaIds = new Set(ideas.map((idea) => idea.id));
   const attempts = db.attempts.filter((attempt) => ideaIds.has(attempt.ideaId));
   const attemptIds = new Set(attempts.map((attempt) => attempt.id));
-  const works = db.works.filter(
-    (work) => ideaIds.has(work.ideaId) && attemptIds.has(work.attemptId),
-  );
+  const works = db.works
+    .filter((work) => ideaIds.has(work.ideaId) && attemptIds.has(work.attemptId))
+    .map((work) => workForViewer(db, work, userId));
   const workIds = new Set(works.map((work) => work.id));
 
   return {

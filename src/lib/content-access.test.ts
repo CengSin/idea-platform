@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { scopeDatabaseForUser } from "./content-access.ts";
+import { scopeDatabaseForUser, workForViewer } from "./content-access.ts";
 import type { Attempt, Database, Idea, Work } from "./types.ts";
 
 const license = { implementation: true, derivatives: true, commercialUse: "with_attribution" as const };
@@ -69,4 +69,25 @@ test("publishing the idea releases its existing project and work tree together",
   assert.equal(published.ideas.some((item) => item.id === "draft-a"), true);
   assert.equal(published.attempts.some((item) => item.ideaId === "draft-a"), true);
   assert.equal(published.works.some((item) => item.ideaId === "draft-a"), true);
+});
+
+test("private iteration suggestions are only serialized for the work owner", () => {
+  const db = fixture();
+  db.works[2].iteration = {
+    status: "open",
+    scannedAt: "2026-09-03T00:00:00.000Z",
+    suggestions: [{
+      id: "secret-suggestion",
+      title: "私有建议",
+      summary: "仅作者可见",
+      problem: "问题",
+      whyItMatters: "价值",
+      status: "pending",
+      createdAt: "2026-09-03T00:00:00.000Z",
+    }],
+    email: { status: "pending" },
+  };
+  assert.equal(workForViewer(db, db.works[2], "user-b").iteration?.suggestions.length, 1);
+  assert.equal(workForViewer(db, db.works[2], "viewer").iteration, undefined);
+  assert.equal(workForViewer(db, db.works[2]).iteration, undefined);
 });

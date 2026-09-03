@@ -2,3 +2,5 @@ backend
 scripts
 data
 .git
+.env*.local
+.cache

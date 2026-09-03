@@ -14,6 +14,7 @@ import {
   Users,
   MoreHorizontal,
   Globe2,
+  ShieldCheck,
 } from "lucide-react";
 import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import Link from "@/components/ui/NavigationLink";
@@ -28,7 +29,7 @@ const items = [
   { href: "/notifications", key: "notifications", label: "通知", icon: Bell },
 ];
 
-export function Sidebar({ unread = 0, user }: { unread?: number; user: User }) {
+export function Sidebar({ unread = 0, user, isAdmin = false }: { unread?: number; user: User; isAdmin?: boolean }) {
   const pathname = usePathname();
   const mobileMenu = useRef<HTMLDetailsElement>(null);
   useEffect(() => { if (mobileMenu.current) mobileMenu.current.open = false; }, [pathname]);
@@ -57,7 +58,7 @@ export function Sidebar({ unread = 0, user }: { unread?: number; user: User }) {
         </Link>
         <LayoutGroup id="sidebar-nav">
           <nav aria-label="工作台导航" className="flex flex-1 flex-col gap-1">
-            {items.map((item) => {
+            {[...items, ...(isAdmin ? [{ href: "/admin", key: "admin", label: "管理", icon: ShieldCheck }] : [])].map((item) => {
               const Icon = item.icon;
               const isActive = active(item.key, item.href);
               return (
