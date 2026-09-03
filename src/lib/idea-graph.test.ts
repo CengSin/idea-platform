@@ -7,7 +7,50 @@ function database(): Database {
   return {
     version: 1,
     users: [],
-    ideas: [],
+    ideas: [
+      {
+        id: "derived",
+        title: "Derived idea",
+        summary: "",
+        problem: "",
+        whyItMatters: "",
+        constraints: [],
+        existingAttempts: [],
+        openQuestions: [],
+        desiredOutputs: [],
+        tags: [],
+        author: { kind: "user", userId: "user-1", displayName: "User" },
+        license: { implementation: true, derivatives: true, commercialUse: "yes" },
+        visibility: "public",
+        status: "published",
+        parentIdeaId: "main",
+        sourceWorkId: "main-work",
+        graph: { x: 280, y: 190 },
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "foreign-derived",
+        title: "Foreign derived idea",
+        summary: "",
+        problem: "",
+        whyItMatters: "",
+        constraints: [],
+        existingAttempts: [],
+        openQuestions: [],
+        desiredOutputs: [],
+        tags: [],
+        author: { kind: "user", userId: "user-2", displayName: "User" },
+        license: { implementation: true, derivatives: true, commercialUse: "yes" },
+        visibility: "public",
+        status: "published",
+        parentIdeaId: "other",
+        sourceWorkId: "foreign-work",
+        graph: { x: 320, y: 230 },
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ],
     events: [],
     notifications: [],
     follows: [],
@@ -89,4 +132,16 @@ test("ideaGrowthPath only returns the selected idea's implementation branches", 
 
   assert.deepEqual(path.attempts.map((attempt) => attempt.id), ["main-branch"]);
   assert.deepEqual(path.works.map((work) => work.id), ["main-work"]);
+  assert.deepEqual(path.derivedIdeas.map((idea) => idea.id), ["derived"]);
+});
+
+test("a derived idea growth path keeps its visible ancestry", () => {
+  const db = database();
+  db.ideas.push({ ...db.ideas[0], id: "main", parentIdeaId: undefined, sourceWorkId: undefined });
+
+  const path = ideaGrowthPath(db, "derived");
+
+  assert.equal(path.parentIdea?.id, "main");
+  assert.equal(path.sourceAttempt?.id, "main-branch");
+  assert.equal(path.sourceWork?.id, "main-work");
 });

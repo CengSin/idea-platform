@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { applyWorkDelete, applyWorkUpdate, ownedWork, parseWorkPatch, WorkMutationError } from "./work-management.ts";
-import { buildAgentBootstrap, buildAgentsMd, buildAgentsUpdatePrompt } from "./agent-setup.ts";
+import { agentSetupDelivery, buildAgentBootstrap, buildAgentPrompt, buildAgentsMd } from "./agent-setup.ts";
 import { buildPublicCatalog } from "./public-catalog.ts";
 import type { Database } from "./types.ts";
 
@@ -119,10 +119,10 @@ test("every generated AGENTS.md includes branch-specific work IDs, PATCH/DELETE 
   assert.ok(markdown.includes("当前来源 Idea 仍是草稿"));
   assert.ok(markdown.includes('-H "Authorization: Bearer draft-token"'));
   assert.ok(markdown.includes("/api/v1/attempts/branch/bootstrap"));
-  assert.ok(markdown.includes("其内容优先于本文件中的旧快照"));
+  assert.ok(markdown.includes("其内容优先于当前配置中的旧快照"));
 });
 
-test("bootstrap exposes live capabilities and the old-project prompt carries the latest AGENTS.md", () => {
+test("bootstrap exposes live capabilities and copied prompts carry the latest connection", () => {
   const db = fixture();
   const denied = buildAgentBootstrap({
     idea: db.ideas[0], attempt: db.attempts[0], baseUrl: "https://platform.example", tokenExpiresAt: at,
@@ -139,12 +139,16 @@ test("bootstrap exposes live capabilities and the old-project prompt carries the
   assert.equal(allowed.capabilities.update_idea, true);
   assert.equal(allowed.write_contracts.update_idea.endpoint, "https://platform.example/api/v1/ideas/idea");
 
-  const markdown = buildAgentsMd({
-    idea: allowedIdea, attempt: db.attempts[0], baseUrl: "https://platform.example", token: "new-token", tokenExpiresAt: at,
+  const markdown = buildAgentPrompt({
+    idea: { ...allowedIdea, parentIdeaId: "parent" }, attempt: db.attempts[0], baseUrl: "https://platform.example", token: "new-token", tokenExpiresAt: at,
   });
-  const prompt = buildAgentsUpdatePrompt(markdown);
-  assert.ok(prompt.includes("读取项目根目录现有的 AGENTS.md"));
-  assert.ok(prompt.includes("<IDEA_PLATFORM_AGENTS_MD>"));
-  assert.ok(prompt.includes("Bearer Token：new-token"));
+  assert.ok(markdown.includes("# Idea Platform 承接任务"));
+  assert.ok(markdown.includes("Bearer Token：new-token"));
   assert.ok(markdown.includes("## 更新来源想法"));
+});
+
+test("root attempts download AGENTS.md while derived ideas copy a prompt", () => {
+  const root = fixture().ideas[0];
+  assert.equal(agentSetupDelivery(root), "agents_md");
+  assert.equal(agentSetupDelivery({ ...root, parentIdeaId: "parent" }), "copy_prompt");
 });

@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   return (
     <PageFrame>
         <h1 className="text-[28px] font-semibold tracking-[-0.04em]">设置</h1>
-        <p className="mt-1 text-[13.5px] text-muted">用户始终拥有控制权。每条承接通过专属 AGENTS.md 连接任意 Agent。</p>
+        <p className="mt-1 text-[13.5px] text-muted">用户始终拥有控制权。一级承接使用 AGENTS.md，作品衍生的子想法使用专属提示词。</p>
 
         <section className="glass fade-up mt-8 max-w-xl rounded-3xl p-5">
           <div className="text-[12px] tracking-[0.08em] text-muted">当前用户</div>

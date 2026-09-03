@@ -293,13 +293,16 @@ function AdoptDialog({
   const prompt = idea
     ? buildAdoptionPrompt(idea, { projectDescription, projectPurpose, approach })
     : "";
+  const derived = Boolean(idea?.parentIdeaId);
 
   return (
     <Dialog
       open={Boolean(idea)}
       onClose={onClose}
       title="承接这个想法"
-      subtitle="承接不产生排他所有权。创建分支后可下载 AGENTS.md，在任意 Agent 中启动开发。"
+      subtitle={derived
+        ? "承接不产生排他所有权。创建子想法分支后可复制完整提示词，在任意 Agent 中启动开发。"
+        : "承接不产生排他所有权。创建一级分支后可下载 AGENTS.md，在任意 Agent 中启动开发。"}
       wide
     >
       {idea && step === "form" ? (
@@ -323,7 +326,7 @@ function AdoptDialog({
             />
           </Field>
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label="项目描述" hint="会写入 AGENTS.md，默认取自 Idea 简介。">
+            <Field label="项目描述" hint={derived ? "会写入 Agent 提示词，默认取自 Idea 简介。" : "会写入 AGENTS.md，默认取自 Idea 简介。"}>
               <TextArea
                 value={projectDescription}
                 onChange={(event) => setProjectDescription(event.target.value)}

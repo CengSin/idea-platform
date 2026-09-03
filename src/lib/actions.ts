@@ -6,7 +6,7 @@ import {
   requireCurrentUser,
   revokeAgentTokensForUser,
 } from "./auth";
-import { buildAgentsMd, buildAgentsUpdatePrompt } from "./agent-setup";
+import { agentSetupDelivery, buildAgentPrompt, buildAgentsMd } from "./agent-setup";
 import { readDb } from "./db";
 import { attemptById, ideaById } from "./format";
 import {
@@ -102,7 +102,7 @@ export async function deleteNextIdeaAction(ideaId: string) {
   return result;
 }
 
-export async function generateAgentsMdAction(input: {
+export async function generateAgentSetupAction(input: {
   attemptId: string;
   baseUrl: string;
 }) {
@@ -110,7 +110,7 @@ export async function generateAgentsMdAction(input: {
   const db = await readDb();
   const attempt = attemptById(db, input.attemptId);
   if (!attempt) throw new Error("承接不存在");
-  if (attempt.ownerId !== me.id) throw new Error("只能为自己的承接生成 AGENTS.md");
+  if (attempt.ownerId !== me.id) throw new Error("只能为自己的承接生成 Agent 配置");
   const idea = ideaById(db, attempt.ideaId);
   if (!idea) throw new Error("来源想法不存在");
 
@@ -124,7 +124,9 @@ export async function generateAgentsMdAction(input: {
   }
 
   const grant = await issueAttemptAgentToken(me.id, attempt.id);
-  const content = buildAgentsMd({
+  const delivery = agentSetupDelivery(idea);
+  const build = delivery === "copy_prompt" ? buildAgentPrompt : buildAgentsMd;
+  const content = build({
     idea,
     attempt,
     baseUrl,
@@ -132,10 +134,10 @@ export async function generateAgentsMdAction(input: {
     tokenExpiresAt: grant.expiresAt,
   });
   return {
-    filename: "AGENTS.md",
+    delivery,
+    filename: delivery === "agents_md" ? "AGENTS.md" : undefined,
     expiresAt: grant.expiresAt,
     content,
-    updatePrompt: buildAgentsUpdatePrompt(content),
   };
 }
 

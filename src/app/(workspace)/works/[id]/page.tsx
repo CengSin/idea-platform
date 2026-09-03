@@ -58,7 +58,7 @@ export default async function WorkPage({
           </div>
           <aside className="space-y-4">
             {bundle.canManage ? <WorkActions work={work} /> : null}
-            {bundle.canManage ? <AgentUpgradePanel attemptId={attempt.id} /> : null}
+            {bundle.canManage ? <AgentUpgradePanel attemptId={attempt.id} derived={Boolean(idea.parentIdeaId)} /> : null}
             <div className="glass rounded-3xl p-5">
               <div className="text-[12px] tracking-[0.08em] text-muted">来源想法</div>
               <Link href={`/ideas/${idea.id}`} className="mt-2 block text-[16px] tracking-[-0.02em]">

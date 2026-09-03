@@ -42,7 +42,7 @@ go run ./cmd/api
 | 文件读取 | GET | `/api/v1/files/*key` | MinIO 对象代理 |
 | 健康检查 | GET | `/health` | mysql / redis / minio |
 
-接口请求体同时接受 camelCase 与 snake_case。Next.js 主应用在承接页生成 `AGENTS.md` 和分支专属 Token，由 Agent 自动调用进展与作品接口。
+接口请求体同时接受 camelCase 与 snake_case。Next.js 主应用为一级承接生成 `AGENTS.md`，为作品衍生的子想法生成可复制提示词；两者都带分支专属 Token，由 Agent 自动调用进展与作品接口。
 
 草稿是整棵内容的发布边界：作者可以在草稿中继续承接、同步状态和保存作品，其他用户的快照及详情不会包含这些关联内容；发布想法后统一可见。MySQL 启动迁移会把历史空状态行明确设置为 `published`。
 
@@ -56,7 +56,7 @@ DELETE 请求体为 `{ "user_confirmed": true }`，永久移除作品并清理�
 
 两者成功均返回 `work_id`、`updated_at`、`attempt_id`、`attempt_status`、`graph_status`；PATCH 另返回更新后的 `work`，DELETE 另返回 `deleted: true`。参数无效为 400，无所有权为 403，不存在为 404。
 
-Go 独立后端沿用受信开发环境的 `X-User-Id` 身份约定，不自行认证浏览器会话或分支 Token，不能直接暴露为公网用户鉴权入口。Next.js `/api/v1/works/:id` 负责登录会话及 Bearer Token 认证，且会核对 Token 的分支范围。每个承接在 Next.js 生成的 `AGENTS.md` 都包含修改/删除说明和示例。
+Go 独立后端沿用受信开发环境的 `X-User-Id` 身份约定，不自行认证浏览器会话或分支 Token，不能直接暴露为公网用户鉴权入口。Next.js `/api/v1/works/:id` 负责登录会话及 Bearer Token 认证，且会核对 Token 的分支范围。每个承接在 Next.js 生成的完整提示词都包含修改/删除说明和示例。
 
 ## 基础设施
 

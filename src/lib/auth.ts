@@ -173,8 +173,8 @@ export async function issueAttemptAgentToken(userId: string, attemptId: string) 
   const now = new Date();
   const expiresAt = new Date(now.getTime() + AGENT_TOKEN_DAYS * 86400000);
   await mutateAuthDb((db) => {
-    // A newly downloaded AGENTS.md must not break an older checkout that is
-    // still using this attempt. Expired grants are cleaned up; active grants
+    // A newly generated AGENTS.md or copied connection prompt must not break
+    // an older agent session. Expired grants are cleaned up; active grants
     // remain independently revocable through the existing account reset flow.
     db.agentTokens = db.agentTokens.filter(
       (item) => new Date(item.expiresAt).getTime() > Date.now(),

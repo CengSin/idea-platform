@@ -101,7 +101,7 @@ export function IdeaGraph({
   const selected = selectedId ? ideas.find((i) => i.id === selectedId) : undefined;
 
   const neighborhood = useMemo(() => {
-    if (!selected) return { attempts: [], works: [] };
+    if (!selected) return { attempts: [], works: [], derivedIdeas: [], parentIdea: undefined, sourceAttempt: undefined, sourceWork: undefined };
     return ideaGrowthPath(db, selected.id);
   }, [db, selected]);
 
@@ -193,12 +193,12 @@ export function IdeaGraph({
     const el = viewport.current;
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
-    const attempts = db.attempts.filter((a) => a.ideaId === idea.id && a.featuredOnGraph && a.graph);
-    const works = db.works.filter((w) => w.status === "published" && w.graph && attempts.some((a) => a.id === w.attemptId || a.workIds.includes(w.id)));
-    const minX = Math.min(idea.graph.x - 184, ...attempts.map((a) => a.graph!.x - 80), ...works.map((w) => w.graph!.x - 112));
-    const maxX = Math.max(idea.graph.x + 184, ...attempts.map((a) => a.graph!.x + 80), ...works.map((w) => w.graph!.x + 112));
-    const minY = Math.min(idea.graph.y - 50, ...attempts.map((a) => a.graph!.y - 45), ...works.map((w) => w.graph!.y - 110));
-    const maxY = Math.max(idea.graph.y + 310, ...attempts.map((a) => a.graph!.y + 65), ...works.map((w) => w.graph!.y + 110));
+    const path = ideaGrowthPath(db, idea.id);
+    const ancestry = [path.parentIdea?.graph, path.sourceAttempt?.graph, path.sourceWork?.graph].filter((point): point is { x: number; y: number } => Boolean(point));
+    const minX = Math.min(idea.graph.x - 184, ...path.attempts.map((a) => a.graph!.x - 80), ...path.works.map((w) => w.graph!.x - 112), ...path.derivedIdeas.map((child) => child.graph.x - 80), ...ancestry.map((point) => point.x - 112));
+    const maxX = Math.max(idea.graph.x + 184, ...path.attempts.map((a) => a.graph!.x + 80), ...path.works.map((w) => w.graph!.x + 112), ...path.derivedIdeas.map((child) => child.graph.x + 80), ...ancestry.map((point) => point.x + 112));
+    const minY = Math.min(idea.graph.y - 50, ...path.attempts.map((a) => a.graph!.y - 45), ...path.works.map((w) => w.graph!.y - 110), ...path.derivedIdeas.map((child) => child.graph.y - 45), ...ancestry.map((point) => point.y - 110));
+    const maxY = Math.max(idea.graph.y + 310, ...path.attempts.map((a) => a.graph!.y + 65), ...path.works.map((w) => w.graph!.y + 110), ...path.derivedIdeas.map((child) => child.graph.y + 65), ...ancestry.map((point) => point.y + 110));
     const side = window.innerWidth < 768 ? 0 : 332;
     const availableW = Math.max(180, width - side - 32);
     const availableH = Math.max(200, height - 168);
@@ -244,7 +244,7 @@ export function IdeaGraph({
     const el = viewport.current;
     if (!el) return { x, y };
     const { width, height } = el.getBoundingClientRect();
-    const points = [selected!.graph, ...neighborhood.attempts.map((attempt) => attempt.graph!), ...neighborhood.works.map((work) => work.graph!)];
+    const points = [selected!.graph, ...neighborhood.attempts.map((attempt) => attempt.graph!), ...neighborhood.works.map((work) => work.graph!), ...neighborhood.derivedIdeas.map((idea) => idea.graph), neighborhood.parentIdea?.graph, neighborhood.sourceAttempt?.graph, neighborhood.sourceWork?.graph].filter((point): point is { x: number; y: number } => Boolean(point));
     const xs = points.map((point) => point.x);
     const ys = points.map((point) => point.y);
     const minX = Math.min(...xs) * k;
@@ -389,6 +389,24 @@ export function IdeaGraph({
                   <stop offset="100%" stopColor="#C4893A" />
                 </radialGradient>
               </defs>
+              {selected && neighborhood.parentIdea ? (() => {
+                const parent = neighborhood.parentIdea;
+                const sourceAttempt = neighborhood.sourceAttempt;
+                const sourceWork = neighborhood.sourceWork;
+                const beforeWork = sourceAttempt?.graph ?? parent.graph;
+                const beforeSelected = sourceWork?.graph ?? beforeWork;
+                return (
+                  <g>
+                    {sourceAttempt?.graph ? (
+                      <path d={quadPath(parent.graph.x, parent.graph.y, sourceAttempt.graph.x, sourceAttempt.graph.y, 36)} fill="none" stroke="rgba(102,199,192,0.58)" strokeWidth="1.6" className="edge-draw-solid" />
+                    ) : null}
+                    {sourceWork?.graph ? (
+                      <path d={`M ${beforeWork.x} ${beforeWork.y} C ${beforeWork.x + 70} ${beforeWork.y}, ${sourceWork.graph.x - 90} ${sourceWork.graph.y}, ${sourceWork.graph.x - 108} ${sourceWork.graph.y}`} fill="none" stroke="rgba(242,239,232,0.45)" strokeWidth="1.5" className="edge-draw-solid" />
+                    ) : null}
+                    <path d={quadPath(beforeSelected.x + (sourceWork?.graph ? 108 : 0), beforeSelected.y, selected.graph.x, selected.graph.y, 32)} fill="none" stroke="rgba(232,184,106,0.8)" strokeWidth="1.8" className="edge-flow edge-draw" />
+                  </g>
+                );
+              })() : null}
               {selected
                 ? neighborhood.attempts.map((attempt) => {
                     const st = effectiveAttemptStatus(attempt);
@@ -426,7 +444,71 @@ export function IdeaGraph({
                     );
                   })
                 : null}
+              {selected
+                ? neighborhood.derivedIdeas.map((child) => {
+                    const sourceWork = neighborhood.works.find((work) => work.id === child.sourceWorkId);
+                    const origin = sourceWork?.graph ?? selected.graph;
+                    return (
+                      <path
+                        key={child.id}
+                        d={quadPath(origin.x + (sourceWork ? 108 : 0), origin.y, child.graph.x, child.graph.y, 32)}
+                        fill="none"
+                        stroke="rgba(232,184,106,0.8)"
+                        strokeWidth="1.8"
+                        className="edge-flow edge-draw"
+                      />
+                    );
+                  })
+                : null}
             </svg>
+
+            {neighborhood.parentIdea ? (
+              <button
+                data-node
+                type="button"
+                aria-label={`展开父想法 ${neighborhood.parentIdea.title}`}
+                onClick={() => selectIdea(neighborhood.parentIdea!)}
+                className="rise-in absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                style={{ left: neighborhood.parentIdea.graph.x, top: neighborhood.parentIdea.graph.y, zIndex: 2 }}
+              >
+                <span className="idea-shell" style={{ width: 42, height: 42 }}>
+                  <span className="idea-bloom" />
+                  <span className="idea-orb"><SproutIcon className="idea-core" /></span>
+                </span>
+                <span className="idea-label mt-2 max-w-[140px] text-center text-idea">{neighborhood.parentIdea.title}</span>
+                <span className="mt-0.5 text-[10px] text-muted">父想法</span>
+              </button>
+            ) : null}
+
+            {neighborhood.sourceAttempt?.graph ? (() => {
+              const owner = userById(db, neighborhood.sourceAttempt.ownerId);
+              return (
+                <div data-node className="rise-in absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={{ left: neighborhood.sourceAttempt.graph!.x, top: neighborhood.sourceAttempt.graph!.y, zIndex: 2 }}>
+                  <div className="attempt-shell" style={{ width: 38, height: 38 }}>
+                    <span className="attempt-bloom" />
+                    <span className="attempt-ring" />
+                    <Avatar className="relative z-[1]" initials={owner?.initials ?? "·"} accent={owner?.accent ?? "#6fd4cb"} size={30} />
+                  </div>
+                  <span className="idea-label mt-2 max-w-[120px] text-center text-artifact">{owner?.displayName ?? neighborhood.sourceAttempt.title}</span>
+                  <span className="mt-0.5 text-[10px] text-muted">原承接</span>
+                </div>
+              );
+            })() : null}
+
+            {neighborhood.sourceWork?.graph ? (
+              <Link
+                data-node
+                href={`/works/${neighborhood.sourceWork.id}`}
+                className="glass lift media-zoom rise-in absolute w-[200px] -translate-y-1/2 overflow-hidden rounded-[20px]"
+                style={{ left: neighborhood.sourceWork.graph.x - 100, top: neighborhood.sourceWork.graph.y, zIndex: 2 }}
+              >
+                <CoverImage src={neighborhood.sourceWork.coverUrl} pageUrl={neighborhood.sourceWork.externalUrl} className="h-[108px] w-full object-cover" />
+                <div className="px-3 py-2.5">
+                  <div className="text-[14px] font-medium tracking-[-0.02em]">{neighborhood.sourceWork.title}</div>
+                  <div className="mt-0.5 text-[11px] text-muted">来源作品</div>
+                </div>
+              </Link>
+            ) : null}
 
             {selected && metrics ? (
               <button
@@ -531,6 +613,30 @@ export function IdeaGraph({
                   </div>
                 </div>
               </Link>
+            ))}
+
+            {neighborhood.derivedIdeas.map((child, i) => (
+              <button
+                key={child.id}
+                data-node
+                type="button"
+                aria-label={`展开子想法 ${child.title}`}
+                onClick={() => selectIdea(child)}
+                className="rise-in absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                style={{
+                  left: child.graph.x,
+                  top: child.graph.y,
+                  animationDelay: `${190 + i * 70}ms`,
+                  zIndex: 3,
+                }}
+              >
+                <span className={`idea-shell ${child.status === "dormant" ? "is-dormant" : ""}`} style={{ width: 46, height: 46 }}>
+                  <span className="idea-bloom" />
+                  <span className="idea-orb"><SproutIcon className="idea-core" /></span>
+                </span>
+                <span className="idea-label mt-2 max-w-[140px] text-center text-idea">{child.title}</span>
+                <span className="mt-0.5 text-[10px] text-muted">子想法</span>
+              </button>
             ))}
 
             {selected && metrics ? (

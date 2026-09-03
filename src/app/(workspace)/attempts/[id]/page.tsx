@@ -81,7 +81,7 @@ export default async function AttemptPage({
             {attempt.progressNote || "Agent 尚未同步进展。"}
           </p>
         </section>
-        {mine ? <AgentSetupPanel attemptId={attempt.id} /> : null}
+        {mine ? <AgentSetupPanel attemptId={attempt.id} derived={Boolean(idea.parentIdeaId)} /> : null}
         {attempt.blockers.length ? (
           <div className="mt-4 text-[13.5px] text-blocked">阻塞：{attempt.blockers.join("；")}</div>
         ) : null}

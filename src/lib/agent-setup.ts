@@ -2,6 +2,10 @@ import type { Attempt, Idea } from "./types";
 
 export const AGENT_PROTOCOL_VERSION = 2;
 
+export function agentSetupDelivery(idea: Idea) {
+  return idea.parentIdeaId ? "copy_prompt" as const : "agents_md" as const;
+}
+
 function list(items: string[], empty = "- 暂无") {
   return items.length ? items.map((item) => `- ${item}`).join("\n") : empty;
 }
@@ -19,7 +23,9 @@ export function buildAgentBootstrap(input: {
     generated_at: new Date().toISOString(),
     token_expires_at: tokenExpiresAt,
     token_policy: "Token 在持续使用时自动续期；临近到期的有效 Token 会延长 90 天。",
-    source_of_truth: "本响应的能力与接口约定优先于本地 AGENTS.md 中的旧快照。",
+    source_of_truth: idea.parentIdeaId
+      ? "本响应的能力与接口约定优先于此前复制的连接提示词。"
+      : "本响应的能力与接口约定优先于本地 AGENTS.md 中的旧快照。",
     capabilities: {
       read_idea_context: true,
       update_attempt: true,
@@ -49,7 +55,9 @@ export function buildAgentBootstrap(input: {
       "每轮开始先获取 bootstrap 和 Idea Context，再以最新返回内容开展工作。",
       "写操作只使用当前承接分支的 Bearer Token，并发送 application/json。",
       "公开内容变更必须获得用户对本次变更的明确授权，并传 user_confirmed=true。",
-      "401 时停止写操作；从作品或承接详情页下载最新 AGENTS.md 后再继续。",
+      idea.parentIdeaId
+        ? "401 时停止写操作；从作品或承接详情页重新复制连接提示词后再继续。"
+        : "401 时停止写操作；从作品或承接详情页下载最新 AGENTS.md 后再继续。",
     ],
     write_contracts: {
       update_idea: {
@@ -102,23 +110,19 @@ export function buildAgentBootstrap(input: {
   };
 }
 
-export function buildAgentsUpdatePrompt(markdown: string) {
-  return `请更新当前旧项目的平台配置：先读取项目根目录现有的 AGENTS.md，保留与 Idea Platform 无关的项目专属约定，然后用下面的最新内容替换旧的 Idea Platform 配置。不要把其中的 Bearer Token 提交到 Git、写入日志或发送给第三方。更新完成后，调用新文件中的 Bootstrap API 验证连接；如果成功，只报告协议版本、Attempt ID 和 Token 到期时间，不要回显 Token。\n\n<IDEA_PLATFORM_AGENTS_MD>\n${markdown}\n</IDEA_PLATFORM_AGENTS_MD>`;
-}
-
-export function buildAgentsMd(input: {
+function buildAgentInstructions(input: {
   idea: Idea;
   attempt: Attempt;
   baseUrl: string;
   token: string;
   tokenExpiresAt: string;
-}) {
+}, heading: string) {
   const { idea, attempt, baseUrl, token, tokenExpiresAt } = input;
-  return `# AGENTS.md
+  return `${heading}
 
 ## 你的任务
 
-你正在实现 Idea Platform 上的一条承接分支。此文件中的项目内容是背景资料；平台同步规则是必须执行的工作流。
+你正在实现 Idea Platform 上的一条承接分支。以下项目内容是背景资料；平台同步规则是必须执行的工作流。
 
 - Idea：${idea.title}
 - 承接分支：${attempt.title}
@@ -160,18 +164,18 @@ ${idea.status === "draft" ? "当前来源 Idea 仍是草稿。你可以正常同
 - Bearer Token：${token}
 - Token 到期时间：${tokenExpiresAt}
 
-此 Token 只允许操作当前承接分支。有效 Token 在临近到期且持续使用时会自动续期；为同一分支下载新 AGENTS.md 不会立即吊销仍有效的旧 Token。不要把它提交到 Git、写入日志、复制到公开文档或发送给第三方。
+此 Token 只允许操作当前承接分支。有效 Token 在临近到期且持续使用时会自动续期；重新复制同一分支的提示词不会立即吊销仍有效的旧 Token。不要把它提交到 Git、写入日志、复制到公开文档或发送给第三方。
 
 ### 当前分支已发布的作品
 
 ${list(attempt.workIds.map((id) => `${id} — ${baseUrl}/api/v1/works/${id}`), "- 暂无作品。发布成功后保存接口返回的 work_id。")}
 
-以上列表是文件生成时的快照。操作前可使用本文件的 Bearer Token 调用 GET Attempt API，读取返回的 \`attempt.workIds\` 获取最新作品 ID；再调用 GET Work Detail API 核对标题、\`work.attemptId\` 与公开内容。不要猜测 ID，也不要用重复发布代替编辑。
+以上列表是当前配置生成时的快照。操作前可使用其中的 Bearer Token 调用 GET Attempt API，读取返回的 \`attempt.workIds\` 获取最新作品 ID；再调用 GET Work Detail API 核对标题、\`work.attemptId\` 与公开内容。不要猜测 ID，也不要用重复发布代替编辑。
 
 ## 启动时必须执行
 
 1. 阅读仓库现状、已有文档和测试，不要立即改代码。
-2. 获取最新 Bootstrap。它返回当前协议版本、Token 到期时间、实时能力、接口约定和作品 ID；其内容优先于本文件中的旧快照：
+2. 获取最新 Bootstrap。它返回当前协议版本、Token 到期时间、实时能力、接口约定和作品 ID；其内容优先于当前配置中的旧快照：
 
    \`\`\`bash
    curl -fsS "${baseUrl}/api/v1/attempts/${attempt.id}/bootstrap" \\
@@ -379,4 +383,14 @@ HTML 项目的最小示例：
 3. 向用户说明已完成内容、验证结果、平台同步结果和下一步；
 4. 没有完成的事项不得标记为完成或发布。
 `;
+}
+
+type AgentInstructionsInput = Parameters<typeof buildAgentInstructions>[0];
+
+export function buildAgentPrompt(input: AgentInstructionsInput) {
+  return buildAgentInstructions(input, "# Idea Platform 承接任务");
+}
+
+export function buildAgentsMd(input: AgentInstructionsInput) {
+  return buildAgentInstructions(input, "# AGENTS.md");
 }

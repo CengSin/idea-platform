@@ -17,7 +17,7 @@ export async function GET(
     return NextResponse.json(
       {
         error: "unauthorized",
-        recovery: "请从承接页或任一所属作品详情页下载最新 AGENTS.md。",
+        recovery: "请从承接页或任一所属作品详情页重新生成 Agent 连接配置。",
       },
       { status: 401 },
     );
