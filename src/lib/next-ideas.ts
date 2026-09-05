@@ -5,6 +5,8 @@ export type NextIdeaInput = {
   summary: string;
   problem: string;
   whyItMatters: string;
+  desiredOutputs?: string[];
+  stopConditions?: string[];
 };
 
 export type NextIdeaStage = "sprout" | "growing" | "result";
@@ -30,6 +32,8 @@ function cleanInput(input: NextIdeaInput) {
     summary: input.summary.trim(),
     problem: input.problem.trim(),
     whyItMatters: input.whyItMatters.trim(),
+    desiredOutputs: (input.desiredOutputs ?? []).map(s => s.trim()).filter(Boolean),
+    stopConditions: (input.stopConditions ?? []).map(s => s.trim()).filter(Boolean),
   };
   if (!clean.title || clean.title.length > 200) {
     throw new NextIdeaMutationError(400, "下一步标题需为 1–200 字符");
@@ -90,7 +94,6 @@ export function createNextIdeaRecord(
     constraints: [],
     existingAttempts: [],
     openQuestions: [],
-    desiredOutputs: [],
     tags: [...parent.tags],
     author: { kind: "user", userId: me.id, displayName: me.displayName },
     license: {
@@ -133,7 +136,7 @@ export function updateNextIdeaRecord(
   at: string,
 ) {
   const idea = ownedNextIdea(db, userId, ideaId);
-  Object.assign(idea, cleanInput(input));
+  Object.assign(idea, cleanInput({ ...input, desiredOutputs: input.desiredOutputs ?? idea.desiredOutputs, stopConditions: input.stopConditions ?? idea.stopConditions }));
   idea.visibility = "public";
   idea.updatedAt = at;
   return idea;

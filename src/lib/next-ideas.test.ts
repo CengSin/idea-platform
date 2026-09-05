@@ -73,3 +73,12 @@ test("a non-owner cannot create a next idea for the work", () => {
   const db = fixture();
   assert.throws(() => createNextIdeaRecord(db, "stranger", "work", input, "next", at), status(403));
 });
+
+test("subidea stores user conditions and legacy edits do not clear them", () => {
+  const db = fixture();
+  const idea = createNextIdeaRecord(db, "owner", "work", { ...input, desiredOutputs: [" 能保留来源 "], stopConditions: [" 等待用户确认 "] }, "next", at);
+  assert.deepEqual(idea.desiredOutputs, ["能保留来源"]);
+  assert.deepEqual(idea.stopConditions, ["等待用户确认"]);
+  updateNextIdeaRecord(db, "owner", "next", input, at);
+  assert.deepEqual(idea.stopConditions, ["等待用户确认"]);
+});

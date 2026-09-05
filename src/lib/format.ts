@@ -141,6 +141,7 @@ export function buildIdeaContext(idea: Idea, origin = ""): IdeaContext {
     existing_attempts: idea.existingAttempts,
     open_questions: idea.openQuestions,
     desired_outputs: idea.desiredOutputs,
+    stop_conditions: idea.stopConditions ?? [],
     license: idea.license,
     tags: idea.tags,
     source: {
@@ -164,19 +165,18 @@ export function buildAdoptionPrompt(
   const lines = [
     `# 项目：${idea.title}`,
     "",
-    "## 项目描述",
+    "## 预期效果",
     projectDescription,
     "",
-    "## 项目目的",
-    projectPurpose,
-    "",
-    "## 核心问题",
+        "## 核心问题",
     idea.problem,
   ];
 
+  if (projectPurpose && projectPurpose !== idea.problem) lines.push("", "## 补充价值", projectPurpose);
+  if (idea.stopConditions?.length) lines.push("", "## 用户设定的停止条件", ...idea.stopConditions.map(s => `- ${s}`));
   if (approach) lines.push("", "## 本次承接方向", approach);
   if (idea.desiredOutputs.length) {
-    lines.push("", "## 期望产出", ...idea.desiredOutputs.map((item) => `- ${item}`));
+    lines.push("", "## 验收标准 / 期望产出", ...idea.desiredOutputs.map((item) => `- ${item}`));
   }
   if (idea.constraints.length) {
     lines.push("", "## 约束条件", ...idea.constraints.map((item) => `- ${item}`));
@@ -187,7 +187,7 @@ export function buildAdoptionPrompt(
   lines.push(
     "",
     "## 执行要求",
-    "请先复述你对项目目标和约束的理解，再给出可验证的实施计划。推进过程中保留关键决策、风险与未解决问题；在对外发布或扩大范围前等待我的确认。",
+    "结合已有代码推进本轮需求，记录验证结果和阻塞。验收与停止条件由用户决定；公开变更沿用现有确认流程。",
   );
   return lines.join("\n");
 }

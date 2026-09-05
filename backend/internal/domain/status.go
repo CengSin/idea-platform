@@ -138,6 +138,7 @@ func BuildIdeaContext(idea Idea, origin string) IdeaContext {
 		ExistingAttempts: existing,
 		OpenQuestions:    questions,
 		DesiredOutputs:   outputs,
+		StopConditions:   idea.StopConditions,
 		License:          idea.License,
 		Tags:             tags,
 		Source: IdeaContextSource{

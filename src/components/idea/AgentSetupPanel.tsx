@@ -48,8 +48,8 @@ export function AgentSetupPanel({ attemptId, derived }: { attemptId: string; der
           <h2 className="text-[17px] font-medium tracking-[-0.025em]">让 Agent 接管这条分支</h2>
           <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-muted">
             {derived
-              ? "这是从作品衍生出的子想法。复制完整提示词给任意 Agent，即可延续这条生长路径。"
-              : "进展、阻塞、测试阶段和作品发布由 Agent 自动同步；配置也包含修改、删除自己作品的接口与权限说明。"}
+              ? "这是从作品衍生出的子想法。复制连接提示词给 Agent，在原项目中继续本轮改动。"
+              : "下载简短连接说明；Agent 每轮读取最新需求和接口，按已有授权同步进展。"}
           </p>
         </div>
         <Button tone="idea" disabled={pending} onClick={generate}>

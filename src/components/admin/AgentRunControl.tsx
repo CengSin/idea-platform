@@ -37,7 +37,7 @@ export function AgentRunControl() {
       </Button>
       {result ? (
         <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
-          已扫描 {result.scanned} 个新作品；邮件发送 {result.email.sent}，失败 {result.email.failed}，
+          {result.configured ? `已分析 ${result.scanned} 个作品，失败 ${result.failed}；` : "模型或 API Key 未配置，分析未执行；"}邮件发送 {result.email.sent}，失败 {result.email.failed}，
           跳过 {result.email.skipped}，未配置 {result.email.unconfigured}。
         </p>
       ) : null}

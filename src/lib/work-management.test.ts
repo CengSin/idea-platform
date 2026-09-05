@@ -100,13 +100,13 @@ test("draft works do not keep a branch published, and inactive branches are neve
   }
 });
 
-test("every generated AGENTS.md includes branch-specific work IDs, PATCH/DELETE contracts and safety rules", () => {
+test("compact AGENTS.md keeps connection and authorization; bootstrap contains detailed contracts", () => {
   for (const id of ["branch-one", "branch-two"]) {
     const db = fixture();
     const markdown = buildAgentsMd({ idea: db.ideas[0], attempt: { ...db.attempts[0], id }, baseUrl: "https://platform.example", token: "test-token", tokenExpiresAt: at });
     assert.ok(markdown.includes(`Attempt ID：${id}`));
-    assert.ok(markdown.includes("work — https://platform.example/api/v1/works/work"));
-    for (const text of ["-X PATCH \"https://platform.example/api/v1/works/<work_id>\"", "-X DELETE", "attempt.workIds", "user_confirmed", "删除不可恢复", "403", "testing", "贡献署名"]) assert.ok(markdown.includes(text), text);
+    assert.ok(markdown.length < 2200);
+    for (const text of ["PATCH", "DELETE", "work_ids", "user_confirmed", "403", "testing", "Bootstrap"]) assert.ok(markdown.includes(text), text);
   }
   const db = fixture();
   const markdown = buildAgentsMd({
@@ -117,9 +117,9 @@ test("every generated AGENTS.md includes branch-specific work IDs, PATCH/DELETE 
     tokenExpiresAt: at,
   });
   assert.ok(markdown.includes("当前来源 Idea 仍是草稿"));
-  assert.ok(markdown.includes('-H "Authorization: Bearer draft-token"'));
+  assert.ok(markdown.includes("Bearer Token：draft-token"));
   assert.ok(markdown.includes("/api/v1/attempts/branch/bootstrap"));
-  assert.ok(markdown.includes("其内容优先于当前配置中的旧快照"));
+  assert.ok(markdown.includes("优先于这份快照"));
 });
 
 test("bootstrap exposes live capabilities and copied prompts carry the latest connection", () => {
@@ -127,7 +127,7 @@ test("bootstrap exposes live capabilities and copied prompts carry the latest co
   const denied = buildAgentBootstrap({
     idea: db.ideas[0], attempt: db.attempts[0], baseUrl: "https://platform.example", tokenExpiresAt: at,
   });
-  assert.equal(denied.protocol_version, 2);
+  assert.equal(denied.protocol_version, 3);
   assert.equal(denied.capabilities.update_idea, false);
   assert.equal(denied.write_contracts.update_idea.available, false);
   assert.deepEqual(denied.current.work_ids, ["work"]);
@@ -144,7 +144,8 @@ test("bootstrap exposes live capabilities and copied prompts carry the latest co
   });
   assert.ok(markdown.includes("# Idea Platform 承接任务"));
   assert.ok(markdown.includes("Bearer Token：new-token"));
-  assert.ok(markdown.includes("## 更新来源想法"));
+  assert.ok(markdown.includes("write_contracts"));
+  assert.ok(allowed.execution_contract.endpoint.endsWith("/execution"));
 });
 
 test("root attempts download AGENTS.md while derived ideas copy a prompt", () => {

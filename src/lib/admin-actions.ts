@@ -14,6 +14,7 @@ export async function saveAgentConfigAction(
   await requireAdminUser();
   try {
     await updateAgentConfig({
+      openaiModel: String(formData.get("openaiModel") ?? ""),
       openaiBaseUrl: String(formData.get("openaiBaseUrl") ?? ""),
       openaiApiKey: String(formData.get("openaiApiKey") ?? ""),
       cronSecret: String(formData.get("cronSecret") ?? ""),

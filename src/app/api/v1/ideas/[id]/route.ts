@@ -1,5 +1,5 @@
 import { getAgentRequestIdentity, getCurrentUser } from "@/lib/auth";
-import { canAccessIdea, workForViewer } from "@/lib/content-access";
+import { attemptForViewer, canAccessIdea, workForViewer } from "@/lib/content-access";
 import { readDb } from "@/lib/db";
 import { ideaById, ideaMetrics } from "@/lib/format";
 import { deleteIdeaDraft, publishIdeaDraft, updateIdea, updateIdeaDraft } from "@/lib/ops";
@@ -26,7 +26,7 @@ export async function GET(
   return NextResponse.json({
     idea,
     metrics: ideaMetrics(db, id),
-    attempts: db.attempts.filter((a) => a.ideaId === id),
+    attempts: db.attempts.filter((a) => a.ideaId === id).map(a => attemptForViewer(a, agent && a.id !== agent.grant.attemptId ? undefined : me?.id)),
     works: db.works.filter((w) => w.ideaId === id).map((work) =>
       workForViewer(
         db,
@@ -87,6 +87,7 @@ export async function PATCH(
       constraints: body.constraints ?? idea.constraints,
       openQuestions: body.open_questions ?? body.openQuestions ?? idea.openQuestions,
       desiredOutputs: body.desired_outputs ?? body.desiredOutputs ?? idea.desiredOutputs,
+      stopConditions: body.stop_conditions ?? idea.stopConditions ?? [],
       tags: body.tags ?? idea.tags,
       visibility: body.visibility ?? idea.visibility,
       license: body.license ?? idea.license,

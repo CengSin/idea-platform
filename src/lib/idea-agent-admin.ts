@@ -11,7 +11,7 @@ export async function getIdeaAgentAdminDashboard() {
   });
   const scannedWorks = completedWorks.filter((work) => Boolean(work.iteration?.scannedAt));
   const pendingSuggestions = completedWorks.reduce(
-    (count, work) => count + (work.iteration?.suggestions.filter((item) => item.status === "pending").length ?? 0),
+    (count, work) => count + (work.iteration?.suggestions.filter((item) => item.status === "pending" && item.kind === "reminder").length ?? 0),
     0,
   );
   const emailFailures = completedWorks.filter((work) => work.iteration?.email.status === "failed").length;
@@ -23,7 +23,9 @@ export async function getIdeaAgentAdminDashboard() {
       title: work.title,
       iterationStatus: work.iteration?.status ?? "open",
       scannedAt: work.iteration?.scannedAt,
-      pendingSuggestions: work.iteration?.suggestions.filter((item) => item.status === "pending").length ?? 0,
+      analysisStatus: work.iteration?.analysis?.status ?? "not_scanned",
+      analysisError: work.iteration?.analysis?.error,
+      pendingSuggestions: work.iteration?.suggestions.filter((item) => item.status === "pending" && item.kind === "reminder").length ?? 0,
       emailStatus: work.iteration?.email.status ?? "not_scanned",
     }));
 
@@ -32,7 +34,7 @@ export async function getIdeaAgentAdminDashboard() {
     metrics: {
       completedWorks: completedWorks.length,
       waitingForScan: completedWorks.filter(
-        (work) => work.iteration?.status !== "closed" && !work.iteration?.scannedAt,
+        (work) => work.iteration?.status !== "closed" && (!work.iteration?.analysis || ["queued", "running", "failed"].includes(work.iteration.analysis.status)),
       ).length,
       scannedWorks: scannedWorks.length,
       closedWorks: completedWorks.filter((work) => work.iteration?.status === "closed").length,

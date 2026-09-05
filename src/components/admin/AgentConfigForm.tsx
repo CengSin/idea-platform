@@ -94,6 +94,9 @@ export function AgentConfigForm({ configuration }: { configuration: AgentConfigV
             placeholder="https://api.openai.com/v1"
           />
         </Field>
+        <Field label="模型名称" hint="填写此服务实际提供的模型 ID；未配置时不会运行分析。">
+          <TextInput name="openaiModel" defaultValue={configuration.openaiModel} placeholder="模型 ID" />
+        </Field>
         <SecretField
           name="openaiApiKey"
           label="OpenAI API Key"

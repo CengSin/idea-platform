@@ -1,4 +1,4 @@
-import type { Database, Idea, Work } from "./types";
+import type { Attempt, Database, Idea, Work } from "./types";
 
 export function isIdeaOwner(idea: Idea, userId: string) {
   return idea.author.userId === userId;
@@ -6,6 +6,12 @@ export function isIdeaOwner(idea: Idea, userId: string) {
 
 export function canAccessIdea(idea: Idea, userId?: string) {
   return idea.status !== "draft" || Boolean(userId && isIdeaOwner(idea, userId));
+}
+
+export function attemptForViewer(attempt: Attempt, userId?: string): Attempt {
+  if (attempt.ownerId === userId) return attempt;
+  const { execution: _privateExecution, ...visible } = attempt;
+  return visible;
 }
 
 export function workForViewer(db: Database, work: Work, userId?: string): Work {
@@ -24,7 +30,7 @@ export function scopeDatabaseForUser(db: Database, userId: string): Database {
   const { agentConfig: _privateAgentConfig, ...visibleDb } = db;
   const ideas = db.ideas.filter((idea) => canAccessIdea(idea, userId));
   const ideaIds = new Set(ideas.map((idea) => idea.id));
-  const attempts = db.attempts.filter((attempt) => ideaIds.has(attempt.ideaId));
+  const attempts = db.attempts.filter((attempt) => ideaIds.has(attempt.ideaId)).map(a => attemptForViewer(a, userId));
   const attemptIds = new Set(attempts.map((attempt) => attempt.id));
   const works = db.works
     .filter((work) => ideaIds.has(work.ideaId) && attemptIds.has(work.attemptId))

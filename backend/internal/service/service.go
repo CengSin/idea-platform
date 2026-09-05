@@ -131,6 +131,13 @@ func canAccessIdea(idea domain.Idea, userID string) bool {
 	return idea.Status != "draft" || idea.AuthorUserID == userID || idea.Author.UserID == userID
 }
 
+func attemptForUser(attempt domain.Attempt, userID string) domain.Attempt {
+	if attempt.OwnerID != userID {
+		attempt.Execution = nil
+	}
+	return attempt
+}
+
 func workForUser(work domain.Work, ownerID, userID string) domain.Work {
 	if ownerID != userID {
 		work.Iteration = nil
@@ -139,6 +146,11 @@ func workForUser(work domain.Work, ownerID, userID string) domain.Work {
 }
 
 func scopeSnapshot(snap *domain.Snapshot, userID string) {
+	for i := range snap.Attempts {
+		if snap.Attempts[i].OwnerID != userID {
+			snap.Attempts[i].Execution = nil
+		}
+	}
 	ideaIDs := map[string]bool{}
 	ideas := make([]domain.Idea, 0, len(snap.Ideas))
 	for _, idea := range snap.Ideas {
@@ -311,6 +323,7 @@ func (s *Service) GetIdea(userID, id string) (map[string]any, error) {
 	}
 	for i := range attempts {
 		domain.NormalizeAttempt(&attempts[i])
+		attempts[i] = attemptForUser(attempts[i], userID)
 	}
 	attemptOwners := map[string]string{}
 	for _, attempt := range attempts {
@@ -421,6 +434,7 @@ func (s *Service) ListAttempts(userID string, mine bool) ([]domain.AttemptListIt
 	out := make([]domain.AttemptListItem, 0, len(attempts))
 	for i := range attempts {
 		domain.NormalizeAttempt(&attempts[i])
+		attempts[i] = attemptForUser(attempts[i], userID)
 		if !mine && !ideaVisible[attempts[i].IdeaID] {
 			continue
 		}
@@ -467,7 +481,7 @@ func (s *Service) GetAttempt(userID, id string) (map[string]any, error) {
 		works = []domain.Work{}
 	}
 	return map[string]any{
-		"attempt":      attempt,
+		"attempt":      attemptForUser(attempt, userID),
 		"graph_status": domain.EffectiveAttemptStatus(attempt, s.now()),
 		"idea":         idea,
 		"owner":        owner,
@@ -564,7 +578,7 @@ func (s *Service) GetWork(userID, id string) (map[string]any, error) {
 	return map[string]any{
 		"work":    work,
 		"idea":    idea,
-		"attempt": attempt,
+		"attempt": attemptForUser(attempt, userID),
 		"forks":   forks,
 		"attribution": map[string]any{
 			"idea_id":       idea.ID,

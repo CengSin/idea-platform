@@ -181,6 +181,9 @@ async function ensureSchema() {
   if (schemaReady) return;
   await tursoClient().executeMultiple(SCHEMA);
   for (const sql of [
+    "ALTER TABLE ideas ADD COLUMN stop_conditions TEXT",
+    "ALTER TABLE attempts ADD COLUMN execution TEXT",
+    "ALTER TABLE agent_config ADD COLUMN openai_model TEXT",
     "ALTER TABLE works ADD COLUMN iteration TEXT",
     "ALTER TABLE notifications ADD COLUMN user_id TEXT",
   ]) {
@@ -271,6 +274,7 @@ function decodeIdea(row: Row): Idea {
     existingAttempts: parseJson(row.existing_attempts, []),
     openQuestions: parseJson(row.open_questions, []),
     desiredOutputs: parseJson(row.desired_outputs, []),
+    stopConditions: parseJson(row.stop_conditions, []),
     tags: parseJson(row.tags, []),
     author: parseJson(row.author, { kind: "user", userId: "", displayName: "" }),
     license: parseJson(row.license, {
@@ -306,6 +310,7 @@ function decodeAttempt(row: Row): Attempt {
     lastActiveAt: str(row.last_active_at),
     createdAt: str(row.created_at),
     workIds: parseJson(row.work_ids, []),
+    execution: parseJson(row.execution, []),
   };
   const projectDescription = optStr(row.project_description);
   const projectPurpose = optStr(row.project_purpose);
@@ -398,6 +403,7 @@ function decodeAgentConfig(row?: Row): AgentRuntimeConfig {
     cronSecret: optStr(row.cron_secret),
     resendApiKey: optStr(row.resend_api_key),
     emailFrom: optStr(row.email_from),
+    openaiModel: optStr(row.openai_model),
   };
 }
 
@@ -490,8 +496,8 @@ function contentInserts(db: Database): InStatement[] {
     stmts.push({
       sql: `INSERT INTO ideas (id, title, summary, problem, why_it_matters, constraints, existing_attempts,
             open_questions, desired_outputs, tags, author, license, visibility, status, parent_idea_id,
-            source_work_id, graph, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            source_work_id, graph, created_at, updated_at, stop_conditions)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         idea.id,
         idea.title,
@@ -512,6 +518,7 @@ function contentInserts(db: Database): InStatement[] {
         jsonText(idea.graph),
         idea.createdAt,
         idea.updatedAt,
+        jsonText(idea.stopConditions ?? []),
       ],
     });
   }
@@ -519,8 +526,8 @@ function contentInserts(db: Database): InStatement[] {
     stmts.push({
       sql: `INSERT INTO attempts (id, idea_id, owner_id, title, approach, project_description, project_purpose,
             execution_prompt, status, progress_note, visibility, blockers, started_at, last_active_at,
-            created_at, target_date, work_ids, graph, featured_on_graph)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            created_at, target_date, work_ids, graph, featured_on_graph, execution)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         attempt.id,
         attempt.ideaId,
@@ -541,6 +548,7 @@ function contentInserts(db: Database): InStatement[] {
         jsonText(attempt.workIds ?? []),
         attempt.graph ? jsonText(attempt.graph) : null,
         attempt.featuredOnGraph ? 1 : 0,
+        jsonText(attempt.execution ?? []),
       ],
     });
   }
@@ -611,14 +619,15 @@ function contentInserts(db: Database): InStatement[] {
   }
   if (db.agentConfig && Object.values(db.agentConfig).some(Boolean)) {
     stmts.push({
-      sql: `INSERT INTO agent_config (id, openai_base_url, openai_api_key, cron_secret, resend_api_key, email_from)
-            VALUES (1, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO agent_config (id, openai_base_url, openai_api_key, cron_secret, resend_api_key, email_from, openai_model)
+            VALUES (1, ?, ?, ?, ?, ?, ?)`,
       args: [
         db.agentConfig.openaiBaseUrl ?? null,
         db.agentConfig.openaiApiKey ?? null,
         db.agentConfig.cronSecret ?? null,
         db.agentConfig.resendApiKey ?? null,
         db.agentConfig.emailFrom ?? null,
+        db.agentConfig.openaiModel ?? null,
       ],
     });
   }

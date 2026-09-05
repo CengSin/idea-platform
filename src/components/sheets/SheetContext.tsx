@@ -11,7 +11,6 @@ import {
 } from "@/lib/actions";
 import {
   buildAdoptionPrompt,
-  buildIdeaContext,
   VISIBILITY_LABEL,
 } from "@/lib/format";
 import type { Idea, License, Visibility } from "@/lib/types";
@@ -87,10 +86,11 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
                 title: form.title,
                 summary: form.summary,
                 problem: form.problem,
-                whyItMatters: form.whyItMatters || form.problem,
+                whyItMatters: form.whyItMatters,
                 constraints: editing?.constraints ?? [],
                 openQuestions: editing?.openQuestions ?? [],
-                desiredOutputs: editing?.desiredOutputs ?? [],
+                desiredOutputs: form.desiredOutputs,
+                stopConditions: form.stopConditions,
                 tags: editing?.tags ?? [],
                 visibility: editing?.visibility ?? "public" as const,
                 license: editing?.license ?? defaultLicense,
@@ -153,7 +153,7 @@ function PublishIdeaDialog({
   open: boolean;
   onClose: () => void;
   onSubmit: (
-    form: { title: string; summary: string; problem: string; whyItMatters: string },
+    form: { title: string; summary: string; problem: string; whyItMatters: string; desiredOutputs: string[]; stopConditions: string[] },
     intent: "draft" | "publish",
   ) => void;
   pending: boolean;
@@ -163,6 +163,8 @@ function PublishIdeaDialog({
   const [summary, setSummary] = useState("");
   const [problem, setProblem] = useState("");
   const [whyItMatters, setWhyItMatters] = useState("");
+  const [criteria, setCriteria] = useState("");
+  const [stop, setStop] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -170,6 +172,8 @@ function PublishIdeaDialog({
     setSummary(idea?.summary ?? "");
     setProblem(idea?.problem ?? "");
     setWhyItMatters(idea?.whyItMatters ?? "");
+    setCriteria(idea?.desiredOutputs.join("\n") ?? "");
+    setStop(idea?.stopConditions?.join("\n") ?? "");
   }, [open, idea]);
 
   const canSave = Boolean(title.trim());
@@ -180,13 +184,13 @@ function PublishIdeaDialog({
       open={open}
       onClose={onClose}
       title={idea ? "编辑想法草稿" : "创建一个想法"}
-      subtitle="可以先保存为草稿，在草稿中创建项目、生成 AGENTS.md 和持续同步进展；准备好后再统一发布。"
+      subtitle="先保存草稿，随时补充；准备好后再公开。"
     >
       <form
         className="flex flex-col gap-4"
         onSubmit={(event) => {
           event.preventDefault();
-          if (canPublish && !idea) onSubmit({ title, summary, problem, whyItMatters }, "publish");
+          if (canPublish && !idea) onSubmit({ title, summary, problem, whyItMatters, desiredOutputs: criteria.split("\n").map(s => s.trim()).filter(Boolean), stopConditions: stop.split("\n").map(s => s.trim()).filter(Boolean) }, "publish");
         }}
       >
         <Field label="标题">
@@ -197,11 +201,11 @@ function PublishIdeaDialog({
             autoFocus
           />
         </Field>
-        <Field label="简要描述">
+        <Field label="预期效果">
           <TextArea
             value={summary}
             onChange={(event) => setSummary(event.target.value)}
-            placeholder="它大概是什么，会怎样运作？"
+            placeholder="做成后，用户能完成什么？"
           />
         </Field>
         <Field label="想解决的问题">
@@ -211,13 +215,24 @@ function PublishIdeaDialog({
             placeholder="现在有什么不方便、不合理或尚未被满足？"
           />
         </Field>
-        <Field label="为什么值得做（可选）">
+        <details className="rounded-2xl border border-line p-4">
+          <summary className="cursor-pointer text-[13px] text-muted">补充说明与执行条件（可选）</summary>
+          <div className="mt-4 flex flex-col gap-4">
+        <Field label="补充价值">
           <TextArea
             value={whyItMatters}
             onChange={(event) => setWhyItMatters(event.target.value)}
             placeholder="它为什么重要，会给谁带来什么改变？"
           />
         </Field>
+        <Field label="验收标准" hint="每行一项，由你决定怎样算完成；也可以之后补充。">
+          <TextArea value={criteria} onChange={e => setCriteria(e.target.value)} placeholder="例如：能创建子想法，并正确保留来源作品" />
+        </Field>
+        <Field label="停止条件" hint="每行一项，由你决定什么时候暂停或结束。">
+          <TextArea value={stop} onChange={e => setStop(e.target.value)} placeholder="例如：本轮完成后停下，等我确认下一步" />
+        </Field>
+          </div>
+        </details>
         <p className="text-[12px] leading-relaxed text-muted">
           草稿及其项目、进展和作品只对你可见。发布草稿后，这些内容会按各自的公开设置一起发布。
         </p>
@@ -227,7 +242,7 @@ function PublishIdeaDialog({
           <Button
             type="button"
             disabled={!canSave || pending}
-            onClick={() => onSubmit({ title, summary, problem, whyItMatters }, "draft")}
+            onClick={() => onSubmit({ title, summary, problem, whyItMatters, desiredOutputs: criteria.split("\n").map(s => s.trim()).filter(Boolean), stopConditions: stop.split("\n").map(s => s.trim()).filter(Boolean) }, "draft")}
           >
             {pending ? "正在保存…" : idea ? "保存修改" : "保存草稿"}
           </Button>
@@ -236,7 +251,7 @@ function PublishIdeaDialog({
               type="button"
               tone="idea"
               disabled={!canPublish || pending}
-              onClick={() => onSubmit({ title, summary, problem, whyItMatters }, "publish")}
+              onClick={() => onSubmit({ title, summary, problem, whyItMatters, desiredOutputs: criteria.split("\n").map(s => s.trim()).filter(Boolean), stopConditions: stop.split("\n").map(s => s.trim()).filter(Boolean) }, "publish")}
             >
               {pending ? "正在发布…" : "直接发布"}
             </Button>
@@ -283,8 +298,8 @@ function AdoptDialog({
     setStep("form");
     setTitle("");
     setApproach("");
-    setProjectDescription(idea?.summary ?? "");
-    setProjectPurpose(idea?.whyItMatters ?? "");
+    setProjectDescription("");
+    setProjectPurpose("");
     setVisibility("public");
     setTargetDate("");
     setCopied(false);
@@ -311,30 +326,34 @@ function AdoptDialog({
             <div className="text-[12px] text-muted">来源 Idea</div>
             <div className="mt-1 text-[15px] tracking-[-0.02em]">{idea.title}</div>
           </div>
-          <Field label="这条分支的实现方向">
+          <Field label="分支名称">
             <TextInput
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="例如：先做一个可验证的最小版本"
             />
           </Field>
-          <Field label="计划如何实现，与其他分支有何不同">
+          <Field label="实现方向（可选）">
             <TextArea
               value={approach}
               onChange={(event) => setApproach(event.target.value)}
               placeholder="可以留空，之后由 Agent 调研并提出方案。"
             />
           </Field>
-          <div className="grid gap-3 md:grid-cols-2">
-            <Field label="项目描述" hint={derived ? "会写入 Agent 提示词，默认取自 Idea 简介。" : "会写入 AGENTS.md，默认取自 Idea 简介。"}>
+          <details className="rounded-2xl border border-line p-4">
+            <summary className="cursor-pointer text-[13px] text-muted">覆盖继承内容与其他设置（可选）</summary>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <Field label="预期效果" hint="留空时自动使用想法的最新预期效果。">
               <TextArea
                 value={projectDescription}
+                placeholder={idea.summary}
                 onChange={(event) => setProjectDescription(event.target.value)}
               />
             </Field>
-            <Field label="项目目的" hint="说明为什么做，以及希望产生什么改变。">
+            <Field label="补充价值" hint="留空时自动继承想法的补充说明。">
               <TextArea
                 value={projectPurpose}
+                placeholder={idea.whyItMatters}
                 onChange={(event) => setProjectPurpose(event.target.value)}
               />
             </Field>
@@ -358,6 +377,7 @@ function AdoptDialog({
               />
             </Field>
           </div>
+          </details>
           {error ? <p className="text-[13px] text-blocked">{error}</p> : null}
           <div className="mt-1 flex justify-between gap-2">
             <Button
@@ -389,17 +409,12 @@ function AdoptDialog({
 
       {idea && step === "preview" ? (
         <div className="flex flex-col gap-4">
-          <PreviewBlock label="Idea Context">
-            <pre className="overflow-auto text-[12px] leading-relaxed text-artifact/85">
-              {JSON.stringify(buildIdeaContext(idea), null, 2)}
-            </pre>
-          </PreviewBlock>
           <PreviewBlock label="你的承接分支">
             <p>方向：{title || "未命名分支"}</p>
             <p>路径：{approach || "交给 Agent 调研后确定"}</p>
             <p>可见性：{VISIBILITY_LABEL[visibility]}</p>
           </PreviewBlock>
-          <PreviewBlock label="项目提示词预览">
+          <PreviewBlock label="任务预览">
             <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-sans text-[12.5px] leading-relaxed text-artifact/85">
               {prompt}
             </pre>

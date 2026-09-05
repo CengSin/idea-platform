@@ -22,6 +22,7 @@ export async function sendAgentIterationEmail(input: {
   });
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: AbortSignal.timeout(5000),
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",

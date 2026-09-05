@@ -43,7 +43,7 @@ export default async function IdeaAgentAdminPage() {
           <div className="flex items-center gap-2 text-[13px] text-idea"><Bot className="h-4 w-4" /> 扫描运行</div>
           <h2 className="mt-2 text-[20px] font-medium tracking-[-0.025em]">手动触发完整扫描</h2>
           <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted">
-            与每日定时任务走同一个服务：生成新建议、补发失败邮件并保持作品级去重。
+            与定时调度走同一个服务：分析有变化的作品、生成提醒标签、重试失败任务。重叠运行使用租约去重。
           </p>
           <div className="mt-5"><AgentRunControl /></div>
         </div>
@@ -61,7 +61,7 @@ export default async function IdeaAgentAdminPage() {
           ["已完成作品", dashboard.metrics.completedWorks],
           ["等待扫描", dashboard.metrics.waitingForScan],
           ["已扫描", dashboard.metrics.scannedWorks],
-          ["待选择建议", dashboard.metrics.pendingSuggestions],
+          ["待查看提醒", dashboard.metrics.pendingSuggestions],
           ["邮件失败", dashboard.metrics.emailFailures],
           ["已关闭", dashboard.metrics.closedWorks],
         ].map(([label, value]) => (
@@ -85,8 +85,8 @@ export default async function IdeaAgentAdminPage() {
             {dashboard.recentWorks.map((work) => (
               <div key={work.id} className="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_120px_120px_100px] sm:items-center">
                 <Link href={`/works/${work.id}`} className="truncate text-[14px] hover:text-idea">{work.title}</Link>
-                <span className="text-[12px] text-muted">{work.scannedAt ? "已扫描" : "等待扫描"}</span>
-                <span className="text-[12px] text-muted">{work.pendingSuggestions} 条待选择</span>
+                <span className="text-[12px] text-muted">{{ not_scanned: "未分析", queued: "排队中", running: "分析中", succeeded: "已分析", failed: "分析失败", cancelled: "已取消" }[work.analysisStatus]}</span>
+                <span className="text-[12px] text-muted">{work.pendingSuggestions} 个提醒</span>
                 <span className={`inline-flex items-center gap-1 text-[12px] ${work.emailStatus === "failed" ? "text-blocked" : "text-muted"}`}>
                   <Mail className="h-3.5 w-3.5" /> {emailLabels[work.emailStatus] ?? work.emailStatus}
                 </span>

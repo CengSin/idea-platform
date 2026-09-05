@@ -223,3 +223,47 @@ export async function setIdeaDeprecatedAction(ideaId: string, deprecated: boolea
   });
   refresh();
 }
+
+export async function runWorkAnalysisAction(workId: string) {
+  const me = await requireCurrentUser();
+  const { getEffectiveAgentConfig } = await import("./agent-config");
+  const config = await getEffectiveAgentConfig();
+  if (!config.openaiApiKey || !config.openaiModel) throw new Error("管理员尚未配置分析模型或 API Key。");
+  await mutateDb(db => {
+    const work = db.works.find(w => w.id === workId);
+    const attempt = db.attempts.find(a => a.id === work?.attemptId);
+    if (!work || attempt?.ownerId !== me.id) throw new Error("只能分析自己的作品。");
+    if (work.status !== "published" || attempt.status !== "published") throw new Error("请先完成并提交作品。");
+    if (work.iteration?.status === "closed") throw new Error("请先开启提醒。");
+    const job = work.iteration?.analysis;
+    if (job?.status === "running" && Date.parse(job.leaseUntil ?? "") > Date.now()) throw new Error("分析已在运行。");
+    if (work.iteration) delete work.iteration.analysis;
+  });
+  const { runIdeaAgentScan } = await import("./idea-agent-runner");
+  const result = await runIdeaAgentScan({ workId });
+  refresh();
+  return result;
+}
+
+export async function enqueueExecutionAction(attemptId: string, input: { id: string; instruction: string; acceptance: string[]; stopConditions: string[] }) {
+  const me = await requireCurrentUser();
+  const { enqueueExecution } = await import("./agent-execution");
+  await mutateDb(db => {
+    const attempt = db.attempts.find(a => a.id === attemptId);
+    if (!attempt || attempt.ownerId !== me.id) throw new Error("只能调度自己的承接分支。");
+    enqueueExecution(attempt, input, new Date().toISOString());
+  });
+  refresh();
+}
+
+export async function decideExecutionAction(attemptId: string, runId: string, decision: "complete" | "cancel" | "retry") {
+  const me = await requireCurrentUser();
+  const { decideExecution } = await import("./agent-execution");
+  if (!["complete", "cancel", "retry"].includes(decision)) throw new Error("无效操作。");
+  await mutateDb(db => {
+    const attempt = db.attempts.find(a => a.id === attemptId);
+    if (!attempt || attempt.ownerId !== me.id) throw new Error("只能调度自己的承接分支。");
+    decideExecution(attempt, runId, decision, new Date().toISOString());
+  });
+  refresh();
+}

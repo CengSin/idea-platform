@@ -1,3 +1,4 @@
+import { sourceContext } from "@/lib/agent-context";
 import { readDb } from "@/lib/db";
 import { getAgentRequestIdentity, getCurrentUser } from "@/lib/auth";
 import { canAccessIdea } from "@/lib/content-access";
@@ -23,5 +24,5 @@ export async function GET(
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   const origin = new URL(req.url).origin;
-  return NextResponse.json(buildIdeaContext(idea, origin));
+  return NextResponse.json({ ...buildIdeaContext(idea, origin), upstream: sourceContext(db, idea, me?.id) }, { headers: { "Cache-Control": "private, no-store" } });
 }

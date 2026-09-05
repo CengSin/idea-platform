@@ -1,5 +1,7 @@
 package domain
 
+import "encoding/json"
+
 const (
 	DefaultUserID  = "user_linshen"
 	StallAfterDays = 21
@@ -61,6 +63,7 @@ type User struct {
 func (User) TableName() string { return "users" }
 
 type Idea struct {
+	StopConditions   []string             `json:"stopConditions,omitempty" gorm:"serializer:json;type:json"`
 	ID               string               `json:"id" gorm:"primaryKey;size:64"`
 	Title            string               `json:"title" gorm:"size:512"`
 	Summary          string               `json:"summary" gorm:"type:text"`
@@ -86,25 +89,26 @@ type Idea struct {
 func (Idea) TableName() string { return "ideas" }
 
 type Attempt struct {
-	ID                 string   `json:"id" gorm:"primaryKey;size:64"`
-	IdeaID             string   `json:"ideaId" gorm:"size:64;index"`
-	OwnerID            string   `json:"ownerId" gorm:"size:64;index"`
-	Title              string   `json:"title" gorm:"size:256"`
-	Approach           string   `json:"approach" gorm:"type:text"`
-	ProjectDescription string   `json:"projectDescription,omitempty" gorm:"type:text"`
-	ProjectPurpose     string   `json:"projectPurpose,omitempty" gorm:"type:text"`
-	ExecutionPrompt    string   `json:"executionPrompt,omitempty" gorm:"type:text"`
-	Status             string   `json:"status" gorm:"size:32;index"`
-	ProgressNote       string   `json:"progressNote" gorm:"type:text"`
-	Visibility         string   `json:"visibility" gorm:"size:32"`
-	Blockers           []string `json:"blockers" gorm:"serializer:json;type:json"`
-	StartedAt          string   `json:"startedAt" gorm:"size:40"`
-	LastActiveAt       string   `json:"lastActiveAt" gorm:"size:40"`
-	CreatedAt          string   `json:"createdAt" gorm:"column:created_at;size:40;autoCreateTime:false"`
-	TargetDate         string   `json:"targetDate,omitempty" gorm:"size:32"`
-	WorkIDs            []string `json:"workIds" gorm:"serializer:json;type:json"`
-	Graph              *Point   `json:"graph,omitempty" gorm:"serializer:json;type:json"`
-	FeaturedOnGraph    bool     `json:"featuredOnGraph"`
+	Execution          json.RawMessage `json:"execution,omitempty" gorm:"type:json"`
+	ID                 string          `json:"id" gorm:"primaryKey;size:64"`
+	IdeaID             string          `json:"ideaId" gorm:"size:64;index"`
+	OwnerID            string          `json:"ownerId" gorm:"size:64;index"`
+	Title              string          `json:"title" gorm:"size:256"`
+	Approach           string          `json:"approach" gorm:"type:text"`
+	ProjectDescription string          `json:"projectDescription,omitempty" gorm:"type:text"`
+	ProjectPurpose     string          `json:"projectPurpose,omitempty" gorm:"type:text"`
+	ExecutionPrompt    string          `json:"executionPrompt,omitempty" gorm:"type:text"`
+	Status             string          `json:"status" gorm:"size:32;index"`
+	ProgressNote       string          `json:"progressNote" gorm:"type:text"`
+	Visibility         string          `json:"visibility" gorm:"size:32"`
+	Blockers           []string        `json:"blockers" gorm:"serializer:json;type:json"`
+	StartedAt          string          `json:"startedAt" gorm:"size:40"`
+	LastActiveAt       string          `json:"lastActiveAt" gorm:"size:40"`
+	CreatedAt          string          `json:"createdAt" gorm:"column:created_at;size:40;autoCreateTime:false"`
+	TargetDate         string          `json:"targetDate,omitempty" gorm:"size:32"`
+	WorkIDs            []string        `json:"workIds" gorm:"serializer:json;type:json"`
+	Graph              *Point          `json:"graph,omitempty" gorm:"serializer:json;type:json"`
+	FeaturedOnGraph    bool            `json:"featuredOnGraph"`
 }
 
 func (Attempt) TableName() string { return "attempts" }
@@ -116,6 +120,7 @@ type Credit struct {
 }
 
 type AgentSuggestion struct {
+	Kind           string `json:"kind,omitempty"`
 	ID             string `json:"id"`
 	Title          string `json:"title"`
 	Summary        string `json:"summary"`
@@ -133,6 +138,7 @@ type AgentEmailState struct {
 }
 
 type WorkIteration struct {
+	Analysis    json.RawMessage   `json:"analysis,omitempty"`
 	Status      string            `json:"status"`
 	Suggestions []AgentSuggestion `json:"suggestions"`
 	ScannedAt   string            `json:"scannedAt,omitempty"`
@@ -232,6 +238,7 @@ type Follow struct {
 func (Follow) TableName() string { return "follows" }
 
 type AgentConfig struct {
+	OpenAIModel   string `json:"openaiModel,omitempty" gorm:"type:text"`
 	ID            uint   `json:"-" gorm:"primaryKey"`
 	OpenAIBaseURL string `json:"openaiBaseUrl,omitempty" gorm:"type:text"`
 	OpenAIAPIKey  string `json:"openaiApiKey,omitempty" gorm:"type:text"`
@@ -252,6 +259,7 @@ type IdeaMetrics struct {
 }
 
 type IdeaContext struct {
+	StopConditions   []string             `json:"stop_conditions,omitempty"`
 	IdeaID           string               `json:"idea_id"`
 	Title            string               `json:"title"`
 	Summary          string               `json:"summary"`

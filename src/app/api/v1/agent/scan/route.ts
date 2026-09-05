@@ -3,6 +3,7 @@ import { runIdeaAgentScan } from "@/lib/idea-agent-runner";
 import { NextResponse } from "next/server";
 import { getEffectiveAgentConfig } from "@/lib/agent-config";
 
+export const maxDuration = 60;
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

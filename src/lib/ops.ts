@@ -31,6 +31,7 @@ export type IdeaInput = {
   constraints: string[];
   openQuestions: string[];
   desiredOutputs: string[];
+  stopConditions?: string[];
   tags: string[];
   visibility: Visibility;
   license: License;
@@ -50,6 +51,7 @@ function cleanIdeaInput(input: IdeaInput) {
       .filter((item) => item.title),
     openQuestions: input.openQuestions.map((item) => item.trim()).filter(Boolean),
     desiredOutputs: input.desiredOutputs.map((item) => item.trim()).filter(Boolean),
+    stopConditions: (input.stopConditions ?? []).map((item) => item.trim()).filter(Boolean),
     tags: input.tags.map((item) => item.trim()).filter(Boolean),
   };
 }
@@ -57,7 +59,7 @@ function cleanIdeaInput(input: IdeaInput) {
 function validateIdea(input: ReturnType<typeof cleanIdeaInput>, publishing: boolean) {
   if (!input.title) throw new Error("请填写想法标题。");
   if (publishing && (!input.summary || !input.problem)) {
-    throw new Error("发布前请填写简要描述和想解决的问题。");
+    throw new Error("发布前请填写预期效果和想解决的问题。");
   }
 }
 
@@ -355,8 +357,8 @@ export async function adoptIdea(userId: string, input: {
       ownerId: me.id,
       title: input.title.trim() || me.displayName,
       approach: input.approach.trim(),
-      projectDescription: input.projectDescription?.trim() || idea.summary,
-      projectPurpose: input.projectPurpose?.trim() || idea.whyItMatters,
+      projectDescription: input.projectDescription?.trim() || undefined,
+      projectPurpose: input.projectPurpose?.trim() || undefined,
       executionPrompt: buildAdoptionPrompt(idea, {
         projectDescription: input.projectDescription,
         projectPurpose: input.projectPurpose,

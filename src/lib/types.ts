@@ -100,6 +100,7 @@ export interface Idea {
   existingAttempts: ExistingAttemptRef[];
   openQuestions: string[];
   desiredOutputs: string[];
+  stopConditions?: string[];
   tags: string[];
   author: ActorRef;
   license: License;
@@ -113,6 +114,7 @@ export interface Idea {
 }
 
 export interface Attempt {
+  execution?: import("./agent-execution").ExecutionRun[];
   id: string;
   ideaId: string;
   ownerId: string;
@@ -162,6 +164,7 @@ export interface Work {
 }
 
 export interface AgentSuggestion {
+  kind?: "reminder";
   id: string;
   title: string;
   summary: string;
@@ -173,6 +176,7 @@ export interface AgentSuggestion {
 }
 
 export interface WorkIteration {
+  analysis?: import("./idea-platform-agent").AnalysisJob;
   status: "open" | "closed";
   suggestions: AgentSuggestion[];
   scannedAt?: string;
@@ -212,6 +216,7 @@ export interface Follow {
 
 export interface AgentRuntimeConfig {
   openaiBaseUrl?: string;
+  openaiModel?: string;
   openaiApiKey?: string;
   cronSecret?: string;
   resendApiKey?: string;
@@ -237,6 +242,7 @@ export interface IdeaContext {
   existing_attempts: ExistingAttemptRef[];
   open_questions: string[];
   desired_outputs: string[];
+  stop_conditions?: string[];
   license: License;
   tags: string[];
   source: {

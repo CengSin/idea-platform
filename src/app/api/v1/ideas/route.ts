@@ -46,10 +46,11 @@ export async function POST(req: Request) {
       title: body.title,
       summary: body.summary ?? "",
       problem: body.problem,
-      whyItMatters: body.why_it_matters ?? body.whyItMatters,
+      whyItMatters: body.why_it_matters ?? body.whyItMatters ?? "",
       constraints: body.constraints ?? [],
       openQuestions: body.open_questions ?? [],
       desiredOutputs: body.desired_outputs ?? [],
+      stopConditions: body.stop_conditions ?? [],
       tags: body.tags ?? [],
       visibility: body.visibility ?? "public",
       license: body.license ?? {

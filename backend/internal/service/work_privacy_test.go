@@ -28,3 +28,13 @@ func TestWorkForUserKeepsIterationOnlyForOwner(t *testing.T) {
 		t.Fatal("sanitizing a copy must not mutate stored work")
 	}
 }
+
+func TestAttemptExecutionIsPrivate(t *testing.T) {
+	attempt := domain.Attempt{ID: "branch", OwnerID: "owner", Execution: []byte(`[{"id":"run","instruction":"private"}]`)}
+	if got := attemptForUser(attempt, "viewer"); got.Execution != nil {
+		t.Fatal("other viewers must not receive execution history")
+	}
+	if got := attemptForUser(attempt, "owner"); got.Execution == nil {
+		t.Fatal("owner should retain execution history")
+	}
+}

@@ -57,7 +57,7 @@ export function NextIdeas({
   };
 
   return (
-    <section className="mt-12 border-t border-line pt-9">
+    <section id="next-ideas" className="scroll-mt-8 mt-12 border-t border-line pt-9">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex items-center gap-2 text-[12px] tracking-[0.08em] text-idea">
@@ -225,12 +225,14 @@ function NextIdeaEditor({
   pending: boolean;
   error: string | null;
   onClose: () => void;
-  onSubmit: (input: { title: string; summary: string; problem: string; whyItMatters: string }) => void;
+  onSubmit: (input: { title: string; summary: string; problem: string; whyItMatters: string; desiredOutputs: string[]; stopConditions: string[] }) => void;
 }) {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [problem, setProblem] = useState("");
   const [whyItMatters, setWhyItMatters] = useState("");
+  const [criteria, setCriteria] = useState("");
+  const [stop, setStop] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -238,6 +240,8 @@ function NextIdeaEditor({
     setSummary(idea?.summary ?? "");
     setProblem(idea?.problem ?? "");
     setWhyItMatters(idea?.whyItMatters ?? "");
+    setCriteria(idea?.desiredOutputs.join("\n") ?? "");
+    setStop(idea?.stopConditions?.join("\n") ?? "");
   }, [open, idea]);
 
   const canSubmit = Boolean(title.trim() && summary.trim() && problem.trim());
@@ -252,22 +256,33 @@ function NextIdeaEditor({
         className="flex flex-col gap-4"
         onSubmit={(event) => {
           event.preventDefault();
-          if (canSubmit && !pending) onSubmit({ title, summary, problem, whyItMatters });
+          if (canSubmit && !pending) onSubmit({ title, summary, problem, whyItMatters, desiredOutputs: criteria.split("\n").map(s => s.trim()).filter(Boolean), stopConditions: stop.split("\n").map(s => s.trim()).filter(Boolean) });
         }}
       >
         <Field label="下一步标题">
           <TextInput value={title} onChange={(event) => setTitle(event.target.value)} placeholder="一句话说清还可以继续做什么" autoFocus />
         </Field>
-        <Field label="可以做成什么">
+        <Field label="本轮改什么">
           <TextArea value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="描述下一步的方向和可能形态" />
         </Field>
-        <Field label="要解决的问题">
+        <Field label="为什么改">
           <TextArea value={problem} onChange={(event) => setProblem(event.target.value)} placeholder="现有作品还留下了什么问题或机会？" />
         </Field>
-        <Field label="为什么值得继续（可选）">
+        <details className="rounded-2xl border border-line p-4">
+          <summary className="cursor-pointer text-[13px] text-muted">补充说明与执行条件（可选）</summary>
+          <div className="mt-4 flex flex-col gap-4">
+        <Field label="补充价值">
           <TextArea value={whyItMatters} onChange={(event) => setWhyItMatters(event.target.value)} placeholder="它会为谁带来什么新的价值？" />
         </Field>
-        <p className="text-[12px] leading-relaxed text-muted">公开发布 · 允许认领与继续衍生 · 自动保留来源作品</p>
+        <Field label="验收标准" hint="每行一项；由你决定，不自动套用上一轮的标准。">
+          <TextArea value={criteria} onChange={e => setCriteria(e.target.value)} />
+        </Field>
+        <Field label="停止条件" hint="每行一项；由你决定。">
+          <TextArea value={stop} onChange={e => setStop(e.target.value)} />
+        </Field>
+          </div>
+        </details>
+        <p className="text-[12px] leading-relaxed text-muted">自动关联来源作品与上游背景。公开发布 · 允许认领与继续衍生 · 自动保留来源作品</p>
         {error ? <p className="text-[13px] text-blocked">{error}</p> : null}
         <div className="flex justify-end gap-2">
           <Button type="button" onClick={onClose}>取消</Button>

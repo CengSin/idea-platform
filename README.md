@@ -67,13 +67,32 @@ go run ./cmd/api
 
 删除会清理作品引用及其动态、通知，保留来源想法、承接和衍生想法，不会删除外部站点或仓库。删去分支最后一个已发布作品时，原为 `published` 的承接回到 `testing`；暂停或放弃状态不变。Agent 配置包含 Bootstrap、作品管理和作者更新想法的接口说明，可从承接页或所属作品详情页重新生成。
 
-### Idea Agent 迭代闭环
+### idea-platform-agent 与执行调度
 
-生产部署每天通过 Vercel Cron 请求 `GET /api/v1/agent/scan`。接口只扫描状态为已发布、所属承接已完成且未关闭后续迭代的作品，并为每个作品生成 3 条私有候选。作者在作品页接受后，候选才会成为公开的衍生 Idea；随后可沿用现有承接页生成 Agent 配置并实现。忽略候选不会产生公开内容，关闭迭代也不会删除已有 Idea 或作品。
+创建想法填写标题、问题和预期效果；补充价值、验收标准（`desiredOutputs`）与停止条件（`stopConditions`）可选。子想法记录本轮改动及原因，Context 返回可访问的上游想法和来源作品。承接的项目描述和目的仅在显式覆盖时保存；留空时读取想法的最新内容。
 
-定时接口必须配置 `CRON_SECRET`。邮件使用 Resend REST API，还需配置 `RESEND_API_KEY` 和已验证发件人 `IDEA_AGENT_EMAIL_FROM`；未配置邮件时建议仍会保存为站内通知，并在配置完成后的下一次扫描重试发送。OpenAI 兼容服务可通过 `OPENAI_BASE_URL` 和 `OPENAI_API_KEY` 配置。`IDEA_AGENT_SCAN_LIMIT` 默认每轮处理 20 个作品，最大 50。
+`idea-platform-agent` 调用管理员配置的 OpenAI 兼容 Chat Completions 接口，根据作品说明、已同步进展、阻塞和已有子想法生成短提醒标签。允许没有提醒，数量不固定（最多六个）；不会自动创建需求，也不声称读取过仓库或实际运行过测试。JSON 输出经过服务端校验。兼容模式遵循 [OpenAI 的 JSON 输出说明](https://developers.openai.com/api/docs/guides/structured-outputs#json-mode)。
 
-管理后台位于 `/admin`。先通过普通注册流程创建账户，再把邮箱加入逗号分隔的 `ADMIN_EMAILS` 环境变量；重新部署后，该账户会在侧栏看到“管理”入口。后台可直接维护 OpenAI Base URL / API Key、定时任务密钥、Resend API Key 和发件人，保存值优先于同名环境变量。密钥可覆盖或清除，但不会回显明文。后台还可查看队列、邮件失败与关闭状态或手动运行一次扫描。私有 Agent 建议只会返回给作品所属承接的作者；公开目录、其他用户页面和通用 API 会剥离 `work.iteration`。
+后台 `/admin` 或环境变量可设置 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`IDEA_AGENT_MODEL`。模型 ID 必须由管理员填写；缺配置时显示未配置，不生成模板结果。后台保存值优先。密钥不会回显。
+
+`vercel.json` 每五分钟请求 `/api/v1/agent/scan`，需配置 `CRON_SECRET`。后台保存的定时密钥需与 Vercel 的 `CRON_SECRET` 一致。每次最多执行两个分析任务，单次模型请求超时20秒；剩余任务持久保存在作品的 `iteration.analysis`。上下文指纹防止重复分析，租约防止重叠执行和迟到结果覆盖；分析故障最多尝试三次并退避，之后可手动重试。关闭提醒取消未完成分析；重新开启或上下文变化后可再次分析。托管环境需支持此 Cron 频率；也可由现有外部调度器以 Bearer 密钥调用同一端点。
+
+可选邮件配置仍为 `RESEND_API_KEY`、`IDEA_AGENT_EMAIL_FROM`，未配置不影响站内提醒。邮件使用作品和分析批次作为幂等键。私有提醒及运行记录只返回给所属分支作者。
+
+开发执行与提醒分析分开运行：承接页“执行调度”填写本轮任务和用户自定的验收、停止条件，再加入队列。外部 Agent 使用该分支 Token 调用 `/api/v1/attempts/<id>/execution`：
+
+- `POST {action:"claim", worker_id}` 领取任务；没有任务时返回 `run:null`。
+- `POST {action:"heartbeat", run_id, lease_id}` 每30秒续租；租约有效120秒。
+- `POST {action:"report", run_id, lease_id, report}` 回传结果，进入 `waiting_review`。
+- `POST {action:"fail", run_id, lease_id, report}` 记录失败。用户在网页验收、停止或重试。
+
+代码执行失联不会自动重跑；用户先检查本地现场后决定重试。取消使旧租约失效；重复回传同一已完成请求不会重复执行。私有运行状态不改写公开承接或作品状态，领取任务不构成公开发布授权。所有已有公开写接口继续要求原有确认。
+
+仓库提供 `scripts/idea-platform-worker.mjs` 作为本地执行器适配层。在目标代码仓库目录运行该脚本，配置 `IDEA_PLATFORM_URL`、`IDEA_ATTEMPT_ID`、`IDEA_AGENT_TOKEN`、`IDEA_AGENT_COMMAND`，可选 `IDEA_AGENT_ARGS`（JSON 字符串数组）。命令以当前目录为工作区，从 stdin 接收 `{run, context, bootstrap, instruction}`，stdout 必须返回 `{report:"完成内容、验证证据、未完成项"}`，诊断写 stderr。使用 `--once` 只领取一次，默认持续等待用户加入的新任务。不要把 Token 写进命令参数或 Git。
+
+使用已登录的 Codex CLI 时，可直接运行 `node /绝对路径/idea_platform/scripts/idea-platform-worker.mjs --codex`，无需设置 `IDEA_AGENT_COMMAND`；内置适配器使用 `codex exec`、`workspace-write` 沙箱和结构化报告，沿用本机模型配置，不开启越权模式。该执行器只做本地实现与测试，公开同步仍需用户另行授权。其他 Agent 可通过上述命令协议接入。适配层负责领取、心跳、取消终止和回传，网站服务器不会直接执行仓库代码。Bootstrap 协议 v3 包含完整实时接口约定，AGENTS.md / 子想法提示词仅保留启动和授权规则。已有本地文件不会被自动覆盖，需重新下载或复制并合并。
+
+当前生产使用的 Turso 与 Vercel Blob 通过版本条件写入保护并发领取。旧 MySQL 导入导出桥接不提供跨实例条件写入，不能作为多实例调度存储；使用它时应保持单个 Next.js 写入实例。每个分支保留最近20次开发运行。
 
 ### 公开访问
 

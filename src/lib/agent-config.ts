@@ -5,6 +5,7 @@ import type { AgentRuntimeConfig } from "./types";
 
 export type EffectiveAgentConfig = {
   openaiBaseUrl: string;
+  openaiModel: string;
   openaiApiKey: string;
   cronSecret: string;
   resendApiKey: string;
@@ -13,12 +14,14 @@ export type EffectiveAgentConfig = {
 
 export type AgentConfigView = {
   openaiBaseUrl: string;
+  openaiModel: string;
   emailFrom: string;
   configured: Record<"openaiApiKey" | "cronSecret" | "resendApiKey", boolean>;
   saved: Record<keyof AgentRuntimeConfig, boolean>;
 };
 
 const envConfig = (): EffectiveAgentConfig => ({
+  openaiModel: (process.env.IDEA_AGENT_MODEL ?? "").trim(),
   openaiBaseUrl: (process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1").trim(),
   openaiApiKey: (process.env.OPENAI_API_KEY ?? "").trim(),
   cronSecret: (process.env.CRON_SECRET ?? "").trim(),
@@ -29,6 +32,7 @@ const envConfig = (): EffectiveAgentConfig => ({
 function resolve(saved: AgentRuntimeConfig = {}): EffectiveAgentConfig {
   const env = envConfig();
   return {
+    openaiModel: saved.openaiModel?.trim() || env.openaiModel,
     openaiBaseUrl: saved.openaiBaseUrl?.trim() || env.openaiBaseUrl,
     openaiApiKey: saved.openaiApiKey?.trim() || env.openaiApiKey,
     cronSecret: saved.cronSecret?.trim() || env.cronSecret,
@@ -47,6 +51,7 @@ export async function getAgentConfigView(): Promise<AgentConfigView> {
   const saved = db.agentConfig ?? {};
   const effective = resolve(saved);
   return {
+    openaiModel: effective.openaiModel,
     openaiBaseUrl: effective.openaiBaseUrl,
     emailFrom: effective.emailFrom,
     configured: {
@@ -55,6 +60,7 @@ export async function getAgentConfigView(): Promise<AgentConfigView> {
       resendApiKey: Boolean(effective.resendApiKey),
     },
     saved: {
+      openaiModel: Boolean(saved.openaiModel),
       openaiBaseUrl: Boolean(saved.openaiBaseUrl),
       openaiApiKey: Boolean(saved.openaiApiKey),
       cronSecret: Boolean(saved.cronSecret),
@@ -66,6 +72,7 @@ export async function getAgentConfigView(): Promise<AgentConfigView> {
 
 export type AgentConfigUpdate = {
   openaiBaseUrl: string;
+  openaiModel: string;
   openaiApiKey?: string;
   cronSecret?: string;
   resendApiKey?: string;
@@ -95,6 +102,8 @@ export async function updateAgentConfig(input: AgentConfigUpdate) {
 
   await mutateDb((db) => {
     const next = { ...(db.agentConfig ?? {}) };
+    if (input.openaiModel.trim()) next.openaiModel = input.openaiModel.trim();
+    else delete next.openaiModel;
     if (baseUrl) next.openaiBaseUrl = baseUrl;
     else delete next.openaiBaseUrl;
     if (emailFrom) next.emailFrom = emailFrom;
