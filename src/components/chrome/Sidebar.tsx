@@ -140,7 +140,7 @@ export function Sidebar({ unread = 0, user, isAdmin = false }: { unread?: number
         </form>
         <details ref={mobileMenu} className="sidebar-mobile-menu relative hidden">
           <summary aria-label="更多选项" className="pressable grid h-10 w-8 cursor-pointer list-none place-items-center rounded-xl text-muted"><MoreHorizontal className="h-5 w-5" /></summary>
-          <div className="absolute right-0 top-12 z-50 w-40 rounded-2xl border border-line bg-[#29251f] p-2 shadow-xl">
+          <div className="absolute right-0 top-12 z-50 w-40 rounded-2xl border border-line bg-surface-solid p-2 shadow-xl">
             <Link href="/settings" className="flex items-center gap-2 rounded-xl p-3 text-[13px]"><Settings className="h-4 w-4" />设置</Link>
             <Link href="/explore" className="flex items-center gap-2 rounded-xl p-3 text-[13px]"><Globe2 className="h-4 w-4" />公开广场</Link>
             <form action={logoutAction}><button type="submit" className="flex w-full items-center gap-2 rounded-xl p-3 text-[13px] text-muted"><LogOut className="h-4 w-4" />退出登录</button></form>

@@ -688,8 +688,9 @@ export function IdeaGraph({
           <div ref={overview} onScroll={(e) => { overviewScroll.current = e.currentTarget.scrollTop; }} className="discovery-overview scroll-thin" data-node>
             {ideas.length > 0 ? <>
               <header className="discovery-intro">
-                <h1>想法，正在长成作品<span>。</span></h1>
-                <p className="discovery-intro-note">发现值得实现的想法，也看见它们走过的路。</p>
+                <div className="discovery-eyebrow"><SproutIcon aria-hidden="true" className="h-3.5 w-3.5" /> THE IDEA GARDEN · 灵感花园</div>
+                <h1>微小的灵感，<br />也有<span>改变日常的光。</span></h1>
+                <p className="discovery-intro-note">发现一个值得解决的问题，让心动的想法慢慢长成作品。</p>
                 <div className="discovery-filter-row">
                   <span className="discovery-total" role="status">{filteredIdeas.length} 个想法 · {filteredIdeas.reduce((sum, idea) => sum + metricsById.get(idea.id)!.workCount, 0)} 个作品</span>
                   {tags.length > 0 ? <div className="discovery-filters" aria-label="按主题筛选">

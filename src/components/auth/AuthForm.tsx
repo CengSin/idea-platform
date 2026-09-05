@@ -25,14 +25,14 @@ export function AuthForm({
 
   return (
     <main className="relative z-10 grid min-h-dvh place-items-center px-5 py-10">
-      <div className="grid w-full max-w-[980px] overflow-hidden rounded-[34px] border border-line bg-[#211c17]/78 shadow-[0_36px_110px_rgba(10,7,4,0.42)] backdrop-blur-3xl lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid w-full max-w-[980px] overflow-hidden rounded-[34px] border border-line bg-surface-solid shadow-[0_24px_80px_rgba(40,65,42,0.08)] backdrop-blur-3xl lg:grid-cols-[1.05fr_0.95fr]">
         <section className="relative hidden min-h-[650px] overflow-hidden border-r border-line p-12 lg:flex lg:flex-col lg:justify-between">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(232,184,106,0.2),transparent_42%),radial-gradient(circle_at_90%_86%,rgba(111,212,203,0.16),transparent_38%)]" />
           <div className="relative">
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-idea/30 bg-idea/10 text-idea">
               <SproutIcon className="h-7 w-7" />
             </span>
-            <h1 className="mt-10 max-w-md text-[42px] font-semibold leading-[1.08] tracking-[-0.05em]">
+            <h1 className="mt-10 max-w-md text-[42px] font-medium leading-[1.3] tracking-[-0.05em]">
               让一个想法，找到愿意把它做出来的人。
             </h1>
             <p className="mt-5 max-w-md text-[15px] leading-7 text-muted">

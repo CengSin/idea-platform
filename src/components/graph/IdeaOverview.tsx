@@ -57,6 +57,7 @@ export function IdeaOverview({ db, ideas, metricsById, onSelect, list = false }:
                 </div>
               </div>
               <p className="discovery-summary">{idea.summary || idea.problem || "一个等待被实现的新想法。"}</p>
+              {idea.whyItMatters?.trim() ? <div className="idea-insight"><span><Sparkles aria-hidden="true" className="h-3 w-3" /> 为什么值得做</span><p>{idea.whyItMatters}</p></div> : null}
               {idea.tags.length > 0 ? <div className="discovery-tags">{idea.tags.slice(0, 2).map((tag) => <span key={tag}>#{tag}</span>)}</div> : null}
               <div className="discovery-metrics">
                 <span><span className="discovery-dot active" />{metrics.activeAttemptCount} 个进行中</span>
