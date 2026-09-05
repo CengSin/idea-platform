@@ -182,6 +182,9 @@ async function ensureSchema() {
   await tursoClient().executeMultiple(SCHEMA);
   for (const sql of [
     "ALTER TABLE ideas ADD COLUMN stop_conditions TEXT",
+    "ALTER TABLE ideas ADD COLUMN source_work_revision_id TEXT",
+    "ALTER TABLE ideas ADD COLUMN agent_request_id TEXT",
+    "ALTER TABLE works ADD COLUMN revisions TEXT",
     "ALTER TABLE attempts ADD COLUMN execution TEXT",
     "ALTER TABLE agent_config ADD COLUMN openai_model TEXT",
     "ALTER TABLE works ADD COLUMN iteration TEXT",
@@ -292,6 +295,8 @@ function decodeIdea(row: Row): Idea {
   const sourceWorkId = optStr(row.source_work_id);
   if (parentIdeaId) idea.parentIdeaId = parentIdeaId;
   if (sourceWorkId) idea.sourceWorkId = sourceWorkId;
+  if (optStr(row.source_work_revision_id)) idea.sourceWorkRevisionId = optStr(row.source_work_revision_id);
+  if (optStr(row.agent_request_id)) idea.agentRequestId = optStr(row.agent_request_id);
   return idea;
 }
 
@@ -356,6 +361,8 @@ function decodeWork(row: Row): Work {
   if (graph) work.graph = graph;
   const iteration = parseJson<Work["iteration"] | null>(row.iteration, null);
   if (iteration) work.iteration = iteration;
+  const revisions = parseJson<Work["revisions"]>(row.revisions, undefined);
+  if (revisions?.length) work.revisions = revisions;
   return work;
 }
 
@@ -496,8 +503,8 @@ function contentInserts(db: Database): InStatement[] {
     stmts.push({
       sql: `INSERT INTO ideas (id, title, summary, problem, why_it_matters, constraints, existing_attempts,
             open_questions, desired_outputs, tags, author, license, visibility, status, parent_idea_id,
-            source_work_id, graph, created_at, updated_at, stop_conditions)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            source_work_id, graph, created_at, updated_at, stop_conditions, source_work_revision_id, agent_request_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         idea.id,
         idea.title,
@@ -519,6 +526,8 @@ function contentInserts(db: Database): InStatement[] {
         idea.createdAt,
         idea.updatedAt,
         jsonText(idea.stopConditions ?? []),
+        idea.sourceWorkRevisionId ?? null,
+        idea.agentRequestId ?? null,
       ],
     });
   }
@@ -555,8 +564,8 @@ function contentInserts(db: Database): InStatement[] {
   for (const work of db.works) {
     stmts.push({
       sql: `INSERT INTO works (id, attempt_id, idea_id, title, summary, type, cover_url, external_url,
-            repository_url, status, credits, license, published_at, views, saves, citations, graph, iteration)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            repository_url, status, credits, license, published_at, views, saves, citations, graph, iteration, revisions)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         work.id,
         work.attemptId,
@@ -576,6 +585,7 @@ function contentInserts(db: Database): InStatement[] {
         work.citations,
         work.graph ? jsonText(work.graph) : null,
         work.iteration ? jsonText(work.iteration) : null,
+        work.revisions ? jsonText(work.revisions) : null,
       ],
     });
   }

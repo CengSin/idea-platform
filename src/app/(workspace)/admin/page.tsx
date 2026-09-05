@@ -39,7 +39,7 @@ export default async function IdeaAgentAdminPage() {
       </section>
 
       <section className="mt-5 grid gap-4 xl:grid-cols-[1.4fr_0.6fr]">
-        <div className="glass rounded-3xl p-5 sm:p-6">
+        <div className="paper-sheet rounded-3xl p-5 sm:p-6">
           <div className="flex items-center gap-2 text-[13px] text-idea"><Bot className="h-4 w-4" /> 扫描运行</div>
           <h2 className="mt-2 text-[20px] font-medium tracking-[-0.025em]">手动触发完整扫描</h2>
           <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted">
@@ -47,7 +47,7 @@ export default async function IdeaAgentAdminPage() {
           </p>
           <div className="mt-5"><AgentRunControl /></div>
         </div>
-        <div className="glass rounded-3xl p-5 sm:p-6">
+        <div className="paper-sheet rounded-3xl p-5 sm:p-6">
           <div className="flex items-center gap-2 text-[13px] text-muted"><KeyRound className="h-4 w-4" /> 管理员账户</div>
           <p className="mt-3 break-all text-[14px]">{account.email}</p>
           <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
@@ -65,14 +65,14 @@ export default async function IdeaAgentAdminPage() {
           ["邮件失败", dashboard.metrics.emailFailures],
           ["已关闭", dashboard.metrics.closedWorks],
         ].map(([label, value]) => (
-          <div key={label} className="glass rounded-2xl p-4">
+          <div key={label} className="paper-sheet rounded-2xl p-4">
             <div className="text-[12px] text-muted">{label}</div>
             <div className="mt-2 text-[25px] font-semibold tracking-[-0.04em]">{value}</div>
           </div>
         ))}
       </section>
 
-      <section className="mt-5 glass overflow-hidden rounded-3xl">
+      <section className="mt-5 paper-sheet overflow-hidden rounded-3xl">
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <div>
             <h2 className="text-[17px] font-medium">最近作品</h2>

@@ -21,7 +21,7 @@ export function AgentExecutionPanel({ attempt, idea }: { attempt: Attempt; idea:
   const perform = (task: () => Promise<unknown>) => {
     setError(""); start(async () => { try { await task(); router.refresh(); } catch(e) { setError(e instanceof Error ? e.message : "操作失败"); } });
   };
-  return <section className="mt-6 max-w-3xl rounded-3xl border border-line p-5">
+  return <section className="paper-sheet mt-6 max-w-3xl">
     <h2 className="text-[17px] font-medium">执行调度</h2>
     <p className="mt-2 text-[13px] leading-relaxed text-muted">连接外部 Agent 后领取本轮任务，持续回传心跳与结果。验收、继续或停止由你决定，公开同步仍需原有授权。</p>
     <p className="mt-2 text-[12px] text-muted">排队不会自动启动本机软件；先在项目目录启动执行器。连接说明见仓库 README 的“执行调度”。</p>

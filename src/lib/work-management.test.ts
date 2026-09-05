@@ -39,7 +39,9 @@ test("partial update preserves IDs, publication date, attribution, counters and 
   const before = structuredClone(db.works[0]);
   const patch = parseWorkPatch({ user_confirmed: true, title: " 新名称 ", repository_url: "" });
   applyWorkUpdate(db, "owner", "work", patch, at);
-  assert.deepEqual(db.works[0], { ...before, title: "新名称", repositoryUrl: "" });
+  assert.equal(db.works[0].revisions?.length, 2);
+  const { revisions: _revisions, ...updated } = db.works[0];
+  assert.deepEqual(updated, { ...before, title: "新名称", repositoryUrl: "" });
   assert.equal(db.attempts[0].status, "published");
 });
 
@@ -127,7 +129,8 @@ test("bootstrap exposes live capabilities and copied prompts carry the latest co
   const denied = buildAgentBootstrap({
     idea: db.ideas[0], attempt: db.attempts[0], baseUrl: "https://platform.example", tokenExpiresAt: at,
   });
-  assert.equal(denied.protocol_version, 3);
+  assert.equal(denied.protocol_version, 4);
+  assert.equal(denied.capabilities.propose_iteration, true);
   assert.equal(denied.capabilities.update_idea, false);
   assert.equal(denied.write_contracts.update_idea.available, false);
   assert.deepEqual(denied.current.work_ids, ["work"]);

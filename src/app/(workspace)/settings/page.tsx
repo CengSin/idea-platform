@@ -13,7 +13,7 @@ export default async function SettingsPage() {
         <h1 className="text-[28px] font-semibold tracking-[-0.04em]">设置</h1>
         <p className="mt-1 text-[13.5px] text-muted">用户始终拥有控制权。一级承接使用 AGENTS.md，作品衍生的子想法使用专属提示词。</p>
 
-        <section className="glass fade-up mt-8 max-w-xl rounded-3xl p-5">
+        <section className="paper-sheet mt-8 max-w-xl">
           <div className="text-[12px] tracking-[0.08em] text-muted">当前用户</div>
           <div className="mt-2 text-[18px] tracking-[-0.02em]">{me.displayName}</div>
           <p className="mt-1 text-[13.5px] text-muted">{me.bio}</p>

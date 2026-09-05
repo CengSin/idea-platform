@@ -41,6 +41,7 @@ export default async function MyIdeasPage() {
                       <Link href={`/ideas/${idea.id}`} className="tracking-[-0.02em]">
                         {idea.title}
                       </Link>
+                      {idea.sourceWorkId && <p className="mt-1 text-[11px] text-muted">↳ {db.works.find(w => w.id === idea.sourceWorkId)?.title || "来源作品暂不可见"}{idea.status === "draft" && idea.author.kind === "agent" ? " · Agent 待审阅" : " · 衍生想法"}</p>}
                     </td>
                     <td className="px-5 py-4">
                       <Chip tone={idea.status === "realized" ? "artifact" : "idea"}>

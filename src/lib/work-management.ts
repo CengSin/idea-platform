@@ -1,3 +1,4 @@
+import { ensureWorkRevision, recordWorkRevision } from "./work-revisions.ts";
 import type { Database, License, Work, WorkType } from "./types";
 
 export class WorkMutationError extends Error {
@@ -93,10 +94,12 @@ export function ownedWork(db: Database, userId: string, workId: string, scopeAtt
 
 export function applyWorkUpdate(db: Database, userId: string, workId: string, patch: WorkPatch, at: string, scopeAttemptId?: string) {
   const { work, attempt } = ownedWork(db, userId, workId, scopeAttemptId);
+  ensureWorkRevision(work, at);
   // Explicit allowlist: callers cannot overwrite identity, attribution or counters.
   for (const key of ["title", "summary", "type", "externalUrl", "repositoryUrl", "coverUrl", "license"] as const) {
     if (patch[key] !== undefined) Object.assign(work, { [key]: patch[key] });
   }
+  recordWorkRevision(work, at);
   attempt.lastActiveAt = at;
   return { work, attempt };
 }

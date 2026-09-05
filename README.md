@@ -190,3 +190,29 @@ npm run tunnel          # tunnel only, if the app is already running
 npm run dev:public      # start Next.js, then open the tunnel
 ./scripts/tunnel.sh --quick   # temporary *.trycloudflare.com URL
 ```
+
+### 白板、作品版本与迭代草稿
+
+首页以图钉便签表示想法、夹子照片卡表示作品，箭头串联“想法 → 作品 → 衍生想法”。搜索保留项目上下文；深层匹配会展开其祖先。手机端按纵向关系阅读，桌面支持滚动、缩放和展开视图。
+
+作品首次发布保存 v1；说明、封面、链接或许可发生变更时追加快照，无变化不增加版本。衍生想法绑定 `sourceWorkRevisionId`，Context 读取绑定版本的说明和链接。已有作品首次修改或创建衍生想法时补录当前快照；旧衍生想法不推测历史版本。快照记录平台元数据，**不是 Git 提交或部署文件快照**，如需固定源码，应提供固定提交/发布标签的链接。删除作品后，已公开衍生想法保留独立记录并显示来源不可见；尚未发布的绑定草稿不能再发布。
+
+Agent Bootstrap 协议 v4 增加 `propose_iteration` 和 `iteration_contract`。每轮读取最新 Bootstrap，使用原有分支 Token：
+
+```http
+POST /api/v1/works/<work_id>/iterations
+Authorization: Bearer <当前承接分支 Token>
+Content-Type: application/json
+
+{
+  "request_id": "stable-id-for-this-proposal",
+  "title": "下一步标题",
+  "summary": "本轮希望改成什么",
+  "problem": "现有作品有什么具体问题",
+  "source_work_revision_id": "<GET 作品返回的 current_revision.id>"
+}
+```
+
+可选 `why_it_matters`、`desired_outputs`、`stop_conditions`。省略版本时绑定提交时的当前版本。相同作品、作者和 `request_id` 重试返回原想法。对同一地址使用 GET 可读取本作品的草稿及用户审阅后的状态。接口只接受草稿字段，不接受发布或权限字段，不产生公开活动；会在作者的通知、作品下一步列表及“我的想法”中出现。作者编辑后通过“发布草稿”公开，来源作品与分支必须仍公开。原有公开写操作授权、验收和停止决定保持不变。
+
+Turso 会自动增加作品快照、来源版本、幂等请求字段；MySQL bridge 同步保留这些字段，Go 原生作品写接口也记录版本。发布前建议按项目现有备份流程保存数据库。

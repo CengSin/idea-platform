@@ -1,3 +1,4 @@
+import { currentWorkRevision } from "@/lib/work-revisions";
 import { PageFrame } from "@/components/chrome/PageFrame";
 import { Chip } from "@/components/ui/Chip";
 import { CoverImage } from "@/components/ui/CoverImage";
@@ -45,7 +46,7 @@ export default async function WorksPage({
           {works.map((work) => {
             const idea = ideaById(db, work.ideaId);
             return (
-              <Link key={work.id} href={`/works/${work.id}`} className="glass lift pressable media-zoom overflow-hidden rounded-3xl">
+              <Link key={work.id} href={`/works/${work.id}`} className="paper-photo lift pressable media-zoom">
                 <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-40 w-full object-cover" />
                 <div className="p-4">
                   <div className="flex items-center justify-between">
@@ -53,7 +54,7 @@ export default async function WorksPage({
                     <Chip>{WORK_TYPE_LABEL[work.type]}</Chip>
                   </div>
                   <p className="mt-2 line-clamp-2 text-[13px] text-muted">{work.summary}</p>
-                  <p className="mt-3 text-[12px] text-muted">来源 · {idea?.title}</p>
+                  <p className="mt-3 text-[12px] text-muted">v{currentWorkRevision(work).number} · 来源 {idea?.title}</p>
                   {idea?.status === "draft" ? (
                     <p className="mt-2 text-[12px] text-idea">随想法草稿一起发布</p>
                   ) : null}

@@ -1,3 +1,4 @@
+import { currentWorkRevision } from "@/lib/work-revisions";
 import { readDb } from "@/lib/db";
 import { attemptById, ideaById, workById } from "@/lib/format";
 import { NextResponse } from "next/server";
@@ -63,6 +64,7 @@ export async function GET(
   }
   return NextResponse.json({
     work: workForViewer(db, work, me?.id),
+    current_revision: currentWorkRevision(work),
     attribution: {
       idea_id: idea?.id,
       idea_title: idea?.title,

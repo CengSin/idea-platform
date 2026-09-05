@@ -66,19 +66,19 @@ export function NextIdeas({
           </div>
           <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.035em]">这个作品，下一步可以长成什么？</h2>
           <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-muted">
-            这里的每一步都是公开想法。认领后会从萌芽进入成长，交付新作品后成为结果。
+            每一步都基于这个作品的确定版本。草稿仅你可见，发布后其他人可以承接并交付新的作品。
           </p>
         </div>
         {canCreate ? (
           <Button tone="idea" onClick={openCreate}>
             <Plus className="h-4 w-4" />
-            发布下一步
+            写下下一步
           </Button>
         ) : null}
       </div>
 
       {items.length ? (
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <div className="iteration-notes mt-5 grid gap-4 md:grid-cols-2">
           {items.map((item) => {
             const tone = item.stage === "result" ? "artifact" : item.stage === "growing" ? "active" : "idea";
             return (
@@ -86,9 +86,9 @@ export function NextIdeas({
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Chip tone={tone}>{NEXT_IDEA_STAGE_LABEL[item.stage]}</Chip>
+                      <Chip tone={tone}>{item.idea.status === "draft" ? "私有草稿" : NEXT_IDEA_STAGE_LABEL[item.stage]}</Chip>
                       <span className="text-[11px] text-muted">
-                        {item.stage === "sprout"
+                        {item.idea.status === "draft" ? (item.idea.author.kind === "agent" ? "Agent 提交 · 待你审阅" : "待你审阅") : item.stage === "sprout"
                           ? "等待认领"
                           : item.stage === "growing"
                             ? `${item.attemptCount} 条承接正在推进`
@@ -105,7 +105,7 @@ export function NextIdeas({
                         type="button"
                         aria-label={`编辑${item.idea.title}`}
                         className="rounded-lg p-2 text-muted transition hover:bg-white/6 hover:text-artifact"
-                        onClick={() => openEdit(item.idea)}
+                        onClick={() => item.idea.status === "draft" ? sheets.openEditIdea(item.idea) : openEdit(item.idea)}
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -134,9 +134,9 @@ export function NextIdeas({
                   <Button
                     tone={item.stage === "result" ? "ghost" : "active"}
                     className="shrink-0 px-3 py-2"
-                    onClick={() => sheets.openAdopt(item.idea)}
+                    onClick={() => item.idea.status === "draft" ? router.push(`/ideas/${item.idea.id}`) : sheets.openAdopt(item.idea)}
                   >
-                    {item.stage === "result" ? "继续认领" : "认领下一步"}
+                    {item.idea.status === "draft" ? "审阅草稿" : item.stage === "result" ? "继续认领" : "认领下一步"}
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -162,11 +162,11 @@ export function NextIdeas({
         pending={pending}
         error={error}
         onClose={() => setEditorOpen(false)}
-        onSubmit={(input) => {
+        onSubmit={(input, draft) => {
           startTransition(async () => {
             try {
               if (editing) await updateNextIdeaAction(editing.id, input);
-              else await createNextIdeaAction(workId, input);
+              else await createNextIdeaAction(workId, input, draft);
               setEditorOpen(false);
               router.refresh();
             } catch (cause) {
@@ -225,7 +225,7 @@ function NextIdeaEditor({
   pending: boolean;
   error: string | null;
   onClose: () => void;
-  onSubmit: (input: { title: string; summary: string; problem: string; whyItMatters: string; desiredOutputs: string[]; stopConditions: string[] }) => void;
+  onSubmit: (input: { title: string; summary: string; problem: string; whyItMatters: string; desiredOutputs: string[]; stopConditions: string[] }, draft?: boolean) => void;
 }) {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -250,7 +250,7 @@ function NextIdeaEditor({
       open={open}
       onClose={onClose}
       title={idea ? "编辑下一步" : "从这个作品发布下一步"}
-      subtitle="发布后立即公开，其他人可以像认领普通想法一样建立自己的实现分支。"
+      subtitle="绑定当前作品版本。可以先存为私有草稿，审阅后再公开。"
     >
       <form
         className="flex flex-col gap-4"
@@ -286,6 +286,7 @@ function NextIdeaEditor({
         {error ? <p className="text-[13px] text-blocked">{error}</p> : null}
         <div className="flex justify-end gap-2">
           <Button type="button" onClick={onClose}>取消</Button>
+          {!idea && <Button type="button" disabled={!canSubmit || pending} onClick={() => onSubmit({ title, summary, problem, whyItMatters, desiredOutputs: criteria.split("\n").filter(Boolean), stopConditions: stop.split("\n").filter(Boolean) }, true)}>保存草稿</Button>}
           <Button type="submit" tone="idea" disabled={!canSubmit || pending}>
             {pending ? "正在保存…" : idea ? "保存修改" : "公开发布"}
           </Button>

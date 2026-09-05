@@ -1,3 +1,4 @@
+import { currentWorkRevision } from "./work-revisions.ts";
 import type { Database } from "./types";
 
 const visibleStatuses = new Set(["published", "evolving", "realized", "dormant", "deprecated"]);
@@ -28,6 +29,8 @@ export function buildPublicCatalog(db: Database) {
       const works = db.works
         .filter((work) => work.ideaId === idea.id && work.status === "published" && attemptIds.has(work.attemptId))
         .map((work) => ({
+          id: work.id,
+          revisionNumber: currentWorkRevision(work).number,
           title: work.title,
           summary: work.summary,
           type: work.type,
@@ -35,8 +38,14 @@ export function buildPublicCatalog(db: Database) {
           externalUrl: publicUrl(work.externalUrl),
         }));
       const author = db.users.find((user) => user.id === idea.author.userId);
+      const parent = db.ideas.find(i => i.id === idea.parentIdeaId && i.visibility === "public" && visibleStatuses.has(i.status));
+      const source = parent && db.works.find(w => w.id === idea.sourceWorkId && w.ideaId === parent.id && w.status === "published" && db.attempts.some(a => a.id === w.attemptId && a.ideaId === parent.id && a.visibility === "public" && a.status !== "abandoned"));
+      const revision = source && source.revisions?.find(r => r.id === idea.sourceWorkRevisionId);
       return {
         id: idea.id,
+        updatedAt: idea.updatedAt,
+        source: parent && source ? { ideaId: parent.id, ideaTitle: parent.title, workId: source.id, workTitle: revision?.title ?? source.title, revisionNumber: revision?.number } : undefined,
+        hasUnavailableSource: Boolean(idea.parentIdeaId && (!parent || !source)),
         title: idea.title,
         status: idea.status,
         summary: idea.summary,

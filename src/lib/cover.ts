@@ -1,4 +1,4 @@
-export const DEFAULT_COVER = "/covers/hushcity.jpg";
+export const DEFAULT_COVER = "/covers/notebook.svg";
 
 export type CoverPreviewSource = "open_graph" | "twitter_card" | "apple_touch_icon" | "favicon";
 
@@ -14,7 +14,7 @@ export function isDefaultCover(url?: string | null) {
   if (trimmed === DEFAULT_COVER) return true;
   try {
     const parsed = new URL(trimmed, "https://idea.local");
-    return parsed.pathname === "/covers/hushcity.jpg" || parsed.pathname.endsWith("/covers/hushcity.jpg");
+    return parsed.pathname.endsWith("/covers/notebook.svg") || parsed.pathname === "/covers/hushcity.jpg" || parsed.pathname.endsWith("/covers/hushcity.jpg");
   } catch {
     return trimmed.endsWith("/covers/hushcity.jpg");
   }

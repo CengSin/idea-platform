@@ -1,3 +1,4 @@
+import { currentWorkRevision } from "@/lib/work-revisions";
 import { PageFrame } from "@/components/chrome/PageFrame";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
@@ -15,11 +16,13 @@ import { notFound } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default async function WorkPage({
-  params,
+  params, searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ revision?: string }>;
 }) {
   const { id } = await params;
+  const { revision: requestedRevision } = await searchParams;
   const bundle = await getWorkBundle(id);
   if (!bundle) notFound();
   const { work, idea, attempt, nextIdeas } = bundle;
@@ -38,10 +41,11 @@ export default async function WorkPage({
       >
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
           <div>
-            <div className="media-zoom overflow-hidden rounded-[28px]">
+            <div className="paper-photo">
               <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-[340px] w-full object-cover" />
             </div>
-            <h1 className="mt-6 text-[32px] font-semibold tracking-[-0.04em]">{work.title}</h1>
+            <p className="mt-5 text-[11px] tracking-widest text-muted">作品 · v{currentWorkRevision(work).number}</p>
+            <h1 className="mt-2 text-[32px] font-semibold tracking-[-0.04em]">{work.title}</h1>
             {idea.status === "draft" ? (
               <div className="mt-4 rounded-2xl border border-idea/25 bg-idea/7 px-4 py-3 text-[13px] text-muted">
                 作品已保存到草稿项目，将在来源想法发布时一起对外可见。
@@ -92,6 +96,11 @@ export default async function WorkPage({
             </div>
           </aside>
         </div>
+        <details className="revision-history paper-sheet mt-8" open={Boolean(requestedRevision)}>
+          <summary>作品版本 · {work.revisions?.length || 1} 份记录</summary>
+          <ol>{(work.revisions?.length ? [...work.revisions].reverse() : [currentWorkRevision(work)]).map(revision => <li key={revision.id} id={`revision-${revision.id}`} className={requestedRevision === revision.id ? "revision-selected" : undefined}><strong>v{revision.number} · {revision.title}</strong><span className="ml-3 text-[11px] text-muted">{revision.recordedAt ? formatDate(revision.recordedAt) : "现有作品，历史未记录"}</span><p>{revision.summary}</p>{revision.repositoryUrl && <a className="text-active text-[12px]" href={revision.repositoryUrl} target="_blank" rel="noreferrer">查看此版本记录的仓库 ↗</a>}</li>)}</ol>
+          <p className="text-[11px] text-muted">版本记录保存作品说明与链接；链接所指的网站或仓库内容可能继续更新。</p>
+        </details>
         {bundle.canManage ? <IdeaAgentPanel work={work} /> : null}
         <NextIdeas
           workId={work.id}

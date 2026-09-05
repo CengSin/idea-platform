@@ -63,27 +63,29 @@ type User struct {
 func (User) TableName() string { return "users" }
 
 type Idea struct {
-	StopConditions   []string             `json:"stopConditions,omitempty" gorm:"serializer:json;type:json"`
-	ID               string               `json:"id" gorm:"primaryKey;size:64"`
-	Title            string               `json:"title" gorm:"size:512"`
-	Summary          string               `json:"summary" gorm:"type:text"`
-	Problem          string               `json:"problem" gorm:"type:text"`
-	WhyItMatters     string               `json:"whyItMatters" gorm:"type:text"`
-	Constraints      []string             `json:"constraints" gorm:"serializer:json;type:json"`
-	ExistingAttempts []ExistingAttemptRef `json:"existingAttempts" gorm:"serializer:json;type:json"`
-	OpenQuestions    []string             `json:"openQuestions" gorm:"serializer:json;type:json"`
-	DesiredOutputs   []string             `json:"desiredOutputs" gorm:"serializer:json;type:json"`
-	Tags             []string             `json:"tags" gorm:"serializer:json;type:json"`
-	Author           ActorRef             `json:"author" gorm:"serializer:json;type:json"`
-	AuthorUserID     string               `json:"-" gorm:"size:64;index"`
-	License          License              `json:"license" gorm:"serializer:json;type:json"`
-	Visibility       string               `json:"visibility" gorm:"size:32;index"`
-	Status           string               `json:"status" gorm:"size:32;index;default:published"`
-	ParentIdeaID     string               `json:"parentIdeaId,omitempty" gorm:"size:64;index"`
-	SourceWorkID     string               `json:"sourceWorkId,omitempty" gorm:"size:64;index"`
-	Graph            Point                `json:"graph" gorm:"serializer:json;type:json"`
-	CreatedAt        string               `json:"createdAt" gorm:"column:created_at;size:40;autoCreateTime:false"`
-	UpdatedAt        string               `json:"updatedAt" gorm:"column:updated_at;size:40;autoUpdateTime:false"`
+	SourceWorkRevisionID string               `json:"sourceWorkRevisionId,omitempty" gorm:"size:128"`
+	AgentRequestID       string               `json:"agentRequestId,omitempty" gorm:"size:128"`
+	StopConditions       []string             `json:"stopConditions,omitempty" gorm:"serializer:json;type:json"`
+	ID                   string               `json:"id" gorm:"primaryKey;size:64"`
+	Title                string               `json:"title" gorm:"size:512"`
+	Summary              string               `json:"summary" gorm:"type:text"`
+	Problem              string               `json:"problem" gorm:"type:text"`
+	WhyItMatters         string               `json:"whyItMatters" gorm:"type:text"`
+	Constraints          []string             `json:"constraints" gorm:"serializer:json;type:json"`
+	ExistingAttempts     []ExistingAttemptRef `json:"existingAttempts" gorm:"serializer:json;type:json"`
+	OpenQuestions        []string             `json:"openQuestions" gorm:"serializer:json;type:json"`
+	DesiredOutputs       []string             `json:"desiredOutputs" gorm:"serializer:json;type:json"`
+	Tags                 []string             `json:"tags" gorm:"serializer:json;type:json"`
+	Author               ActorRef             `json:"author" gorm:"serializer:json;type:json"`
+	AuthorUserID         string               `json:"-" gorm:"size:64;index"`
+	License              License              `json:"license" gorm:"serializer:json;type:json"`
+	Visibility           string               `json:"visibility" gorm:"size:32;index"`
+	Status               string               `json:"status" gorm:"size:32;index;default:published"`
+	ParentIdeaID         string               `json:"parentIdeaId,omitempty" gorm:"size:64;index"`
+	SourceWorkID         string               `json:"sourceWorkId,omitempty" gorm:"size:64;index"`
+	Graph                Point                `json:"graph" gorm:"serializer:json;type:json"`
+	CreatedAt            string               `json:"createdAt" gorm:"column:created_at;size:40;autoCreateTime:false"`
+	UpdatedAt            string               `json:"updatedAt" gorm:"column:updated_at;size:40;autoUpdateTime:false"`
 }
 
 func (Idea) TableName() string { return "ideas" }
@@ -146,24 +148,25 @@ type WorkIteration struct {
 }
 
 type Work struct {
-	ID            string         `json:"id" gorm:"primaryKey;size:64"`
-	AttemptID     string         `json:"attemptId" gorm:"size:64;index"`
-	IdeaID        string         `json:"ideaId" gorm:"size:64;index"`
-	Title         string         `json:"title" gorm:"size:256"`
-	Summary       string         `json:"summary" gorm:"type:text"`
-	Type          string         `json:"type" gorm:"size:32"`
-	CoverURL      string         `json:"coverUrl" gorm:"size:1024"`
-	ExternalURL   string         `json:"externalUrl,omitempty" gorm:"size:1024"`
-	RepositoryURL string         `json:"repositoryUrl,omitempty" gorm:"size:1024"`
-	Status        string         `json:"status" gorm:"size:32;index"`
-	Credits       []Credit       `json:"credits" gorm:"serializer:json;type:json"`
-	License       License        `json:"license" gorm:"serializer:json;type:json"`
-	PublishedAt   string         `json:"publishedAt,omitempty" gorm:"size:40"`
-	Views         int            `json:"views"`
-	Saves         int            `json:"saves"`
-	Citations     int            `json:"citations"`
-	Graph         *Point         `json:"graph,omitempty" gorm:"serializer:json;type:json"`
-	Iteration     *WorkIteration `json:"iteration,omitempty" gorm:"serializer:json;type:json"`
+	Revisions     json.RawMessage `json:"revisions,omitempty" gorm:"type:json"`
+	ID            string          `json:"id" gorm:"primaryKey;size:64"`
+	AttemptID     string          `json:"attemptId" gorm:"size:64;index"`
+	IdeaID        string          `json:"ideaId" gorm:"size:64;index"`
+	Title         string          `json:"title" gorm:"size:256"`
+	Summary       string          `json:"summary" gorm:"type:text"`
+	Type          string          `json:"type" gorm:"size:32"`
+	CoverURL      string          `json:"coverUrl" gorm:"size:1024"`
+	ExternalURL   string          `json:"externalUrl,omitempty" gorm:"size:1024"`
+	RepositoryURL string          `json:"repositoryUrl,omitempty" gorm:"size:1024"`
+	Status        string          `json:"status" gorm:"size:32;index"`
+	Credits       []Credit        `json:"credits" gorm:"serializer:json;type:json"`
+	License       License         `json:"license" gorm:"serializer:json;type:json"`
+	PublishedAt   string          `json:"publishedAt,omitempty" gorm:"size:40"`
+	Views         int             `json:"views"`
+	Saves         int             `json:"saves"`
+	Citations     int             `json:"citations"`
+	Graph         *Point          `json:"graph,omitempty" gorm:"serializer:json;type:json"`
+	Iteration     *WorkIteration  `json:"iteration,omitempty" gorm:"serializer:json;type:json"`
 }
 
 func (Work) TableName() string { return "works" }

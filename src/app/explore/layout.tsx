@@ -17,7 +17,6 @@ export default function ExploreLayout({ children }: { children: React.ReactNode 
           </Link>
           <nav aria-label="游客导航" className="flex items-center gap-2 sm:gap-7">
             <Link href="/explore#ideas" className="hidden text-[13px] text-muted hover:text-artifact sm:block">发现想法</Link>
-            <Link href="/explore#how-it-works" className="hidden text-[13px] text-muted hover:text-artifact md:block">如何参与</Link>
             <Link href="/login" className="pressable rounded-xl px-3 py-2.5 text-[13px] text-muted hover:text-artifact">登录</Link>
             <Link href="/register" className="explore-cta small">写下想法 <ArrowUpRight className="h-3.5 w-3.5" /></Link>
           </nav>

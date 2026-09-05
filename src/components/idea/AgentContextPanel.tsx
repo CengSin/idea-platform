@@ -15,10 +15,12 @@ export function AgentContextPanel({ idea }: { idea: Idea }) {
     { key: "约束", body: idea.constraints.join("；") },
     { key: "已有尝试", body: idea.existingAttempts.map((x) => `${x.title}${x.note ? `：${x.note}` : ""}`).join("\n") },
     { key: "开放问题", body: idea.openQuestions.join("\n") },
-  ];
+    { key: "验收标准", body: idea.desiredOutputs.join("\n") },
+    { key: "停止条件", body: (idea.stopConditions ?? []).join("\n") },
+  ].filter(s => s.body.trim());
 
   return (
-    <aside className="glass-heavy rounded-[24px] p-4">
+    <aside className="paper-sheet p-4">
       <div className="mb-3 flex items-center gap-2 text-[14px] tracking-[-0.02em]">
         <span className="text-muted">Agent 可读取的上下文</span>
       </div>

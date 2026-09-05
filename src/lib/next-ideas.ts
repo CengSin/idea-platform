@@ -1,3 +1,4 @@
+import { ensureWorkRevision } from "./work-revisions.ts";
 import type { Database, Idea } from "./types";
 
 export type NextIdeaInput = {
@@ -74,8 +75,9 @@ export function createNextIdeaRecord(
   input: NextIdeaInput,
   id: string,
   at: string,
+  options: { draft?: boolean; sourceWorkRevisionId?: string; agentRequestId?: string } = {},
 ): Idea {
-  const work = db.works.find((item) => item.id === workId && item.status === "published");
+  const work = db.works.find((item) => item.id === workId && (item.status === "published" || (options.draft && item.status === "draft")));
   if (!work) throw new NextIdeaMutationError(404, "来源作品不存在或尚未发布");
   const attempt = db.attempts.find((item) => item.id === work.attemptId);
   if (!attempt || attempt.ownerId !== userId) {
@@ -85,6 +87,16 @@ export function createNextIdeaRecord(
   const me = db.users.find((item) => item.id === userId);
   if (!parent || !me) throw new NextIdeaMutationError(404, "来源想法或用户不存在");
 
+  if (!options.draft && (["draft", "archived"].includes(parent.status) || parent.visibility !== "public" || attempt.visibility !== "public" || attempt.status === "abandoned")) {
+    throw new NextIdeaMutationError(409, "来源尚未公开，请先保存迭代草稿。");
+  }
+  const revision = ensureWorkRevision(work, at);
+  const sourceRevisionId = options.sourceWorkRevisionId ?? revision.id;
+  if (!work.revisions!.some(r => r.id === sourceRevisionId)) throw new NextIdeaMutationError(400, "来源作品版本不存在");
+  if (options.agentRequestId) {
+    const existing = db.ideas.find(i => i.sourceWorkId === workId && i.author.userId === userId && i.agentRequestId === options.agentRequestId);
+    if (existing) return existing;
+  }
   const clean = cleanInput(input);
   const siblingIndex = db.ideas.filter((item) => item.sourceWorkId === workId).length;
   const origin = work.graph ?? parent.graph;
@@ -101,10 +113,12 @@ export function createNextIdeaRecord(
       derivatives: true,
       commercialUse: "with_attribution",
     },
-    visibility: "public",
-    status: "published",
+    visibility: options.draft ? "private" : "public",
+    status: options.draft ? "draft" : "published",
     parentIdeaId: parent.id,
     sourceWorkId: work.id,
+    sourceWorkRevisionId: sourceRevisionId,
+    ...(options.agentRequestId ? { agentRequestId: options.agentRequestId } : {}),
     graph: {
       x: origin.x + 220,
       y: origin.y + 120 + siblingIndex * 90,
@@ -113,7 +127,7 @@ export function createNextIdeaRecord(
     updatedAt: at,
   };
   db.ideas.push(idea);
-  work.citations += 1;
+  if (!options.draft) work.citations += 1;
   return idea;
 }
 
@@ -137,7 +151,7 @@ export function updateNextIdeaRecord(
 ) {
   const idea = ownedNextIdea(db, userId, ideaId);
   Object.assign(idea, cleanInput({ ...input, desiredOutputs: input.desiredOutputs ?? idea.desiredOutputs, stopConditions: input.stopConditions ?? idea.stopConditions }));
-  idea.visibility = "public";
+  if (idea.status !== "draft") idea.visibility = "public";
   idea.updatedAt = at;
   return idea;
 }
@@ -151,10 +165,11 @@ export function deleteNextIdeaRecord(db: Database, userId: string, ideaId: strin
     throw new NextIdeaMutationError(409, "这一步已经产生作品，不能删除");
   }
 
+  db.notifications = db.notifications.filter(n => n.href !== `/ideas/${ideaId}`);
   db.ideas = db.ideas.filter((item) => item.id !== ideaId);
   db.follows = db.follows.filter((follow) => follow.ideaId !== ideaId);
   db.events = db.events.filter((event) => event.ideaId !== ideaId);
   const sourceWork = db.works.find((work) => work.id === idea.sourceWorkId);
-  if (sourceWork) sourceWork.citations = Math.max(0, sourceWork.citations - 1);
+  if (sourceWork && idea.status !== "draft") sourceWork.citations = Math.max(0, sourceWork.citations - 1);
   return idea;
 }

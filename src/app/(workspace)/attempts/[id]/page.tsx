@@ -44,7 +44,7 @@ export default async function AttemptPage({
           </span>
         }
       >
-        <div className="flex items-start justify-between gap-6">
+        <div className="paper-sheet flex items-start justify-between gap-6">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-[28px] font-semibold tracking-[-0.04em]">{attempt.title}</h1>
@@ -71,7 +71,7 @@ export default async function AttemptPage({
         <div className="mt-4 text-[13px] text-muted">
           开始于 {formatDateTime(attempt.startedAt)} · 最近活动 {formatDateTime(attempt.lastActiveAt)}
         </div>
-        <section className="glass mt-6 max-w-3xl rounded-2xl p-5">
+        <section className="paper-summary paper-progress mt-6 max-w-3xl">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-[15px] font-medium tracking-[-0.02em]">最新进展</h2>
             <span className="text-[12px] text-muted">
@@ -89,7 +89,7 @@ export default async function AttemptPage({
         ) : null}
 
         {works.length ? (
-          <div className="mt-8 grid grid-cols-3 gap-4">
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
             {works.map((work) => (
               <Link key={work.id} href={`/works/${work.id}`} className="glass lift media-zoom overflow-hidden rounded-2xl">
                 <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-28 w-full object-cover" />

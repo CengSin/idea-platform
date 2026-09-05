@@ -25,7 +25,7 @@ export function IdeaAgentPanel({ work }: { work: Work }) {
   };
   const labels = { queued: "等待分析", running: "正在分析", succeeded: "分析完成", failed: "分析失败", cancelled: "已取消" };
   return (
-    <section className="mt-10 rounded-3xl border border-line p-5 sm:p-6">
+    <section className="paper-sheet mt-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-[13px] text-idea"><Bot className="h-4 w-4" />迭代提醒</div>
         <div className="flex flex-wrap gap-2">

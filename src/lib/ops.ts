@@ -1,3 +1,4 @@
+import { ensureWorkRevision } from "./work-revisions";
 import { nanoid } from "nanoid";
 import { DEFAULT_COVER } from "./cover";
 import { mutateDb, readDb, resetDb } from "./db";
@@ -111,11 +112,12 @@ export async function saveIdeaDraft(userId: string, input: IdeaInput) {
   return createIdea(userId, input, "draft");
 }
 
-export async function createNextIdea(userId: string, workId: string, input: NextIdeaInput) {
+export async function createNextIdea(userId: string, workId: string, input: NextIdeaInput, draft = false) {
   const id = `idea_${nanoid(8)}`;
   const at = nowIso();
   await mutateDb((db) => {
-    const idea = createNextIdeaRecord(db, userId, workId, input, id, at);
+    const idea = createNextIdeaRecord(db, userId, workId, input, id, at, { draft });
+    if (draft) return;
     const me = db.users.find((item) => item.id === userId)!;
     db.events.unshift({
       id: `evt_${nanoid(6)}`,
@@ -127,7 +129,7 @@ export async function createNextIdea(userId: string, workId: string, input: Next
       workId,
     });
   });
-  return { idea_id: id, url: `/ideas/${id}`, review_status: "published" as const };
+  return { idea_id: id, url: `/ideas/${id}`, review_status: draft ? "draft" as const : "published" as const };
 }
 
 export async function updateNextIdea(
@@ -280,6 +282,17 @@ export async function publishIdeaDraft(userId: string, ideaId: string) {
       desiredOutputs: idea.desiredOutputs, tags: idea.tags,
       visibility: idea.visibility, license: idea.license,
     }), true);
+    if (idea.sourceWorkRevisionId && !idea.sourceWorkId) throw new Error("来源作品已移除，无法发布这条迭代。");
+    if (idea.sourceWorkId) {
+      const source = db.works.find(w => w.id === idea.sourceWorkId);
+      const parent = db.ideas.find(i => i.id === source?.ideaId);
+      const branch = db.attempts.find(a => a.id === source?.attemptId);
+      if (!source || source.status !== "published" || !parent || ["draft", "archived"].includes(parent.status) || parent.visibility !== "public" || branch?.visibility !== "public" || branch?.status === "abandoned") throw new Error("来源作品尚未公开，暂不能发布这条迭代。");
+      if (idea.sourceWorkRevisionId && !source.revisions?.some(r => r.id === idea.sourceWorkRevisionId)) throw new Error("来源版本不存在，无法发布这条迭代。");
+      idea.parentIdeaId = parent.id;
+      idea.visibility = "public";
+      source.citations += 1;
+    }
     idea.status = "published";
     idea.updatedAt = publishedAt;
     nextStatus = recomputeIdeaStatus(idea, db);
@@ -314,7 +327,7 @@ export async function deleteIdeaDraft(userId: string, ideaId: string) {
       (item) => item.ideaId !== ideaId && (!item.attemptId || !attemptIdSet.has(item.attemptId)) && (!item.workId || !workIds.has(item.workId)),
     );
     db.notifications = db.notifications.filter(
-      (item) => !attemptIds.some((id) => item.href === `/attempts/${id}`) &&
+      (item) => item.href !== `/ideas/${ideaId}` && !attemptIds.some((id) => item.href === `/attempts/${id}`) &&
         ![...workIds].some((id) => item.href === `/works/${id}`),
     );
     db.follows = db.follows.filter((item) => item.ideaId !== ideaId);
@@ -488,6 +501,7 @@ export async function publishWork(userId: string, input: {
         ? { x: attempt.graph.x + 180, y: attempt.graph.y + 10 }
         : undefined,
     });
+    ensureWorkRevision(db.works.find(w => w.id === id)!, at);
     attempt.workIds = [...attempt.workIds, id];
     attempt.status = "published";
     attempt.lastActiveAt = at;

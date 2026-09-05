@@ -40,12 +40,12 @@ export function DraftIdeaActions({ idea }: { idea: Idea }) {
   };
 
   return (
-    <div className="mb-7 rounded-2xl border border-idea/25 bg-idea/7 px-4 py-4">
+    <div className="paper-sheet mb-7">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="text-[14px] font-medium text-idea">这是你的草稿</div>
+          <div className="text-[14px] font-medium text-idea">{idea.author.kind === "agent" ? "Agent 提交的迭代草稿 · 等待你审阅" : "这是你的草稿"}</div>
           <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
-            你可以继续创建项目、生成 AGENTS.md、同步进展和发布作品；对外发布想法时，它们会一起可见。
+            {idea.sourceWorkId ? "核对来源作品、本轮改动与执行条件。编辑后可以发布，也可以保留草稿继续探索。" : "你可以先创建项目并推进。发布想法时，关联的公开项目与作品将一起可见。"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

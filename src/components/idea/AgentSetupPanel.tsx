@@ -42,7 +42,7 @@ export function AgentSetupPanel({ attemptId, derived }: { attemptId: string; der
   };
 
   return (
-    <section className="glass mt-8 max-w-3xl rounded-3xl p-5">
+    <section className="paper-sheet mt-8 max-w-3xl">
       <div className="flex items-start justify-between gap-5">
         <div>
           <h2 className="text-[17px] font-medium tracking-[-0.025em]">让 Agent 接管这条分支</h2>

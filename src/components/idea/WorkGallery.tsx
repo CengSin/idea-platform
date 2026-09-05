@@ -2,7 +2,7 @@ import { Chip } from "@/components/ui/Chip";
 import { CoverImage } from "@/components/ui/CoverImage";
 import { WORK_TYPE_LABEL } from "@/lib/format";
 import type { Work } from "@/lib/types";
-import { Eye, GitFork, Play, Star } from "lucide-react";
+import { Eye, GitFork, Star } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
 
 function compact(n: number) {
@@ -19,13 +19,10 @@ export function WorkGallery({ works }: { works: Work[] }) {
           <Link
             key={work.id}
             href={`/works/${work.id}`}
-            className="glass lift pressable media-zoom group overflow-hidden rounded-3xl"
+            className="paper-photo lift pressable media-zoom group"
           >
             <div className="relative">
               <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-[168px] w-full object-cover" />
-              <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-artifact backdrop-blur-sm">
-                <Play className="h-3.5 w-3.5 fill-current" />
-              </span>
             </div>
             <div className="p-4">
               <div className="flex items-start justify-between gap-3">

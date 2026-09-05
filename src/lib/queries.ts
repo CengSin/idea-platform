@@ -115,7 +115,7 @@ export async function getWorkBundle(id: string) {
   const work = workById(db, id);
   if (!work) return null;
   const nextIdeas = db.ideas
-    .filter((idea) => idea.sourceWorkId === id && idea.visibility === "public" && idea.status !== "draft" && idea.status !== "archived")
+    .filter((idea) => idea.sourceWorkId === id && idea.status !== "archived" && ((idea.visibility === "public" && idea.status !== "draft") || idea.author.userId === me.id))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .map((idea) => ({
       idea,

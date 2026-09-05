@@ -108,6 +108,8 @@ export interface Idea {
   status: IdeaStatus;
   parentIdeaId?: string;
   sourceWorkId?: string;
+  sourceWorkRevisionId?: string;
+  agentRequestId?: string;
   graph: { x: number; y: number };
   createdAt: string;
   updatedAt: string;
@@ -142,7 +144,21 @@ export interface Credit {
   name: string;
 }
 
+export interface WorkRevision {
+  id: string;
+  number: number;
+  recordedAt: string;
+  title: string;
+  summary: string;
+  type: WorkType;
+  coverUrl: string;
+  externalUrl?: string;
+  repositoryUrl?: string;
+  license: License;
+}
+
 export interface Work {
+  revisions?: WorkRevision[];
   id: string;
   attemptId: string;
   ideaId: string;

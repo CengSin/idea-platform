@@ -1,6 +1,5 @@
 "use client";
 
-import { SproutIcon } from "@/components/icons";
 import { useSheets } from "@/components/sheets/SheetContext";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
@@ -31,12 +30,8 @@ export function IdeaHeader({
   const [statusError, setStatusError] = useState("");
 
   return (
-    <header className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <header className="paper-summary flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex min-w-0 gap-5">
-        <span className="relative mt-1 flex h-[88px] w-[88px] shrink-0 items-center justify-center rounded-full border border-idea/40 bg-[radial-gradient(circle_at_35%_30%,rgba(232,184,106,0.28),rgba(28,24,20,0.15))] text-idea shadow-[0_0_40px_rgba(232,184,106,0.28)]">
-          <span className="idea-halo" />
-          <SproutIcon className="h-12 w-12" />
-        </span>
         <div className="min-w-0">
           <h1 className="text-[32px] font-semibold leading-[1.15] tracking-[-0.04em]">
             {idea.title} {idea.status === "deprecated" && <span className="idea-deprecated-badge">已弃用</span>}

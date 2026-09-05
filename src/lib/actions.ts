@@ -81,9 +81,10 @@ export async function adoptIdeaAction(input: Parameters<typeof adoptIdea>[1]) {
 export async function createNextIdeaAction(
   workId: string,
   input: Parameters<typeof createNextIdea>[2],
+  draft = false,
 ) {
   const me = await requireCurrentUser();
-  const result = await createNextIdea(me.id, workId, input);
+  const result = await createNextIdea(me.id, workId, input, draft);
   refresh();
   return result;
 }

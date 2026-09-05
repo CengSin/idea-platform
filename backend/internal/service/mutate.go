@@ -395,6 +395,9 @@ func (s *Service) PublishWork(ctx context.Context, userID string, in PublishWork
 			PublishedAt:   at,
 			Graph:         graph,
 		}
+		if err := recordWorkRevision(&work, at); err != nil {
+			return err
+		}
 		if err := tx.Create(&work).Error; err != nil {
 			return err
 		}

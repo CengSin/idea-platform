@@ -151,6 +151,9 @@ func (s *Service) mutateWork(ctx context.Context, userID, id string, in *UpdateW
 		}
 		text := "更新了作品「" + work.Title + "」"
 		if in != nil {
+			if err := recordWorkRevision(&work, at); err != nil {
+				return err
+			}
 			for target, value := range map[*string]*string{&work.Title: in.Title, &work.Summary: in.Summary, &work.Type: in.Type, &work.ExternalURL: in.ExternalURL, &work.RepositoryURL: in.RepositoryURL, &work.CoverURL: in.CoverURL} {
 				if value != nil {
 					*target = *value
@@ -158,6 +161,9 @@ func (s *Service) mutateWork(ctx context.Context, userID, id string, in *UpdateW
 			}
 			if in.License != nil {
 				work.License = *in.License
+			}
+			if err := recordWorkRevision(&work, at); err != nil {
+				return err
 			}
 			if err := tx.Save(&work).Error; err != nil {
 				return err
