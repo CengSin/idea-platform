@@ -19,6 +19,7 @@ export const IDEA_STATUS_LABEL: Record<IdeaStatus, string> = {
   published: "已发布",
   evolving: "生长中",
   realized: "已产生作品",
+  deprecated: "已弃用",
   dormant: "沉寂",
   archived: "已归档",
 };
@@ -222,7 +223,7 @@ export function attemptById(db: Database, id: string) {
 }
 
 export function recomputeIdeaStatus(idea: Idea, db: Database): IdeaStatus {
-  if (idea.status === "draft" || idea.status === "archived") return idea.status;
+  if (idea.status === "deprecated" || idea.status === "draft" || idea.status === "archived") return idea.status;
   const attempts = db.attempts.filter((a) => a.ideaId === idea.id);
   const statuses = attempts.map((a) => effectiveAttemptStatus(a));
   const hasWork = db.works.some(

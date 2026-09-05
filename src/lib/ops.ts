@@ -335,6 +335,7 @@ export async function adoptIdea(userId: string, input: {
   await mutateDb((db) => {
     const idea = db.ideas.find((i) => i.id === input.ideaId);
     if (!idea) throw new Error("Idea 不存在");
+    if (idea.status === "deprecated") throw new Error("该想法已弃用，不能创建新的承接");
     if (idea.status === "draft" && idea.author.userId !== userId) {
       throw new Error("草稿仅作者本人可以创建项目");
     }

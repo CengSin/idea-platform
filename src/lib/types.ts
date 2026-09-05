@@ -5,6 +5,7 @@ export type IdeaStatus =
   | "published"
   | "evolving"
   | "realized"
+  | "deprecated"
   | "dormant"
   | "archived";
 export type AttemptStatus =

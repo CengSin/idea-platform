@@ -84,3 +84,23 @@ test("auth return path preserves an internal destination but rejects external re
   assert.equal(authDestination("/ideas/public-idea?from=explore"), "/ideas/public-idea?from=explore");
   for (const unsafe of [undefined, "https://example.com", "//example.com", "/\\example.com", "/\n/example.com", "/login?next=/register", "/register"]) assert.equal(authDestination(unsafe), "/");
 });
+
+test("public creator links and bio follow profile visibility", () => {
+  const db = fixture();
+  assert.equal(buildPublicCatalog(db)[0].authorId, undefined);
+  assert.equal(buildPublicCatalog(db)[0].authorBio, undefined);
+  db.users[0].visibility = "public";
+  assert.equal(buildPublicCatalog(db)[0].authorId, db.users[0].id);
+  assert.equal(buildPublicCatalog(db)[0].authorBio, db.users[0].bio);
+  db.users[0].visibility = "limited";
+  assert.equal(buildPublicCatalog(db)[0].authorId, undefined);
+  assert.equal(buildPublicCatalog(db)[0].authorBio, undefined);
+});
+
+test("deprecated ideas remain publicly readable with their lifecycle status", () => {
+  const db = fixture();
+  db.ideas[0] = { ...idea, status: "deprecated" };
+  const [result] = buildPublicCatalog(db);
+  assert.equal(result.status, "deprecated");
+  assert.equal(result.title, idea.title);
+});

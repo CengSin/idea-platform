@@ -19,6 +19,11 @@ function normalizeDb(db: Database) {
   for (const idea of db.ideas) {
     // Data written before draft support is published by definition.
     if (!idea.status) idea.status = "published";
+    // Migrate the legacy title marker to an explicit lifecycle state.
+    if (/[（(]弃用[）)]\s*$/.test(idea.title)) {
+      idea.status = "deprecated";
+      idea.title = idea.title.replace(/\s*[（(]弃用[）)]\s*$/, "");
+    }
     idea.status = recomputeIdeaStatus(idea, db);
     const activityTimes = [
       idea.updatedAt,

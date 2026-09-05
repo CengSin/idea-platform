@@ -7,7 +7,7 @@ import {
   revokeAgentTokensForUser,
 } from "./auth";
 import { agentSetupDelivery, buildAgentPrompt, buildAgentsMd } from "./agent-setup";
-import { readDb } from "./db";
+import { readDb, mutateDb } from "./db";
 import { attemptById, ideaById } from "./format";
 import {
   addProjectLink,
@@ -209,5 +209,17 @@ export async function removeProjectLinkAction(formData: FormData) {
   const linkId = String(formData.get("linkId") ?? "");
   if (!linkId) return;
   await removeProjectLink(me.id, linkId);
+  refresh();
+}
+
+export async function setIdeaDeprecatedAction(ideaId: string, deprecated: boolean) {
+  const me = await requireCurrentUser();
+  await mutateDb(db => {
+    const idea = db.ideas.find(i => i.id === ideaId);
+    if (!idea || idea.author.userId !== me.id) throw new Error("只能修改自己的想法状态");
+    if (idea.status === "draft" || idea.status === "archived") throw new Error("请先发布想法");
+    idea.status = deprecated ? "deprecated" : "published";
+    idea.updatedAt = new Date().toISOString();
+  });
   refresh();
 }

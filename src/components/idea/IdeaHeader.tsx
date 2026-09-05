@@ -4,7 +4,7 @@ import { SproutIcon } from "@/components/icons";
 import { useSheets } from "@/components/sheets/SheetContext";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
-import { followIdeaAction } from "@/lib/actions";
+import { followIdeaAction, setIdeaDeprecatedAction } from "@/lib/actions";
 import { formatDateTime, formatLicense, VISIBILITY_LABEL } from "@/lib/format";
 import type { Idea, IdeaMetrics, User } from "@/lib/types";
 import { Users } from "lucide-react";
@@ -27,7 +27,8 @@ export function IdeaHeader({
 }) {
   const sheets = useSheets();
   const [on, setOn] = useState(following);
-  const [, start] = useTransition();
+  const [pending, start] = useTransition();
+  const [statusError, setStatusError] = useState("");
 
   return (
     <header className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -38,7 +39,7 @@ export function IdeaHeader({
         </span>
         <div className="min-w-0">
           <h1 className="text-[32px] font-semibold leading-[1.15] tracking-[-0.04em]">
-            {idea.title}
+            {idea.title} {idea.status === "deprecated" && <span className="idea-deprecated-badge">已弃用</span>}
           </h1>
           <p className="mt-3 max-w-[640px] text-[14.5px] leading-relaxed text-muted">
             {idea.summary}
@@ -62,14 +63,20 @@ export function IdeaHeader({
         </div>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-3">
+        {isOwner && idea.status !== "draft" && idea.status !== "archived" && <button type="button" disabled={pending} className="text-[12px] text-muted underline underline-offset-4 disabled:opacity-50" onClick={() => start(async () => {
+          setStatusError("");
+          try { await setIdeaDeprecatedAction(idea.id, idea.status !== "deprecated"); }
+          catch (error) { setStatusError(error instanceof Error ? error.message : "状态更新失败，请重试"); }
+        })}>{pending ? "正在更新…" : idea.status === "deprecated" ? "恢复这个想法" : "标记为弃用"}</button>}
+        {statusError && <p role="alert" className="text-sm text-blocked">{statusError}</p>}
         <div className="flex gap-2">
           <Button
             tone="idea"
             onClick={() => sheets.openAdopt(idea)}
-            disabled={!!myAttemptId}
+            disabled={!!myAttemptId || idea.status === "deprecated"}
           >
             <Users className="h-4 w-4" />
-            {myAttemptId ? "项目已创建" : idea.status === "draft" && isOwner ? "为草稿创建项目" : "承接这个想法"}
+            {idea.status === "deprecated" ? "想法已弃用" : myAttemptId ? "项目已创建" : idea.status === "draft" && isOwner ? "为草稿创建项目" : "承接这个想法"}
           </Button>
         </div>
         <div className="flex items-center gap-3 text-[13px] text-muted">

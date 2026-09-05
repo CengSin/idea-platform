@@ -1,6 +1,6 @@
 import type { Database } from "./types";
 
-const visibleStatuses = new Set(["published", "evolving", "realized", "dormant"]);
+const visibleStatuses = new Set(["published", "evolving", "realized", "dormant", "deprecated"]);
 
 function publicUrl(value?: string) {
   if (!value) return undefined;
@@ -38,6 +38,7 @@ export function buildPublicCatalog(db: Database) {
       return {
         id: idea.id,
         title: idea.title,
+        status: idea.status,
         summary: idea.summary,
         problem: idea.problem,
         whyItMatters: idea.whyItMatters,
@@ -46,6 +47,8 @@ export function buildPublicCatalog(db: Database) {
         desiredOutputs: idea.desiredOutputs,
         tags: idea.tags,
         authorName: author?.visibility === "public" ? author.displayName : "社区创作者",
+        authorId: author?.visibility === "public" ? author.id : undefined,
+        authorBio: author?.visibility === "public" ? author.bio : undefined,
         attemptCount: attempts.length,
         works,
       };

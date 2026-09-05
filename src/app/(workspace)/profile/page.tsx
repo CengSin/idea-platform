@@ -32,12 +32,12 @@ export default async function ProfilePage() {
 
   return (
     <PageFrame>
-      <h1 className="text-[28px] font-semibold tracking-[-0.04em]">个人资料</h1>
+      <h1 className="text-[28px] font-semibold tracking-[-0.04em]">我的开放笔记本</h1>
       <p className="mt-1 text-[13.5px] text-muted">
-        邮箱用于登录；项目连接把你正在做的事集中在一处。
+        记录我提出的问题、参与的实现，以及一路带回来的作品。
       </p>
 
-      <section className="glass fade-up mt-8 flex max-w-2xl items-center gap-4 rounded-3xl p-5">
+      <section className="journal fade-up mt-8 flex max-w-2xl items-center gap-5 border-y border-line py-8">
         <Avatar initials={me.initials} accent={me.accent} size={56} />
         <div className="min-w-0">
           <div className="text-[18px] tracking-[-0.02em]">{me.displayName}</div>
@@ -53,9 +53,9 @@ export default async function ProfilePage() {
       <section className="mt-8 max-w-2xl">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-[20px] font-semibold tracking-[-0.03em]">项目连接</h2>
+            <h2 className="text-[20px] font-semibold tracking-[-0.03em]">我的想法与行动</h2>
             <p className="mt-1 text-[13.5px] text-muted">
-              添加仓库或站点，也会列出你在平台上的想法、承接与作品。
+              分享是一个起点，每一次动手都让想法更进一步。
             </p>
           </div>
           <span className="text-[12px] text-muted">{total} 个连接</span>
@@ -95,6 +95,7 @@ export default async function ProfilePage() {
             </div>
           ))}
 
+          <h3 className="pt-8 pb-3 text-lg">我提出的想法 · {ideas.length}</h3>
           {ideas.map((idea) => (
             <Link
               key={idea.id}
@@ -112,6 +113,7 @@ export default async function ProfilePage() {
             </Link>
           ))}
 
+          <h3 className="pt-8 pb-3 text-lg">我参与的实现 · {attempts.length}</h3>
           {attempts.map((attempt) => {
             const status = effectiveAttemptStatus(attempt);
             return (
@@ -144,6 +146,7 @@ export default async function ProfilePage() {
             );
           })}
 
+          <h3 className="pt-8 pb-3 text-lg">我带回的作品 · {works.length}</h3>
           {works.map((work) => (
             <div
               key={work.id}
