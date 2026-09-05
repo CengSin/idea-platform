@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/v1/agent/scan",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 1 * * *"
     }
   ]
 }
