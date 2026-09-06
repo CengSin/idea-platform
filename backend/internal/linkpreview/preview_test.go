@@ -27,7 +27,7 @@ func TestMetaImagePrefersOpenGraphAndResolvesRelativeURL(t *testing.T) {
 	}
 }
 
-func TestPreviewFallsBackToFaviconWhenOpenGraphIsDefaultCover(t *testing.T) {
+func TestPreviewAcceptsAbsoluteOpenGraphImage(t *testing.T) {
 	pageURL, err := url.Parse("https://mood.example.com/")
 	if err != nil {
 		t.Fatal(err)
@@ -38,12 +38,12 @@ func TestPreviewFallsBackToFaviconWhenOpenGraphIsDefaultCover(t *testing.T) {
 	</head></html>`)
 	result := metaImage(body, pageURL)
 	if result == nil {
-		t.Fatal("expected favicon fallback")
+		t.Fatal("expected Open Graph image")
 	}
-	if result.ImageURL != "https://mood.example.com/favicon.svg" {
+	if result.ImageURL != "https://idea.example.com/covers/hushcity.jpg" {
 		t.Fatalf("unexpected image URL: %s", result.ImageURL)
 	}
-	if result.Source != "favicon" {
+	if result.Source != "open_graph" {
 		t.Fatalf("unexpected source: %s", result.Source)
 	}
 }
@@ -52,8 +52,8 @@ func TestIsDefaultCover(t *testing.T) {
 	if !IsDefaultCover("/covers/hushcity.jpg") {
 		t.Fatal("relative default cover")
 	}
-	if !IsDefaultCover("https://idea-platform-delta.vercel.app/covers/hushcity.jpg") {
-		t.Fatal("absolute default cover")
+	if IsDefaultCover("https://idea-platform-delta.vercel.app/covers/hushcity.jpg") {
+		t.Fatal("absolute cover should remain usable")
 	}
 	if IsDefaultCover("https://mood.example.com/og-image.jpg") {
 		t.Fatal("unique cover should not be default")

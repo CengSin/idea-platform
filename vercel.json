@@ -5,5 +5,12 @@
       "path": "/api/v1/agent/scan",
       "schedule": "0 1 * * *"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/og-image.jpg",
+      "destination": "/covers/hushcity.jpg",
+      "permanent": true
+    }
   ]
 }

@@ -136,11 +136,7 @@ func IsDefaultCover(raw string) bool {
 	if trimmed == "" || trimmed == defaultCoverPath {
 		return true
 	}
-	parsed, err := url.Parse(trimmed)
-	if err != nil {
-		return strings.HasSuffix(trimmed, defaultCoverPath)
-	}
-	return parsed.Path == defaultCoverPath || strings.HasSuffix(parsed.Path, defaultCoverPath)
+	return false
 }
 
 func IsPlaceholderCover(raw string) bool {

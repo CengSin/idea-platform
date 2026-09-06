@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     description,
     images: [
       {
-        url: "/covers/hushcity.jpg",
+        url: "/og-image.jpg",
         width: 1280,
         height: 720,
         alt: "Idea Platform 中彼此连接并持续生长的想法网络",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title,
     description,
-    images: ["/covers/hushcity.jpg"],
+    images: ["/og-image.jpg"],
   },
 };
 

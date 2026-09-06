@@ -34,7 +34,7 @@ function FamilyNode({ idea, family, workspace, depth = 0 }: { idea: PublicIdea; 
       return <div className="board-node work-branch" key={work.id}>
         <Link className="work-print" href={workspace ? `/works/${work.id}` : `/explore/${idea.id}#work-${work.id}`}>
           <span className="paper-clip" aria-hidden="true"/>
-          <div className="print-preview">{work.coverUrl ? <CoverImage src={work.coverUrl} alt={work.title} className="h-full w-full object-cover"/> : <div className="print-placeholder"><ImageIcon size={32} strokeWidth={1}/><span>{work.title}</span><small>{work.type === "website" ? "网站作品" : "作品"}</small></div>}</div>
+          <div className="print-preview">{work.coverUrl || work.externalUrl ? <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} alt={work.title} className="h-full w-full object-cover"/> : <div className="print-placeholder"><ImageIcon size={32} strokeWidth={1}/><span>{work.title}</span><small>{work.type === "website" ? "网站作品" : "作品"}</small></div>}</div>
           <div className="print-caption"><strong>{work.title}</strong><ArrowUpRight size={16}/></div><small>作品 · v{work.revisionNumber}</small>
         </Link>
         {next.length ? <><Arrows count={next.length} label="继续迭代"/><div className="board-branches">{next.map(child => <FamilyNode key={child.id} idea={child} family={family} workspace={workspace} depth={depth + 1}/>)}</div></> : <><Arrows label="下一步会是什么"/><Link className="board-next" href={workspace ? `/works/${work.id}#next-ideas` : `/explore/${idea.id}#work-${work.id}`}><Plus size={16}/>探索下一步</Link></>}

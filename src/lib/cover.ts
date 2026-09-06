@@ -12,11 +12,14 @@ export function isDefaultCover(url?: string | null) {
   const trimmed = url?.trim() ?? "";
   if (!trimmed) return true;
   if (trimmed === DEFAULT_COVER) return true;
+  // The old local fallback was stored as this relative path. An absolute URL
+  // with the same pathname can be a site's intentional Open Graph image.
+  if (trimmed === "/covers/hushcity.jpg") return true;
   try {
     const parsed = new URL(trimmed, "https://idea.local");
-    return parsed.pathname.endsWith("/covers/notebook.svg") || parsed.pathname === "/covers/hushcity.jpg" || parsed.pathname.endsWith("/covers/hushcity.jpg");
+    return parsed.origin === "https://idea.local" && parsed.pathname.endsWith("/covers/notebook.svg");
   } catch {
-    return trimmed.endsWith("/covers/hushcity.jpg");
+    return false;
   }
 }
 
@@ -78,10 +81,14 @@ export function coverCandidates(coverUrl?: string, externalUrl?: string) {
     seen.add(value);
     out.push(value);
   };
-  add(coverUrl);
+  // A stored site mark is usually the result of an earlier preview fallback,
+  // not an explicit cover. Give the site's large preview endpoints a chance
+  // before falling back to that small icon.
+  if (!coverUrl || !isSiteMarkUrl(coverUrl)) add(coverUrl);
   if (externalUrl) {
     for (const candidate of siteIconCandidates(externalUrl)) add(candidate);
   }
+  if (coverUrl && isSiteMarkUrl(coverUrl)) add(coverUrl);
   add(DEFAULT_COVER, true);
   return out;
 }

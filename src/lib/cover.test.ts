@@ -11,9 +11,9 @@ import {
   isSiteMarkUrl,
 } from "./cover.ts";
 
-test("isDefaultCover treats platform fallback photos as default", () => {
+test("isDefaultCover only treats local fallback assets as default", () => {
   assert.equal(isDefaultCover("/covers/hushcity.jpg"), true);
-  assert.equal(isDefaultCover("https://idea-platform-delta.vercel.app/covers/hushcity.jpg"), true);
+  assert.equal(isDefaultCover("https://idea-platform-delta.vercel.app/covers/hushcity.jpg"), false);
   assert.equal(isDefaultCover("https://mood.z-agent.ccwu.cc/og-image.jpg"), false);
 });
 
@@ -46,6 +46,18 @@ test("coverCandidates prefers a real cover then first-party images", () => {
     displayCoverUrl("https://www.google.com/s2/favicons?sz=128&domain=mood.z-agent.ccwu.cc", "https://mood.z-agent.ccwu.cc/"),
     "https://mood.z-agent.ccwu.cc/og-image.jpg",
   );
+  assert.deepEqual(
+    coverCandidates("https://stock-tinder.z-agent.ccwu.cc/favicon.svg", "https://stock-tinder.z-agent.ccwu.cc/"),
+    [
+      "https://stock-tinder.z-agent.ccwu.cc/og-image.jpg",
+      "https://stock-tinder.z-agent.ccwu.cc/og-image.png",
+      "https://stock-tinder.z-agent.ccwu.cc/apple-touch-icon.png",
+      "https://stock-tinder.z-agent.ccwu.cc/favicon.svg",
+      "https://stock-tinder.z-agent.ccwu.cc/icon.svg",
+      "https://stock-tinder.z-agent.ccwu.cc/favicon.ico",
+      DEFAULT_COVER,
+    ],
+  );
 });
 
 test("isSiteMarkUrl detects first-party icons only", () => {
@@ -65,14 +77,15 @@ test("extractPreviewImage prefers og:image and resolves relative URLs", () => {
   assert.equal(preview?.source, "open_graph");
 });
 
-test("extractPreviewImage skips the platform default cover and uses the site icon", () => {
+test("extractPreviewImage accepts an absolute Open Graph image", () => {
   const html = `<html><head>
     <meta property="og:image" content="https://idea.example.com/covers/hushcity.jpg">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   </head></html>`;
   const previews = extractPreviewImages(html, "https://mood.example.com/");
-  assert.equal(previews[0]?.imageUrl, "https://mood.example.com/apple-touch-icon.png");
-  assert.equal(previews[0]?.source, "apple_touch_icon");
-  assert.equal(previews[1]?.imageUrl, "https://mood.example.com/favicon.svg");
+  assert.equal(previews[0]?.imageUrl, "https://idea.example.com/covers/hushcity.jpg");
+  assert.equal(previews[0]?.source, "open_graph");
+  assert.equal(previews[1]?.imageUrl, "https://mood.example.com/apple-touch-icon.png");
+  assert.equal(previews[2]?.imageUrl, "https://mood.example.com/favicon.svg");
 });
