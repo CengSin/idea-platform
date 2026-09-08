@@ -44,7 +44,7 @@ export default async function IdeaAgentAdminPage() {
           <div className="flex items-center gap-2 text-[13px] text-idea"><Bot className="h-4 w-4" /> 扫描运行</div>
           <h2 className="mt-2 text-[20px] font-medium tracking-[-0.025em]">手动触发完整扫描</h2>
           <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted">
-            与定时调度走同一个服务：分析有变化的作品、生成提醒标签、重试失败任务。重叠运行使用租约去重。
+            与定时调度走同一个服务：先把任务写入队列并立即返回，避免网关超时。后台继续分析有变化的作品、生成提醒标签并重试失败任务。重叠运行使用租约去重。
           </p>
           <div className="mt-5"><AgentRunControl /></div>
         </div>

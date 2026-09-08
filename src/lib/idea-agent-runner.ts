@@ -7,6 +7,20 @@ import { claimAnalysis, enqueueAnalyses, finishAnalysis, generateReminders } fro
 import { sendAgentIterationEmail } from "./idea-agent-mailer";
 import { getEffectiveAgentConfig } from "./agent-config";
 
+export async function queueIdeaAgentAnalyses() {
+  const config = await getEffectiveAgentConfig();
+  const configured = Boolean(config.openaiApiKey && config.openaiModel);
+  let queued = 0;
+  if (configured) {
+    const at = new Date().toISOString();
+    await mutateDb((db) => {
+      enqueueAnalyses(db, at, () => `job_${nanoid(12)}`);
+      queued = db.works.filter((work) => work.iteration?.analysis?.status === "queued").length;
+    });
+  }
+  return { configured, queued };
+}
+
 export async function runIdeaAgentScan(input: { siteUrl?: string; workId?: string } = {}) {
   const config = await getEffectiveAgentConfig();
   const started = Date.now();

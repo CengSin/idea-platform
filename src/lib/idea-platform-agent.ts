@@ -126,7 +126,7 @@ export async function generateReminders(config: { openaiBaseUrl: string; openaiA
       method: "POST",
       redirect: "error",
       cache: "no-store",
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(20000),
       headers: { Authorization: `Bearer ${config.openaiApiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: config.openaiModel, response_format: { type: "json_object" },

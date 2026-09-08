@@ -33,12 +33,13 @@ export function AgentRunControl() {
         }}
       >
         {pending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-        {pending ? "正在扫描并发送…" : "立即运行一次"}
+        {pending ? "正在排队…" : "立即运行一次"}
       </Button>
       {result ? (
         <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
-          {result.configured ? `已分析 ${result.scanned} 个作品，失败 ${result.failed}；` : "模型或 API Key 未配置，分析未执行；"}邮件发送 {result.email.sent}，失败 {result.email.failed}，
-          跳过 {result.email.skipped}，未配置 {result.email.unconfigured}。
+          {result.configured
+            ? `已排队 ${result.queued} 个分析任务，后台继续处理；请稍后刷新查看结果。`
+            : "模型或 API Key 未配置，分析未执行。"}
         </p>
       ) : null}
       {error ? <p className="mt-3 text-[12.5px] text-blocked">{error}</p> : null}

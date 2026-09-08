@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireAdminUser } from "./admin";
-import { runIdeaAgentScan } from "./idea-agent-runner";
+import { queueIdeaAgentAnalyses, runIdeaAgentScan } from "./idea-agent-runner";
 import { updateAgentConfig } from "./agent-config";
 
 export type AgentConfigState = { ok?: boolean; error?: string };
@@ -33,8 +34,16 @@ export async function saveAgentConfigAction(
 
 export async function runIdeaAgentNowAction() {
   await requireAdminUser();
-  const result = await runIdeaAgentScan();
+  const queued = await queueIdeaAgentAnalyses();
+  after(async () => {
+    try {
+      await runIdeaAgentScan();
+      revalidatePath("/admin");
+      revalidatePath("/works", "layout");
+    } catch {
+      // Unfinished jobs remain in the durable analysis queue.
+    }
+  });
   revalidatePath("/admin");
-  revalidatePath("/works", "layout");
-  return result;
+  return queued;
 }
