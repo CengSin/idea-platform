@@ -8,17 +8,17 @@ Discover ideas, let people implement them independently, and track how they grow
 
 ## 中文
 
-Idea Platform 是一个想法协作平台：发布想法、承接实现、跟踪进展，并最终把结果发布为作品。首页用图谱展示想法、承接、作品与衍生想法之间的关系。登录用户可为一级承接生成 `AGENTS.md`，为作品衍生的子想法复制完整提示词，让 Agent 自动回写状态。
+Idea Platform 是一个想法协作平台：发布想法、承接实现、跟踪进展，并最终把结果发布为作品。首页用白板展示想法、作品与衍生想法之间的关系。登录用户可为一级承接生成 `AGENTS.md`，为作品衍生的子想法复制完整提示词，让 Agent 自动回写状态。
 
 新想法可以先保存为草稿。草稿作者仍可创建承接项目、生成 `AGENTS.md`、同步状态并发布作品；整棵草稿内容在此期间仅作者可见，发布想法时统一进入公开链路。旧数据没有草稿标记时按已发布内容迁移。
 
-登录后的发现首页默认展示项目摘要、代表承接与最新作品封面，按可用宽度排列，较多项目使用紧凑预览。点击「生长路径」后，桌面展开可拖拽图谱，手机展示可滚动的承接和作品详情。右侧动态按项目与日期合并，优先展示作品发布，完整记录可按需展开；搜索、主题筛选和发布入口常驻可用。
+登录后的发现首页按项目家族排列：图钉便签表示想法，夹子照片卡表示作品，箭头串联衍生想法。搜索保留项目关系；深层匹配会展开祖先。桌面可滚动、缩放和展开，手机纵向阅读。
 
 ### 技术栈
 
-- 前端：Next.js 15、React 19、Tailwind CSS 4
-- 后端：Go（Gin）+ MySQL + Redis + MinIO
-- 本地开发时，前端也可把数据写到 `data/db.json`
+- Next.js 15、React 19、Tailwind CSS 4
+- 生产数据：Turso（`DATA_BACKEND=turso`）
+- 本地开发也可把数据写到 `data/db.json`
 
 ### 快速开始
 
@@ -27,18 +27,7 @@ npm install
 npm run dev
 ```
 
-打开 [http://localhost:3001](http://localhost:3001)，注册账号后即可从空白状态开始。内容保存在 `data/db.json`，账号和会话保存在 `data/auth.json`。
-
-### 后端 API
-
-```bash
-cd backend
-cp .env.example .env
-docker compose up -d
-go run ./cmd/api
-```
-
-默认地址 [http://localhost:8081](http://localhost:8081)。完整接口说明见 [backend/README.md](backend/README.md)。
+打开 [http://localhost:3001](http://localhost:3001)，注册账号后即可从空白状态开始。内容保存在 `data/db.json`，账号和会话保存在 `data/auth.json`。设置 `DATA_BACKEND=turso` 后读写 Turso。
 
 ### Agent API
 
@@ -77,7 +66,7 @@ go run ./cmd/api
 
 `vercel.json` 每五分钟请求 `/api/v1/agent/scan`，需配置 `CRON_SECRET`。后台保存的定时密钥需与 Vercel 的 `CRON_SECRET` 一致。每次最多执行两个分析任务，单次模型请求超时20秒；剩余任务持久保存在作品的 `iteration.analysis`。上下文指纹防止重复分析，租约防止重叠执行和迟到结果覆盖；分析故障最多尝试三次并退避，之后可手动重试。关闭提醒取消未完成分析；重新开启或上下文变化后可再次分析。托管环境需支持此 Cron 频率；也可由现有外部调度器以 Bearer 密钥调用同一端点。
 
-可选邮件配置仍为 `RESEND_API_KEY`、`IDEA_AGENT_EMAIL_FROM`，未配置不影响站内提醒。邮件使用作品和分析批次作为幂等键。私有提醒及运行记录只返回给所属分支作者。
+可选邮件配置仍为 `RESEND_API_KEY`、`IDEA_AGENT_EMAIL_FROM`，未配置不影响站内提醒。邮件使用作品和分析批次作为幂等键。待处理提醒标签对所有人可见；分析队列、邮件状态和已忽略记录仍只返回给所属分支作者。忽略、重新分析和开关仍仅作者可操作。
 
 开发执行与提醒分析分开运行：承接页“执行调度”填写本轮任务和用户自定的验收、停止条件，再加入队列。外部 Agent 使用该分支 Token 调用 `/api/v1/attempts/<id>/execution`：
 
@@ -118,13 +107,13 @@ Idea Platform is a collaboration space for ideas: publish an idea, adopt it as a
 
 New ideas can be kept as drafts. Their authors can still create an implementation branch, generate `AGENTS.md`, sync progress, and ship works; the full tree remains author-only until publishing the idea releases it together. Historical rows without a draft state migrate as published.
 
-The signed-in discovery page starts with responsive project summaries, representative attempts, and the latest published work covers. Larger collections use compact previews. Selecting a project opens the draggable graph on desktop or readable attempt/work details on mobile. Activity is grouped by project and date, with work publications highlighted and complete records available on demand.
+The signed-in discovery page shows project families: pinned notes for ideas, clipped photo cards for works, and arrows to derived ideas. Search keeps project context; deeper matches expand ancestors. Desktop supports scroll, zoom and an expanded view; phones read the same relationships vertically.
 
 ### Stack
 
-- Frontend: Next.js 15, React 19, Tailwind CSS 4
-- Backend: Go (Gin) + MySQL + Redis + MinIO
-- For local frontend-only development, data can live in `data/db.json`
+- Next.js 15, React 19, Tailwind CSS 4
+- Production data: Turso (`DATA_BACKEND=turso`)
+- Local development can also store data in `data/db.json`
 
 ### Quick start
 
@@ -133,18 +122,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001). Visitors enter the public explore page; registering or signing in opens the workspace. Content is stored in `data/db.json`; accounts and sessions are stored in `data/auth.json`.
-
-### Backend API
-
-```bash
-cd backend
-cp .env.example .env
-docker compose up -d
-go run ./cmd/api
-```
-
-Listens on [http://localhost:8081](http://localhost:8081) by default. See [backend/README.md](backend/README.md) for the full API map.
+Open [http://localhost:3001](http://localhost:3001). Visitors enter the public explore page; registering or signing in opens the workspace. Content is stored in `data/db.json`; accounts and sessions are stored in `data/auth.json`. Set `DATA_BACKEND=turso` to read and write Turso.
 
 ### Agent API
 
@@ -171,11 +149,11 @@ PATCH accepts title, summary, type, external/repository/cover URLs and a complet
 
 ### Public access
 
-`/explore` is the guest entrance, and `/explore/:id` shows a public idea and its public works. Only published public ideas and works belonging to public, non-abandoned attempts are exposed. Drafts, unlisted/private ideas, account data, notifications, and execution prompts are excluded. Public responses are not cached, so visibility changes apply on the next request. Participation still requires authentication; login and registration preserve the selected idea as the return destination.
+`/explore` is the guest entrance, and `/explore/:id` shows a public idea and its public works. Only published public ideas and works belonging to public, non-abandoned attempts are exposed. Pending reminder labels on published works are public; analysis jobs, email state, dismissed reminders, drafts, unlisted/private ideas, account data, notifications, and execution prompts are excluded. Public responses are not cached, so visibility changes apply on the next request. Participation still requires authentication; login and registration preserve the selected idea as the return destination.
 
 Page reads reuse data only within the current request and never wait for external cover scraping. Covers are resolved on work publication, with browser fallbacks for older content. Navigation includes loading placeholders and pending feedback. Background updates run at most once every 30 seconds while the page is visible and no editor is active.
 
-Run `npm test` for public-data isolation, redirect safety, covers, persistence and work ownership/cleanup tests. `npm run test:work-api` verifies authentication, branch scope, partial updates and deletion over HTTP using a disposable local app and synthetic data. Run `npm run build` for production compilation and type validation, and `cd backend && go test ./...` for Go tests.
+Run `npm test` for public-data isolation, redirect safety, covers, persistence and work ownership/cleanup tests. `npm run test:work-api` verifies authentication, branch scope, partial updates and deletion over HTTP using a disposable local app and synthetic data. Run `npm run build` for production compilation and type validation.
 
 When deploying to another domain:
 
@@ -215,4 +193,4 @@ Content-Type: application/json
 
 可选 `why_it_matters`、`desired_outputs`、`stop_conditions`。省略版本时绑定提交时的当前版本。相同作品、作者和 `request_id` 重试返回原想法。对同一地址使用 GET 可读取本作品的草稿及用户审阅后的状态。接口只接受草稿字段，不接受发布或权限字段，不产生公开活动；会在作者的通知、作品下一步列表及“我的想法”中出现。作者编辑后通过“发布草稿”公开，来源作品与分支必须仍公开。原有公开写操作授权、验收和停止决定保持不变。
 
-Turso 会自动增加作品快照、来源版本、幂等请求字段；MySQL bridge 同步保留这些字段，Go 原生作品写接口也记录版本。发布前建议按项目现有备份流程保存数据库。
+Turso 会自动增加作品快照、来源版本、幂等请求字段。发布前建议按项目现有备份流程保存数据库。

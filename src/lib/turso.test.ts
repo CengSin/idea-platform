@@ -110,11 +110,10 @@ test("databaseFromRows restores nested JSON and optional fields", () => {
   assert.equal(db.users[0]?.displayName, "cengsin");
   assert.deepEqual(db.users[0]?.skills, ["go"]);
   assert.equal(db.ideas[0]?.author.userId, "user_38c0e310a872");
-  assert.equal(db.attempts[0]?.featuredOnGraph, true);
   assert.equal(db.attempts[0]?.projectDescription, "desc");
   assert.equal(db.notifications[0]?.read, true);
   assert.equal(db.notifications[0]?.userId, "user_38c0e310a872");
-  assert.equal(db.works[0]?.iteration?.email.status, "pending");
+  assert.equal(db.works[0]?.iteration?.email?.status, "pending");
   assert.deepEqual(db.follows[0], { userId: "user_38c0e310a872", ideaId: "idea_1" });
   assert.equal(db.agentConfig?.openaiBaseUrl, "https://api.example.com/v1");
   assert.equal(db.agentConfig?.cronSecret, "cron-private");

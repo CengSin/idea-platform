@@ -78,23 +78,50 @@ test("publishing the idea releases its existing project and work tree together",
   assert.equal(published.works.some((item) => item.ideaId === "draft-a"), true);
 });
 
-test("private iteration suggestions are only serialized for the work owner", () => {
+test("pending reminders are public while analysis jobs stay private", () => {
   const db = fixture();
   db.works[2].iteration = {
     status: "open",
     scannedAt: "2026-09-03T00:00:00.000Z",
     suggestions: [{
-      id: "secret-suggestion",
-      title: "私有建议",
-      summary: "仅作者可见",
+      id: "public-reminder",
+      kind: "reminder",
+      title: "公开提醒",
+      summary: "大家都能看到",
       problem: "问题",
       whyItMatters: "价值",
       status: "pending",
       createdAt: "2026-09-03T00:00:00.000Z",
+    }, {
+      id: "dismissed-reminder",
+      kind: "reminder",
+      title: "已忽略",
+      summary: "不应公开",
+      problem: "问题",
+      whyItMatters: "价值",
+      status: "dismissed",
+      createdAt: "2026-09-03T00:00:00.000Z",
     }],
     email: { status: "pending" },
+    analysis: {
+      id: "job",
+      fingerprint: "fp",
+      status: "running",
+      attempts: 1,
+      queuedAt: "2026-09-03T00:00:00.000Z",
+      leaseId: "secret-lease",
+      leaseUntil: "2026-09-03T00:01:00.000Z",
+    },
   };
-  assert.equal(workForViewer(db, db.works[2], "user-b").iteration?.suggestions.length, 1);
-  assert.equal(workForViewer(db, db.works[2], "viewer").iteration, undefined);
-  assert.equal(workForViewer(db, db.works[2]).iteration, undefined);
+  const owner = workForViewer(db, db.works[2], "user-b");
+  const viewer = workForViewer(db, db.works[2], "viewer");
+  const guest = workForViewer(db, db.works[2]);
+  assert.equal(owner.iteration?.suggestions.length, 2);
+  assert.equal(owner.iteration?.analysis?.leaseId, "secret-lease");
+  assert.deepEqual(viewer.iteration?.suggestions.map((item) => item.id), ["public-reminder"]);
+  assert.equal(viewer.iteration?.analysis, undefined);
+  assert.equal(viewer.iteration?.email, undefined);
+  assert.deepEqual(guest.iteration?.suggestions.map((item) => item.id), ["public-reminder"]);
+  assert.equal(JSON.stringify(viewer).includes("secret-lease"), false);
+  assert.equal(JSON.stringify(guest).includes("已忽略"), false);
 });

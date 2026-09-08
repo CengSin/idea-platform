@@ -15,7 +15,7 @@ test("analysis lease excludes duplicate workers and rejects stale commits", () =
   assert.equal(finishAnalysis(db, "work", "a", later(62), { reminders: [] }, ids), false);
   assert.equal(finishAnalysis(db, "work", "b", later(62), { reminders: [] }, ids), true);
   assert.equal(db.works[0].iteration?.suggestions.length, 0);
-  assert.equal(db.works[0].iteration?.email.status, "skipped");
+  assert.equal(db.works[0].iteration?.email?.status, "skipped");
 });
 
 test("analysis retries transient failure, stops technical retries, and invalidates changed context", () => {
@@ -37,12 +37,12 @@ test("model output supports zero and variable count, rejects malformed output, a
   assert.equal(parseReminders({ reminders: [{ label: "测试", reason: "缺少证据" }, { label: "测试", reason: "重复" }] }).length, 1);
   assert.throws(() => parseReminders({ reminders: [{ label: "", reason: "x" }] }));
   assert.throws(() => parseReminders({ reminders: Array(7).fill({ label: "a", reason: "b" }) }));
-  const db = fixture(); db.attempts[0].executionPrompt = "SECRET";
+  const db = fixture();
   const context = analysisContext(db, db.works[0]);
-  assert.ok(!JSON.stringify(context).includes("SECRET"));
   const config = { openaiBaseUrl: "https://model.example/v1", openaiApiKey: "private-key", openaiModel: "configured-model" };
   const mock: typeof fetch = async (url, init) => {
     assert.equal(url, "https://model.example/v1/chat/completions");
+    assert.equal(init?.cache, "no-store");
     const body = JSON.parse(init!.body as string);
     assert.equal(body.model, "configured-model");
     assert.ok(!JSON.stringify(body).includes("private-key"));
@@ -51,6 +51,7 @@ test("model output supports zero and variable count, rejects malformed output, a
   assert.equal((await generateReminders(config, context, mock)).length, 1);
   await assert.rejects(generateReminders(config, context, async () => Response.json({ choices: [{ finish_reason: "length", message: { content: '{}' } }] })));
   await assert.rejects(generateReminders(config, context, async () => new Response("secret upstream body", { status: 503 })), /503/);
+  await assert.rejects(generateReminders(config, context, async () => { throw Object.assign(new Error("aborted"), { name: "TimeoutError" }); }), /模型请求超时/);
 });
 
 test("subidea upstream context excludes another owner's private work and draft", () => {

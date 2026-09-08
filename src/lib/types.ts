@@ -32,11 +32,9 @@ export type AgentEmailStatus = "pending" | "sent" | "failed" | "skipped";
 export type ActorKind = "user" | "agent";
 export type CommercialUse = "yes" | "with_attribution" | "no";
 export type NotificationKind =
-  | "match"
   | "attempt"
   | "work"
   | "agent"
-  | "stale"
   | "fork";
 
 export const ACTIVE_ATTEMPT_STATUSES: AttemptStatus[] = [
@@ -124,7 +122,6 @@ export interface Attempt {
   approach: string;
   projectDescription?: string;
   projectPurpose?: string;
-  executionPrompt?: string;
   status: AttemptStatus;
   progressNote: string;
   visibility: Visibility;
@@ -135,7 +132,6 @@ export interface Attempt {
   targetDate?: string;
   workIds: string[];
   graph?: { x: number; y: number };
-  featuredOnGraph?: boolean;
 }
 
 export interface Credit {
@@ -196,12 +192,18 @@ export interface WorkIteration {
   status: "open" | "closed";
   suggestions: AgentSuggestion[];
   scannedAt?: string;
-  email: {
+  email?: {
     status: AgentEmailStatus;
     lastAttemptAt?: string;
     sentAt?: string;
   };
 }
+
+export type PublicWorkReminder = {
+  id: string;
+  title: string;
+  summary: string;
+};
 
 export interface ActivityEvent {
   id: string;

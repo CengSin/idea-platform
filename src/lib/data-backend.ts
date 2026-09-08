@@ -1,6 +1,6 @@
 import type { Database } from "./types";
 
-export type DataBackend = "vercel" | "mysql" | "turso";
+export type DataBackend = "vercel" | "turso";
 
 export type AuthDump = {
   version: 1;
@@ -15,13 +15,15 @@ export type DataDump = Database & {
 
 export function dataBackend(): DataBackend {
   const value = (process.env.DATA_BACKEND ?? "vercel").trim().toLowerCase();
-  if (value === "mysql") return "mysql";
   if (value === "turso") return "turso";
   return "vercel";
 }
 
-export function mysqlApiUrl() {
-  return (process.env.MYSQL_API_URL ?? "http://127.0.0.1:8081").replace(/\/$/, "");
+export function useRemoteBlobStore() {
+  if (dataBackend() === "turso") return false;
+  // `next dev` must not write the shared Blob store just because a migration token is in .env.local.
+  if (process.env.NODE_ENV === "development" && process.env.VERCEL !== "1") return false;
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN) || process.env.VERCEL === "1";
 }
 
 export function dataExportToken() {

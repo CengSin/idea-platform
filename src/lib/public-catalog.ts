@@ -1,3 +1,4 @@
+import { publicReminders } from "./content-access.ts";
 import { currentWorkRevision } from "./work-revisions.ts";
 import type { Database } from "./types";
 
@@ -36,6 +37,7 @@ export function buildPublicCatalog(db: Database) {
           type: work.type,
           coverUrl: work.coverUrl?.startsWith("/covers/") ? work.coverUrl : publicUrl(work.coverUrl),
           externalUrl: publicUrl(work.externalUrl),
+          reminders: publicReminders(work),
         }));
       const author = db.users.find((user) => user.id === idea.author.userId);
       const parent = db.ideas.find(i => i.id === idea.parentIdeaId && i.visibility === "public" && visibleStatuses.has(i.status));

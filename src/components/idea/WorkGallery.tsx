@@ -1,14 +1,11 @@
+import { WorkReminders } from "@/components/idea/WorkReminders";
 import { Chip } from "@/components/ui/Chip";
 import { CoverImage } from "@/components/ui/CoverImage";
+import { publicReminders } from "@/lib/content-access";
 import { WORK_TYPE_LABEL } from "@/lib/format";
 import type { Work } from "@/lib/types";
-import { Eye, GitFork, Star } from "lucide-react";
+import { GitFork } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
-
-function compact(n: number) {
-  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "")}k`;
-  return String(n);
-}
 
 export function WorkGallery({ works }: { works: Work[] }) {
   return (
@@ -31,22 +28,13 @@ export function WorkGallery({ works }: { works: Work[] }) {
                   <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted">
                     {work.summary}
                   </p>
+                  <WorkReminders reminders={publicReminders(work)} compact />
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-between text-[12px] text-muted">
-                <span className="inline-flex items-center gap-3">
-                  <span className="inline-flex items-center gap-1">
-                    <Eye className="h-3.5 w-3.5" />
-                    {compact(work.views)}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Star className="h-3.5 w-3.5" />
-                    {work.saves}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <GitFork className="h-3.5 w-3.5" />
-                    {work.citations}
-                  </span>
+                <span className="inline-flex items-center gap-1">
+                  <GitFork className="h-3.5 w-3.5" />
+                  {work.citations}
                 </span>
                 <Chip tone="artifact">已发布 · {WORK_TYPE_LABEL[work.type]}</Chip>
               </div>

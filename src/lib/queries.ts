@@ -30,17 +30,7 @@ export async function getIdeaBundle(id: string) {
     .sort((a, b) => (a.startedAt < b.startedAt ? -1 : 1));
   const works = db.works.filter((w) => w.ideaId === id && w.status === "published");
   const forks = db.ideas.filter((i) => i.parentIdeaId === id);
-  const similar = db.ideas.filter(
-    (i) =>
-      i.id !== id &&
-      i.parentIdeaId !== id &&
-      i.status !== "draft" &&
-      i.tags.some((t) => idea.tags.includes(t)),
-  );
   const author = userById(db, idea.author.userId);
-  const following = db.follows.some(
-    (f) => f.userId === me.id && f.ideaId === id,
-  );
   const myAttempt = attempts.find(
     (a) => a.ownerId === me.id && a.status !== "abandoned",
   );
@@ -51,10 +41,8 @@ export async function getIdeaBundle(id: string) {
     attempts,
     works,
     forks,
-    similar,
     author,
     metrics: ideaMetrics(db, id),
-    following,
     myAttempt,
     sourceWork,
     nextIdeaStage: sourceWork ? nextIdeaStage(db, idea.id) : undefined,

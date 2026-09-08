@@ -2,6 +2,7 @@ import {
   BlobNotFoundError,
   BlobPreconditionFailedError,
   get,
+  head,
   put,
 } from "@vercel/blob";
 import fs from "node:fs/promises";
@@ -9,9 +10,8 @@ import path from "node:path";
 import {
   asDatabase,
   dataBackend,
-  dataExportToken,
   emptyAuthDump,
-  mysqlApiUrl,
+  useRemoteBlobStore,
   type AuthDump,
   type DataDump,
 } from "./data-backend";
@@ -28,8 +28,12 @@ const AUTH_FILE = "auth.json";
 const DB_FILE = "db.json";
 
 function useBlobStore() {
-  if (dataBackend() === "mysql" || dataBackend() === "turso") return false;
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN) || process.env.VERCEL === "1";
+  return useRemoteBlobStore();
+}
+
+function blobEtag(etag?: string) {
+  const value = etag?.replace(/^W\//, "").replaceAll('"', "").trim();
+  return value || undefined;
 }
 
 let queue: Promise<unknown> = Promise.resolve();
@@ -41,51 +45,6 @@ export function withStoreLock<T>(fn: () => Promise<T>): Promise<T> {
     () => undefined,
   );
   return run;
-}
-
-let mysqlDumpCache: { at: number; dump: DataDump } | null = null;
-
-function adminHeaders(json = false): HeadersInit {
-  const token = dataExportToken();
-  if (!token) {
-    throw new Error("DATA_EXPORT_TOKEN is required when DATA_BACKEND=mysql");
-  }
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
-  };
-  if (json) headers["Content-Type"] = "application/json";
-  return headers;
-}
-
-async function fetchMysqlDump(): Promise<DataDump> {
-  const now = Date.now();
-  if (mysqlDumpCache && now - mysqlDumpCache.at < 1000) {
-    return mysqlDumpCache.dump;
-  }
-  const response = await fetch(`${mysqlApiUrl()}/api/v1/admin/export`, {
-    headers: adminHeaders(),
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`mysql export failed (${response.status}): ${text}`);
-  }
-  const dump = (await response.json()) as DataDump;
-  mysqlDumpCache = { at: now, dump };
-  return dump;
-}
-
-async function importMysql(body: DataDump | { auth: AuthDump }) {
-  mysqlDumpCache = null;
-  const response = await fetch(`${mysqlApiUrl()}/api/v1/admin/import`, {
-    method: "PUT",
-    headers: adminHeaders(true),
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`mysql import failed (${response.status}): ${text}`);
-  }
 }
 
 export type JsonRecord<T> = {
@@ -121,24 +80,12 @@ export async function readJsonRecord<T>(name: string): Promise<JsonRecord<T>> {
     throw new Error(`unsupported turso document: ${name}`);
   }
 
-  if (dataBackend() === "mysql") {
-    try {
-      const dump = await fetchMysqlDump();
-      if (name === AUTH_FILE) {
-        return { value: (dump.auth ?? emptyAuthDump()) as T };
-      }
-      return { value: asDatabase(dump) as T };
-    } catch (error) {
-      if (error instanceof Error && /\b404\b/.test(error.message)) {
-        return { value: null };
-      }
-      throw error;
-    }
-  }
-
   if (useBlobStore()) {
     try {
-      const result = await get(name, { access: "private", useCache: false });
+      const [result, meta] = await Promise.all([
+        get(name, { access: "private", useCache: false }),
+        head(name).catch(() => null),
+      ]);
       if (result == null) return { value: null };
       if (result.statusCode !== 200 || !result.stream) {
         throw new Error(`${name}: unexpected blob status ${result.statusCode}`);
@@ -147,7 +94,7 @@ export async function readJsonRecord<T>(name: string): Promise<JsonRecord<T>> {
       if (!text.trim()) {
         throw new Error(`${name} is empty`);
       }
-      return { value: JSON.parse(text) as T, etag: result.blob.etag };
+      return { value: JSON.parse(text) as T, etag: blobEtag(meta?.etag ?? result.blob.etag) };
     } catch (error) {
       if (error instanceof BlobNotFoundError) return { value: null };
       throw error;
@@ -186,25 +133,13 @@ export async function writeJsonFile(
     throw new Error(`unsupported turso document: ${name}`);
   }
 
-  if (dataBackend() === "mysql") {
-    if (name === AUTH_FILE) {
-      await importMysql({ auth: value as AuthDump });
-      return;
-    }
-    if (name === DB_FILE) {
-      await importMysql(value as DataDump);
-      return;
-    }
-    throw new Error(`unsupported mysql document: ${name}`);
-  }
-
   const payload = JSON.stringify(value, null, 2);
   if (useBlobStore()) {
     await put(name, payload, {
       access: "private",
       addRandomSuffix: false,
       allowOverwrite: options.createOnly ? false : true,
-      ...(options.etag ? { ifMatch: options.etag } : {}),
+      ...(blobEtag(options.etag) ? { ifMatch: blobEtag(options.etag) } : {}),
       contentType: "application/json; charset=utf-8",
     });
     return;

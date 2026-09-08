@@ -22,7 +22,6 @@ export async function POST(req: Request) {
       approach: body.approach ?? "",
       visibility: body.visibility ?? "public",
       targetDate: body.target_date,
-      asWatch: body.as_watch,
     });
     return NextResponse.json({
       ...result,

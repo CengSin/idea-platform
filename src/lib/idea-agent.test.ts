@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  acceptAgentSuggestionRecord,
   dismissAgentSuggestionRecord,
   IdeaAgentMutationError,
   isAuthorizedAgentScan,
@@ -21,12 +20,12 @@ function ids() {
 
 const status = (code: number) => (error: unknown) => error instanceof IdeaAgentMutationError && error.status === code;
 
-test("completed analysis creates private reminders and sends one notification", () => {
+test("completed analysis creates reminders and sends one notification", () => {
   const db = fixture();
   const batches = analyze(db);
   assert.equal(batches.length, 1);
   assert.equal(db.works[0].iteration?.suggestions.length, 2);
-  assert.equal(db.works[0].iteration?.email.status, "pending");
+  assert.equal(db.works[0].iteration?.email?.status, "pending");
   assert.equal(db.notifications[0].userId, "owner");
   assert.equal(analyze(db).length, 0);
   assert.equal(pendingAgentEmails(db).length, 1);
@@ -59,21 +58,17 @@ test("scan ignores unfinished, archived and closed works", () => {
   assert.equal(pendingAgentEmails(closed).length, 0);
 });
 
-test("owner can accept or dismiss suggestions while other users cannot", () => {
+test("owner can dismiss suggestions while other users cannot", () => {
   const db = fixture();
   analyze(db);
-  const [accepted, dismissed] = db.works[0].iteration!.suggestions;
-  delete accepted.kind; // legacy full suggestion still accepts explicit publication
+  const [first, dismissed] = db.works[0].iteration!.suggestions;
   assert.throws(
-    () => acceptAgentSuggestionRecord(db, "stranger", "work", accepted.id, "next"),
+    () => dismissAgentSuggestionRecord(db, "stranger", "work", first.id),
     status(403),
   );
-  const suggestion = acceptAgentSuggestionRecord(db, "owner", "work", accepted.id, "next");
-  assert.equal(suggestion.status, "accepted");
-  assert.equal(accepted.acceptedIdeaId, "next");
   dismissAgentSuggestionRecord(db, "owner", "work", dismissed.id);
   assert.equal(dismissed.status, "dismissed");
-  assert.equal(db.works[0].citations, 0);
+  assert.equal(first.status, "pending");
 });
 
 test("email rendering escapes work and suggestion content", () => {

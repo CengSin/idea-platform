@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Search, Plus, Minus, Maximize2, Minimize2, Image as ImageIcon } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
 import { CoverImage } from "@/components/ui/CoverImage";
+import { WorkReminders } from "@/components/idea/WorkReminders";
 import type { PublicIdea } from "@/lib/public-catalog";
 import { boardFamilies } from "@/lib/board-families";
 
@@ -36,6 +37,7 @@ function FamilyNode({ idea, family, workspace, depth = 0 }: { idea: PublicIdea; 
           <span className="paper-clip" aria-hidden="true"/>
           <div className="print-preview">{work.coverUrl || work.externalUrl ? <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} alt={work.title} className="h-full w-full object-cover"/> : <div className="print-placeholder"><ImageIcon size={32} strokeWidth={1}/><span>{work.title}</span><small>{work.type === "website" ? "网站作品" : "作品"}</small></div>}</div>
           <div className="print-caption"><strong>{work.title}</strong><ArrowUpRight size={16}/></div><small>作品 · v{work.revisionNumber}</small>
+          <WorkReminders reminders={work.reminders ?? []} compact />
         </Link>
         {next.length ? <><Arrows count={next.length} label="继续迭代"/><div className="board-branches">{next.map(child => <FamilyNode key={child.id} idea={child} family={family} workspace={workspace} depth={depth + 1}/>)}</div></> : <><Arrows label="下一步会是什么"/><Link className="board-next" href={workspace ? `/works/${work.id}#next-ideas` : `/explore/${idea.id}#work-${work.id}`}><Plus size={16}/>探索下一步</Link></>}
       </div>;

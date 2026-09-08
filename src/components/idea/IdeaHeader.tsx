@@ -3,7 +3,7 @@
 import { useSheets } from "@/components/sheets/SheetContext";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
-import { followIdeaAction, setIdeaDeprecatedAction } from "@/lib/actions";
+import { setIdeaDeprecatedAction } from "@/lib/actions";
 import { formatDateTime, formatLicense, VISIBILITY_LABEL } from "@/lib/format";
 import type { Idea, IdeaMetrics, User } from "@/lib/types";
 import { Users } from "lucide-react";
@@ -13,19 +13,16 @@ export function IdeaHeader({
   idea,
   author,
   metrics,
-  following,
   myAttemptId,
   isOwner = false,
 }: {
   idea: Idea;
   author?: User;
   metrics: IdeaMetrics;
-  following: boolean;
   myAttemptId?: string;
   isOwner?: boolean;
 }) {
   const sheets = useSheets();
-  const [on, setOn] = useState(following);
   const [pending, start] = useTransition();
   const [statusError, setStatusError] = useState("");
 
@@ -79,17 +76,6 @@ export function IdeaHeader({
             {metrics.totalAttemptCount} 人承接 · {metrics.workCount} 个作品 · {metrics.forkCount}{" "}
             次衍生
           </span>
-          {idea.status !== "draft" ? <button
-            type="button"
-            className="text-idea"
-            onClick={() => {
-              const next = !on;
-              setOn(next);
-              start(() => followIdeaAction(idea.id, next));
-            }}
-          >
-            {on ? "已关注" : "关注"}
-          </button> : null}
         </div>
       </div>
     </header>

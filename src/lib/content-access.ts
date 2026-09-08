@@ -1,4 +1,18 @@
-import type { Attempt, Database, Idea, Work } from "./types";
+import type { AgentSuggestion, Attempt, Database, Idea, PublicWorkReminder, Work } from "./types";
+
+export function pendingReminders(work: Pick<Work, "iteration">): AgentSuggestion[] {
+  return (work.iteration?.suggestions ?? []).filter(
+    (item) => item.status === "pending" && item.kind === "reminder",
+  );
+}
+
+export function publicReminders(work: Pick<Work, "iteration">): PublicWorkReminder[] {
+  return pendingReminders(work).map((item) => ({
+    id: item.id,
+    title: item.title,
+    summary: item.summary,
+  }));
+}
 
 export function isIdeaOwner(idea: Idea, userId: string) {
   return idea.author.userId === userId;
@@ -18,7 +32,24 @@ export function workForViewer(db: Database, work: Work, userId?: string): Work {
   const attempt = db.attempts.find((item) => item.id === work.attemptId);
   if (userId && attempt?.ownerId === userId) return work;
   const { iteration: _privateIteration, ...visibleWork } = work;
-  return visibleWork;
+  const suggestions = pendingReminders(work).map((item) => ({
+    id: item.id,
+    kind: "reminder" as const,
+    title: item.title,
+    summary: item.summary,
+    problem: item.problem,
+    whyItMatters: item.whyItMatters,
+    status: "pending" as const,
+    createdAt: item.createdAt,
+  }));
+  if (!suggestions.length) return visibleWork;
+  return {
+    ...visibleWork,
+    iteration: {
+      status: work.iteration?.status ?? "open",
+      suggestions,
+    },
+  };
 }
 
 /**

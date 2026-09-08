@@ -127,7 +127,6 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
                 projectPurpose: form.projectPurpose,
                 visibility: form.visibility,
                 targetDate: form.targetDate || undefined,
-                asWatch: form.asWatch,
               });
               setAdopt(null);
               router.push(`/attempts/${result.attempt_id}`);
@@ -269,7 +268,6 @@ type AdoptForm = {
   projectPurpose: string;
   visibility: Visibility;
   targetDate: string;
-  asWatch?: boolean;
 };
 
 function AdoptDialog({
@@ -379,30 +377,11 @@ function AdoptDialog({
           </div>
           </details>
           {error ? <p className="text-[13px] text-blocked">{error}</p> : null}
-          <div className="mt-1 flex justify-between gap-2">
-            <Button
-              type="button"
-              tone="quiet"
-              onClick={() =>
-                onSubmit({
-                  title: title || "观察中",
-                  approach: approach || "先观察这个想法的演化。",
-                  projectDescription,
-                  projectPurpose,
-                  visibility,
-                  targetDate,
-                  asWatch: true,
-                })
-              }
-            >
-              先关注，不正式承接
+          <div className="mt-1 flex justify-end gap-2">
+            <Button type="button" onClick={onClose}>取消</Button>
+            <Button type="button" tone="idea" onClick={() => setStep("preview")}>
+              预览承接内容
             </Button>
-            <div className="flex gap-2">
-              <Button type="button" onClick={onClose}>取消</Button>
-              <Button type="button" tone="idea" onClick={() => setStep("preview")}>
-                预览承接内容
-              </Button>
-            </div>
           </div>
         </div>
       ) : null}

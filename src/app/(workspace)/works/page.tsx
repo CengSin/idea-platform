@@ -1,7 +1,9 @@
 import { currentWorkRevision } from "@/lib/work-revisions";
 import { PageFrame } from "@/components/chrome/PageFrame";
+import { WorkReminders } from "@/components/idea/WorkReminders";
 import { Chip } from "@/components/ui/Chip";
 import { CoverImage } from "@/components/ui/CoverImage";
+import { publicReminders } from "@/lib/content-access";
 import { WORK_TYPE_LABEL, ideaById } from "@/lib/format";
 import { getSnapshot } from "@/lib/queries";
 import Link from "@/components/ui/NavigationLink";
@@ -54,6 +56,7 @@ export default async function WorksPage({
                     <Chip>{WORK_TYPE_LABEL[work.type]}</Chip>
                   </div>
                   <p className="mt-2 line-clamp-2 text-[13px] text-muted">{work.summary}</p>
+                  <WorkReminders reminders={publicReminders(work)} compact />
                   <p className="mt-3 text-[12px] text-muted">v{currentWorkRevision(work).number} · 来源 {idea?.title}</p>
                   {idea?.status === "draft" ? (
                     <p className="mt-2 text-[12px] text-idea">随想法草稿一起发布</p>

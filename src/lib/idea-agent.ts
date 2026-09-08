@@ -31,7 +31,7 @@ export function pendingAgentEmails(db: Database): AgentScanBatch[] {
       !iteration?.scannedAt ||
       iteration.status === "closed" ||
       suggestions.length === 0 ||
-      !["pending", "failed"].includes(iteration.email.status)
+      !(iteration.email && ["pending", "failed"].includes(iteration.email.status))
     ) return [];
     const attempt = db.attempts.find((item) => item.id === work.attemptId);
     if (!attempt) return [];
@@ -70,23 +70,6 @@ function ownedSuggestion(db: Database, userId: string, workId: string, suggestio
   const suggestion = work.iteration?.suggestions.find((item) => item.id === suggestionId);
   if (!suggestion) throw new IdeaAgentMutationError(404, "迭代建议不存在");
   return { work, suggestion };
-}
-
-export function acceptAgentSuggestionRecord(
-  db: Database,
-  userId: string,
-  workId: string,
-  suggestionId: string,
-  ideaId: string,
-) {
-  const { suggestion } = ownedSuggestion(db, userId, workId, suggestionId);
-  if (suggestion.kind === "reminder") throw new IdeaAgentMutationError(400, "提醒不是完整需求，请先编写下一步。");
-  if (suggestion.status !== "pending") {
-    throw new IdeaAgentMutationError(409, "这条建议已经处理过了");
-  }
-  suggestion.status = "accepted";
-  suggestion.acceptedIdeaId = ideaId;
-  return suggestion;
 }
 
 export function dismissAgentSuggestionRecord(

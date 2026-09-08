@@ -319,15 +319,12 @@ function decodeAttempt(row: Row): Attempt {
   };
   const projectDescription = optStr(row.project_description);
   const projectPurpose = optStr(row.project_purpose);
-  const executionPrompt = optStr(row.execution_prompt);
   const targetDate = optStr(row.target_date);
   if (projectDescription) attempt.projectDescription = projectDescription;
   if (projectPurpose) attempt.projectPurpose = projectPurpose;
-  if (executionPrompt) attempt.executionPrompt = executionPrompt;
   if (targetDate) attempt.targetDate = targetDate;
   const graph = parseJson<Attempt["graph"] | null>(row.graph, null);
   if (graph) attempt.graph = graph;
-  if (num(row.featured_on_graph) === 1) attempt.featuredOnGraph = true;
   return attempt;
 }
 
@@ -545,7 +542,7 @@ function contentInserts(db: Database): InStatement[] {
         attempt.approach,
         attempt.projectDescription ?? null,
         attempt.projectPurpose ?? null,
-        attempt.executionPrompt ?? null,
+        null,
         attempt.status,
         attempt.progressNote,
         attempt.visibility,
@@ -556,7 +553,7 @@ function contentInserts(db: Database): InStatement[] {
         attempt.targetDate ?? null,
         jsonText(attempt.workIds ?? []),
         attempt.graph ? jsonText(attempt.graph) : null,
-        attempt.featuredOnGraph ? 1 : 0,
+        0,
         jsonText(attempt.execution ?? []),
       ],
     });

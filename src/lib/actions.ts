@@ -11,13 +11,11 @@ import { readDb, mutateDb } from "./db";
 import { attemptById, ideaById } from "./format";
 import {
   addProjectLink,
-  acceptAgentSuggestion,
   adoptIdea,
   clearContent,
   createNextIdea,
   deleteNextIdea,
   dismissAgentSuggestion,
-  followIdea,
   markNotificationsRead,
   publishIdea,
   publishIdeaDraft,
@@ -106,13 +104,6 @@ export async function deleteNextIdeaAction(ideaId: string) {
   return result;
 }
 
-export async function acceptAgentSuggestionAction(workId: string, suggestionId: string) {
-  const me = await requireCurrentUser();
-  const result = await acceptAgentSuggestion(me.id, workId, suggestionId);
-  refresh();
-  return result;
-}
-
 export async function dismissAgentSuggestionAction(workId: string, suggestionId: string) {
   const me = await requireCurrentUser();
   const result = await dismissAgentSuggestion(me.id, workId, suggestionId);
@@ -164,12 +155,6 @@ export async function generateAgentSetupAction(input: {
     expiresAt: grant.expiresAt,
     content,
   };
-}
-
-export async function followIdeaAction(ideaId: string, follow: boolean) {
-  const me = await requireCurrentUser();
-  await followIdea(me.id, ideaId, follow);
-  refresh();
 }
 
 export async function markNotificationsReadAction() {

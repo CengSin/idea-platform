@@ -4,6 +4,7 @@ import {
   emptyAuthDump,
   parseAuthDump,
   parseDatabaseDump,
+  useRemoteBlobStore,
 } from "./data-backend.ts";
 
 test("parseAuthDump returns empty dump for missing files instead of implying a write", () => {
@@ -38,6 +39,35 @@ test("parseDatabaseDump rejects an unsupported version instead of seeding over i
     () => parseDatabaseDump({ version: 2, users: [{ id: "user_keep" }] }),
     /unsupported db.json version: 2/,
   );
+});
+
+test("local next dev does not write Vercel Blob when a leftover token is present", () => {
+  const previous = {
+    DATA_BACKEND: process.env.DATA_BACKEND,
+    NODE_ENV: process.env.NODE_ENV,
+    VERCEL: process.env.VERCEL,
+    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
+  };
+  const restore = () => {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
+  try {
+    process.env.DATA_BACKEND = "vercel";
+    process.env.NODE_ENV = "development";
+    delete process.env.VERCEL;
+    process.env.BLOB_READ_WRITE_TOKEN = "vercel_blob_rw_test";
+    assert.equal(useRemoteBlobStore(), false);
+    process.env.VERCEL = "1";
+    assert.equal(useRemoteBlobStore(), true);
+    delete process.env.VERCEL;
+    process.env.DATA_BACKEND = "turso";
+    assert.equal(useRemoteBlobStore(), false);
+  } finally {
+    restore();
+  }
 });
 
 test("parseDatabaseDump preserves private agent configuration", () => {

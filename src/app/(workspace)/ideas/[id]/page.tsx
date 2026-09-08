@@ -22,7 +22,7 @@ export default async function IdeaDetailPage({
   const { id } = await params;
   const bundle = await getIdeaBundle(id);
   if (!bundle) notFound();
-  const { idea, attempts, works, forks, similar, author, metrics, following, myAttempt, db, currentUserId } =
+  const { idea, attempts, works, forks, author, metrics, myAttempt, db, currentUserId } =
     bundle;
   const source = sourceContext(db, idea, currentUserId);
   const isOwner = idea.author.userId === currentUserId;
@@ -45,7 +45,6 @@ export default async function IdeaDetailPage({
           idea={idea}
           author={author}
           metrics={metrics}
-          following={following}
           myAttemptId={myAttempt?.id}
           isOwner={isOwner}
         />
@@ -86,27 +85,6 @@ export default async function IdeaDetailPage({
             ))}
           </div>
         </section>
-
-        {similar.length ? (
-          <section className="mt-10">
-            <h2 className="text-[18px] font-semibold tracking-[-0.03em]">相似或可能重复</h2>
-            <p className="mt-1 text-[13px] text-muted">
-              平台不会粗暴删除相似想法，你可以声明关联。
-            </p>
-            <div className="mt-4 space-y-2">
-              {similar.slice(0, 4).map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/ideas/${item.id}`}
-                  className="row-hover flex items-center justify-between rounded-2xl border border-line px-4 py-3 text-[14px]"
-                >
-                  <span>{item.title}</span>
-                  <span className="text-[12px] text-muted">{item.author.displayName}</span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
       </PageFrame>
   );
 }

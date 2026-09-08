@@ -14,6 +14,7 @@ import Link from "@/components/ui/NavigationLink";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function WorkPage({
   params, searchParams,
@@ -101,7 +102,7 @@ export default async function WorkPage({
           <ol>{(work.revisions?.length ? [...work.revisions].reverse() : [currentWorkRevision(work)]).map(revision => <li key={revision.id} id={`revision-${revision.id}`} className={requestedRevision === revision.id ? "revision-selected" : undefined}><strong>v{revision.number} · {revision.title}</strong><span className="ml-3 text-[11px] text-muted">{revision.recordedAt ? formatDate(revision.recordedAt) : "现有作品，历史未记录"}</span><p>{revision.summary}</p>{revision.repositoryUrl && <a className="text-active text-[12px]" href={revision.repositoryUrl} target="_blank" rel="noreferrer">查看此版本记录的仓库 ↗</a>}</li>)}</ol>
           <p className="text-[11px] text-muted">版本记录保存作品说明与链接；链接所指的网站或仓库内容可能继续更新。</p>
         </details>
-        {bundle.canManage ? <IdeaAgentPanel work={work} /> : null}
+        <IdeaAgentPanel work={work} canManage={bundle.canManage} />
         <NextIdeas
           workId={work.id}
           workTitle={work.title}

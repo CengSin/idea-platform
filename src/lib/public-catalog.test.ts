@@ -15,7 +15,7 @@ const idea: Idea = {
 };
 const attempt: Attempt = {
   id: "public-attempt", ideaId: idea.id, ownerId: "private-author", title: "公开承接",
-  approach: "APPROACH_SECRET", executionPrompt: "EXECUTION_SECRET", status: "testing",
+  approach: "APPROACH_SECRET", status: "testing",
   progressNote: "PROGRESS_SECRET", visibility: "public", blockers: [], startedAt: "2026-08-01",
   lastActiveAt: "2026-08-31", createdAt: "2026-08-01", workIds: [],
 };
@@ -60,9 +60,50 @@ test("guest payload cannot disclose account identity, private ancestry or execut
   const result = buildPublicCatalog(fixture());
   assert.equal(result[0].authorName, "社区创作者");
   const serialized = JSON.stringify(result);
-  for (const secret of ["PRIVATE_NAME", "private-author", "PROFILE_SECRET", "PRIVATE_PARENT", "PRIVATE_SOURCE", "APPROACH_SECRET", "EXECUTION_SECRET", "PROGRESS_SECRET"]) assert.equal(serialized.includes(secret), false, secret);
+  for (const secret of ["PRIVATE_NAME", "private-author", "PROFILE_SECRET", "PRIVATE_PARENT", "PRIVATE_SOURCE", "APPROACH_SECRET", "PROGRESS_SECRET"]) assert.equal(serialized.includes(secret), false, secret);
   assert.equal("notifications" in result[0], false);
   assert.equal("attempts" in result[0], false);
+});
+
+test("public catalog includes pending reminder labels but not analysis internals", () => {
+  const db = fixture();
+  db.works[0].iteration = {
+    status: "open",
+    suggestions: [{
+      id: "sug-public",
+      kind: "reminder",
+      title: "补充验收",
+      summary: "公开可见的提醒依据",
+      problem: "公开可见的提醒依据",
+      whyItMatters: "",
+      status: "pending",
+      createdAt: "2026-09-03T00:00:00.000Z",
+    }, {
+      id: "sug-hidden",
+      kind: "reminder",
+      title: "已忽略提醒",
+      summary: "不应出现在公开目录",
+      problem: "不应出现在公开目录",
+      whyItMatters: "",
+      status: "dismissed",
+      createdAt: "2026-09-03T00:00:00.000Z",
+    }],
+    email: { status: "pending" },
+    analysis: {
+      id: "job",
+      fingerprint: "fp",
+      status: "running",
+      attempts: 1,
+      queuedAt: "2026-09-03T00:00:00.000Z",
+      leaseId: "secret-lease",
+    },
+  };
+  const [result] = buildPublicCatalog(db);
+  assert.deepEqual(result.works[0].reminders, [{ id: "sug-public", title: "补充验收", summary: "公开可见的提醒依据" }]);
+  const serialized = JSON.stringify(result);
+  assert.equal(serialized.includes("secret-lease"), false);
+  assert.equal(serialized.includes("已忽略提醒"), false);
+  assert.equal(serialized.includes("email"), false);
 });
 
 test("guest outbound links reject scripts and embedded credentials", () => {

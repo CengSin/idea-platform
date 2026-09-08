@@ -8,6 +8,7 @@ import { getIdeaAgentAdminDashboard } from "@/lib/idea-agent-admin";
 import { Bot, KeyRound, Mail, ShieldCheck, TimerReset } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const emailLabels: Record<string, string> = {
   not_scanned: "未扫描",

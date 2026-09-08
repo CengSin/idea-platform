@@ -9,7 +9,7 @@
   "redirects": [
     {
       "source": "/og-image.jpg",
-      "destination": "/covers/hushcity.jpg",
+      "destination": "/covers/notebook.svg",
       "permanent": true
     }
   ]

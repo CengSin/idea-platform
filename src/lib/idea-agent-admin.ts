@@ -14,7 +14,7 @@ export async function getIdeaAgentAdminDashboard() {
     (count, work) => count + (work.iteration?.suggestions.filter((item) => item.status === "pending" && item.kind === "reminder").length ?? 0),
     0,
   );
-  const emailFailures = completedWorks.filter((work) => work.iteration?.email.status === "failed").length;
+  const emailFailures = completedWorks.filter((work) => work.iteration?.email?.status === "failed").length;
   const recentWorks = [...completedWorks]
     .sort((a, b) => (b.iteration?.scannedAt ?? b.publishedAt ?? "").localeCompare(a.iteration?.scannedAt ?? a.publishedAt ?? ""))
     .slice(0, 12)
@@ -26,7 +26,7 @@ export async function getIdeaAgentAdminDashboard() {
       analysisStatus: work.iteration?.analysis?.status ?? "not_scanned",
       analysisError: work.iteration?.analysis?.error,
       pendingSuggestions: work.iteration?.suggestions.filter((item) => item.status === "pending" && item.kind === "reminder").length ?? 0,
-      emailStatus: work.iteration?.email.status ?? "not_scanned",
+      emailStatus: work.iteration?.email?.status ?? "not_scanned",
     }));
 
   return {

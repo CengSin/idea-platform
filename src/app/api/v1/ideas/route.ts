@@ -59,7 +59,6 @@ export async function POST(req: Request) {
         commercialUse: "with_attribution",
       },
       existingAttempts: body.existing_attempts ?? [],
-      viaAgent: true,
     };
     const result = asDraft
       ? await saveIdeaDraft(me.id, input)

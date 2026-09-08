@@ -16,7 +16,7 @@ export async function runIdeaAgentScan(input: { siteUrl?: string; workId?: strin
   if (configured) {
     await mutateDb(db => enqueueAnalyses(db, at(), () => `job_${nanoid(12)}`));
     // Bound the request duration; unclaimed work stays in the durable queue.
-    for (let i = 0; i < (input.workId ? 1 : 2) && Date.now() - started < 25000; i++) {
+    for (let i = 0; i < (input.workId ? 1 : 2) && Date.now() - started < 50000; i++) {
       const leaseId = nanoid(24);
       let claim: ReturnType<typeof claimAnalysis> = null;
       await mutateDb(db => { claim = claimAnalysis(db, at(), leaseId, input.workId); });

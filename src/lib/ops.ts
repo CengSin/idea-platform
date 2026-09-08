@@ -2,7 +2,7 @@ import { ensureWorkRevision } from "./work-revisions";
 import { nanoid } from "nanoid";
 import { DEFAULT_COVER } from "./cover";
 import { mutateDb, readDb, resetDb } from "./db";
-import { buildAdoptionPrompt, recomputeIdeaStatus } from "./format";
+import { recomputeIdeaStatus } from "./format";
 import { isPlaceholderCover } from "./cover";
 import { resolveLinkPreview } from "./link-preview";
 import { applyWorkDelete, applyWorkUpdate, ownedWork, parseWorkPatch } from "./work-management";
@@ -13,7 +13,6 @@ import {
   type NextIdeaInput,
 } from "./next-ideas";
 import {
-  acceptAgentSuggestionRecord,
   dismissAgentSuggestionRecord,
   setWorkIterationStatusRecord,
 } from "./idea-agent";
@@ -163,28 +162,6 @@ export async function deleteNextIdea(userId: string, ideaId: string) {
     workId = idea.sourceWorkId!;
   });
   return { idea_id: ideaId, work_id: workId, deleted: true };
-}
-
-export async function acceptAgentSuggestion(userId: string, workId: string, suggestionId: string) {
-  const ideaId = `idea_${nanoid(8)}`;
-  const at = nowIso();
-  await mutateDb((db) => {
-    const suggestion = acceptAgentSuggestionRecord(db, userId, workId, suggestionId, ideaId);
-    const idea = createNextIdeaRecord(db, userId, workId, suggestion, ideaId, at);
-    idea.author.kind = "agent";
-    idea.author.displayName = `Idea Agent · ${idea.author.displayName}`;
-    const me = db.users.find((item) => item.id === userId)!;
-    db.events.unshift({
-      id: `evt_${nanoid(6)}`,
-      at,
-      actorId: me.id,
-      actorName: me.displayName,
-      text: `接受了 Idea Agent 的建议「${idea.title}」`,
-      ideaId: idea.id,
-      workId,
-    });
-  });
-  return { idea_id: ideaId, url: `/ideas/${ideaId}`, review_status: "published" as const };
 }
 
 export async function dismissAgentSuggestion(userId: string, workId: string, suggestionId: string) {
@@ -343,7 +320,6 @@ export async function adoptIdea(userId: string, input: {
   projectPurpose?: string;
   visibility: Visibility;
   targetDate?: string;
-  asWatch?: boolean;
 }) {
   const id = `att_${nanoid(8)}`;
   const createdAt = nowIso();
@@ -362,8 +338,6 @@ export async function adoptIdea(userId: string, input: {
         a.status !== "abandoned",
     );
     if (existing) throw new Error("你已经有一条承接分支，可在「承接中」继续更新。");
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 180 + Math.random() * 80;
     db.attempts.push({
       id,
       ideaId: input.ideaId,
@@ -372,13 +346,8 @@ export async function adoptIdea(userId: string, input: {
       approach: input.approach.trim(),
       projectDescription: input.projectDescription?.trim() || undefined,
       projectPurpose: input.projectPurpose?.trim() || undefined,
-      executionPrompt: buildAdoptionPrompt(idea, {
-        projectDescription: input.projectDescription,
-        projectPurpose: input.projectPurpose,
-        approach: input.approach,
-      }),
-      status: input.asWatch ? "considering" : "understanding",
-      progressNote: input.asWatch ? "正在观察这个想法。" : "已正式承接，开始理解问题。",
+      status: "understanding",
+      progressNote: "已正式承接，开始理解问题。",
       visibility: input.visibility,
       blockers: [],
       startedAt: createdAt,
@@ -386,11 +355,6 @@ export async function adoptIdea(userId: string, input: {
       createdAt,
       targetDate: input.targetDate || undefined,
       workIds: [],
-      graph: {
-        x: idea.graph.x + Math.cos(angle) * radius,
-        y: idea.graph.y + Math.sin(angle) * radius,
-      },
-      featuredOnGraph: true,
     });
     idea.updatedAt = createdAt;
     db.events.unshift({
@@ -398,7 +362,7 @@ export async function adoptIdea(userId: string, input: {
       at: createdAt,
       actorId: me.id,
       actorName: me.displayName,
-      text: input.asWatch ? "开始关注这个想法" : `承接了「${idea.title}」`,
+      text: `承接了「${idea.title}」`,
       ideaId: idea.id,
       attemptId: id,
     });
@@ -412,7 +376,7 @@ export async function adoptIdea(userId: string, input: {
       kind: "attempt",
     });
   });
-  return { attempt_id: id, stage: input.asWatch ? "considering" : "understanding" };
+  return { attempt_id: id, stage: "understanding" };
 }
 
 export async function updateAttempt(userId: string, input: {
@@ -454,15 +418,6 @@ export async function updateAttempt(userId: string, input: {
   return { updated_at: at };
 }
 
-export async function followIdea(userId: string, ideaId: string, follow: boolean) {
-  await mutateDb((db) => {
-    db.follows = db.follows.filter(
-      (f) => !(f.userId === userId && f.ideaId === ideaId),
-    );
-    if (follow) db.follows.push({ userId, ideaId });
-  });
-}
-
 export async function publishWork(userId: string, input: {
   attemptId: string;
   title: string;
@@ -497,9 +452,6 @@ export async function publishWork(userId: string, input: {
       views: 0,
       saves: 0,
       citations: 0,
-      graph: attempt.graph
-        ? { x: attempt.graph.x + 180, y: attempt.graph.y + 10 }
-        : undefined,
     });
     ensureWorkRevision(db.works.find(w => w.id === id)!, at);
     attempt.workIds = [...attempt.workIds, id];

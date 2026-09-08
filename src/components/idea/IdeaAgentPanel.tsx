@@ -1,21 +1,23 @@
 "use client";
 
 import { dismissAgentSuggestionAction, setWorkIterationStatusAction, runWorkAnalysisAction } from "@/lib/actions";
+import { pendingReminders } from "@/lib/content-access";
 import type { Work } from "@/lib/types";
 import { Bot, PauseCircle, PlayCircle, RefreshCw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 
-export function IdeaAgentPanel({ work }: { work: Work }) {
+export function IdeaAgentPanel({ work, canManage }: { work: Work; canManage: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const isOpen = work.iteration?.status !== "closed";
-  const reminders = work.iteration?.suggestions.filter(s => s.status === "pending" && s.kind === "reminder") ?? [];
+  const reminders = pendingReminders(work);
   const active = reminders.find(r => r.id === selected);
-  const job = work.iteration?.analysis;
+  const job = canManage ? work.iteration?.analysis : undefined;
+  if (!canManage && reminders.length === 0) return null;
   const run = (task: () => Promise<unknown>) => {
     setError(null);
     startTransition(async () => {
@@ -28,28 +30,31 @@ export function IdeaAgentPanel({ work }: { work: Work }) {
     <section className="paper-sheet mt-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-[13px] text-idea"><Bot className="h-4 w-4" />迭代提醒</div>
-        <div className="flex flex-wrap gap-2">
+        {canManage ? <div className="flex flex-wrap gap-2">
           {isOpen ? <Button tone="quiet" disabled={pending || (job?.status === "running" && Date.parse(job.leaseUntil ?? "") > Date.now())} onClick={() => run(() => runWorkAnalysisAction(work.id))}><RefreshCw className="h-3.5 w-3.5" />{pending ? "分析中…" : "重新分析"}</Button> : null}
           <Button tone="quiet" onClick={() => run(() => setWorkIterationStatusAction(work.id, isOpen ? "closed" : "open"))}>
             {isOpen ? <PauseCircle className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}{isOpen ? "停止提醒" : "开启提醒"}
           </Button>
-        </div>
+        </div> : null}
       </div>
-      <p className="mt-3 text-[12.5px] leading-relaxed text-muted">根据作品说明和已同步的进展提取值得留意的点。点击标签查看依据，下一步做什么由你决定。</p>
-      {!isOpen ? <p className="mt-4 text-[13px] text-muted">已停止后续分析。</p> : <>
+      <p className="mt-3 text-[12.5px] leading-relaxed text-muted">{canManage ? "根据作品说明和已同步的进展提取值得留意的点。点击标签查看依据，下一步做什么由你决定。" : "根据作品说明和已同步的进展提取值得留意的点。点击标签查看依据。"}</p>
+      {canManage && !isOpen ? <p className="mt-4 text-[13px] text-muted">已停止后续分析。</p> : null}
+      {isOpen || !canManage ? <>
         <div className="mt-4 flex flex-wrap gap-2">
           {reminders.map(r => <button key={r.id} type="button" aria-pressed={selected === r.id} onClick={() => setSelected(selected === r.id ? null : r.id)} className={`rounded-full border px-3 py-1.5 text-[12px] ${selected === r.id ? "border-idea bg-idea/10 text-idea" : "border-line text-muted"}`}>{r.title}</button>)}
         </div>
         {active ? <div className="mt-3 rounded-xl bg-idea/5 p-4 text-[13px] leading-relaxed">
           <p>{active.summary}</p>
-          <div className="mt-3 flex items-center gap-5 text-[12px]">
+          {canManage ? <div className="mt-3 flex items-center gap-5 text-[12px]">
             <a href="#next-ideas" className="text-idea">在下方写下一步</a>
             <button type="button" disabled={pending} className="inline-flex items-center gap-1 text-muted" onClick={() => run(() => dismissAgentSuggestionAction(work.id, active.id))}><X className="h-3 w-3" />忽略</button>
-          </div>
+          </div> : null}
         </div> : null}
-        <p className="mt-3 text-[12px] text-muted">{job ? labels[job.status] : "尚未分析，可手动运行或等待定时调度。"}{job?.status === "succeeded" && reminders.length === 0 ? "，目前没有新的提醒。" : ""}{job?.nextAttemptAt ? `，下次调度将在 ${new Date(job.nextAttemptAt).toLocaleString("zh-CN")} 后重试。` : ""}</p>
-        {job?.error ? <p className="mt-2 text-[12px] text-blocked">{job.error}</p> : null}
-      </>}
+        {canManage ? <>
+          <p className="mt-3 text-[12px] text-muted">{job ? labels[job.status] : "尚未分析，可手动运行或等待定时调度。"}{job?.status === "succeeded" && reminders.length === 0 ? "，目前没有新的提醒。" : ""}{job?.nextAttemptAt ? `，下次调度将在 ${new Date(job.nextAttemptAt).toLocaleString("zh-CN")} 后重试。` : ""}</p>
+          {job?.error ? <p className="mt-2 text-[12px] text-blocked">{job.error}</p> : null}
+        </> : null}
+      </> : null}
       {error ? <p className="mt-3 text-[13px] text-blocked">{error}</p> : null}
     </section>
   );
