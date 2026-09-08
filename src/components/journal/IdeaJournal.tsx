@@ -28,7 +28,7 @@ function FamilyNode({ idea, family, workspace, depth = 0 }: { idea: PublicIdea; 
       <Link href={href} className="note-story"><h2>{idea.title}</h2><p>{idea.summary || idea.problem}</p></Link>
       {idea.source && <small className="note-origin">基于 {idea.source.workTitle} · {idea.source.revisionNumber ? `v${idea.source.revisionNumber}` : "历史版本未记录"}</small>}
       {idea.hasUnavailableSource && <small className="note-origin">来源作品暂不可见</small>}
-      <div className="note-meta"><span>{idea.authorName}</span><span>{idea.status === "deprecated" ? "已弃用" : idea.works.length ? "已落地" : idea.attemptCount ? `${idea.attemptCount} 人在实现` : "等待实现"}</span></div>
+      <div className="note-meta"><span>{idea.authorName}</span><span>{idea.status === "deprecated" ? "已弃用" : idea.works.length ? "已落地" : idea.status === "realized" ? "已实现" : idea.attemptCount ? `${idea.attemptCount} 人在实现` : "等待实现"}</span></div>
     </article>
     {idea.works.length > 0 && show && <><Arrows count={idea.works.length} label="做出来了"/><div className="board-branches">{idea.works.map(work => {
       const next = children.filter(i => i.source?.workId === work.id);

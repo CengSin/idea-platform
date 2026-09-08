@@ -18,7 +18,7 @@ export const IDEA_STATUS_LABEL: Record<IdeaStatus, string> = {
   draft: "草稿",
   published: "已发布",
   evolving: "生长中",
-  realized: "已产生作品",
+  realized: "已实现",
   deprecated: "已弃用",
   dormant: "沉寂",
   archived: "已归档",
