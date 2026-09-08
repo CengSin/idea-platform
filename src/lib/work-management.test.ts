@@ -129,7 +129,7 @@ test("bootstrap exposes live capabilities and copied prompts carry the latest co
   const denied = buildAgentBootstrap({
     idea: db.ideas[0], attempt: db.attempts[0], baseUrl: "https://platform.example", tokenExpiresAt: at,
   });
-  assert.equal(denied.protocol_version, 4);
+  assert.equal(denied.protocol_version, 5);
   assert.equal(denied.capabilities.propose_iteration, true);
   assert.equal(denied.capabilities.update_idea, false);
   assert.equal(denied.write_contracts.update_idea.available, false);
@@ -148,7 +148,8 @@ test("bootstrap exposes live capabilities and copied prompts carry the latest co
   assert.ok(markdown.includes("# Idea Platform 承接任务"));
   assert.ok(markdown.includes("Bearer Token：new-token"));
   assert.ok(markdown.includes("write_contracts"));
-  assert.ok(allowed.execution_contract.endpoint.endsWith("/execution"));
+  assert.ok(allowed.todos_contract.endpoint.endsWith("/todos"));
+  assert.equal(allowed.capabilities.attempt_todos, true);
 });
 
 test("root attempts download AGENTS.md while derived ideas copy a prompt", () => {

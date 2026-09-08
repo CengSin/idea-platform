@@ -16,7 +16,7 @@ export type AnalysisJob = {
   error?: string;
 };
 
-// Only selected project data enters the model context. No tokens, config or execution prompts.
+// Only selected project data enters the model context. No tokens, config or private todos.
 export function analysisContext(db: Database, work: Work) {
   const idea = db.ideas.find(i => i.id === work.ideaId);
   const attempt = db.attempts.find(a => a.id === work.attemptId);

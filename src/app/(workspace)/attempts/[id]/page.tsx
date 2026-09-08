@@ -1,5 +1,5 @@
 import { PageFrame } from "@/components/chrome/PageFrame";
-import { AgentExecutionPanel } from "@/components/idea/AgentExecutionPanel";
+import { AttemptTodoPanel } from "@/components/idea/AttemptTodoPanel";
 import { AgentSetupPanel } from "@/components/idea/AgentSetupPanel";
 import { Chip } from "@/components/ui/Chip";
 import { CoverImage } from "@/components/ui/CoverImage";
@@ -83,7 +83,7 @@ export default async function AttemptPage({
           </p>
         </section>
         {mine ? <AgentSetupPanel attemptId={attempt.id} derived={Boolean(idea.parentIdeaId)} /> : null}
-        {mine ? <AgentExecutionPanel attempt={attempt} idea={idea} /> : null}
+        {mine ? <AttemptTodoPanel attempt={attempt} /> : null}
         {attempt.blockers.length ? (
           <div className="mt-4 text-[13.5px] text-blocked">阻塞：{attempt.blockers.join("；")}</div>
         ) : null}

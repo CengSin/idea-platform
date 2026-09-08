@@ -24,7 +24,7 @@ export function canAccessIdea(idea: Idea, userId?: string) {
 
 export function attemptForViewer(attempt: Attempt, userId?: string): Attempt {
   if (attempt.ownerId === userId) return attempt;
-  const { execution: _privateExecution, ...visible } = attempt;
+  const { todos: _privateTodos, ...visible } = attempt;
   return visible;
 }
 
