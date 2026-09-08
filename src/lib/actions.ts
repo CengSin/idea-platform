@@ -231,25 +231,38 @@ export async function runWorkAnalysisAction(workId: string) {
   return result;
 }
 
-export async function enqueueExecutionAction(attemptId: string, input: { id: string; instruction: string; acceptance: string[]; stopConditions: string[] }) {
+export async function addAttemptTodoAction(attemptId: string, input: { id: string; title: string }) {
   const me = await requireCurrentUser();
-  const { enqueueExecution } = await import("./agent-execution");
+  const { addTodo } = await import("./attempt-todos");
   await mutateDb(db => {
     const attempt = db.attempts.find(a => a.id === attemptId);
-    if (!attempt || attempt.ownerId !== me.id) throw new Error("只能调度自己的承接分支。");
-    enqueueExecution(attempt, input, new Date().toISOString());
+    if (!attempt || attempt.ownerId !== me.id) throw new Error("只能编辑自己的承接待办。");
+    addTodo(attempt, input, new Date().toISOString());
   });
   refresh();
 }
 
-export async function decideExecutionAction(attemptId: string, runId: string, decision: "complete" | "cancel" | "retry") {
+export async function updateAttemptTodoAction(
+  attemptId: string,
+  input: { id: string; title?: string; done?: boolean },
+) {
   const me = await requireCurrentUser();
-  const { decideExecution } = await import("./agent-execution");
-  if (!["complete", "cancel", "retry"].includes(decision)) throw new Error("无效操作。");
+  const { updateTodo } = await import("./attempt-todos");
   await mutateDb(db => {
     const attempt = db.attempts.find(a => a.id === attemptId);
-    if (!attempt || attempt.ownerId !== me.id) throw new Error("只能调度自己的承接分支。");
-    decideExecution(attempt, runId, decision, new Date().toISOString());
+    if (!attempt || attempt.ownerId !== me.id) throw new Error("只能编辑自己的承接待办。");
+    updateTodo(attempt, input, new Date().toISOString());
+  });
+  refresh();
+}
+
+export async function deleteAttemptTodoAction(attemptId: string, todoId: string) {
+  const me = await requireCurrentUser();
+  const { deleteTodo } = await import("./attempt-todos");
+  await mutateDb(db => {
+    const attempt = db.attempts.find(a => a.id === attemptId);
+    if (!attempt || attempt.ownerId !== me.id) throw new Error("只能编辑自己的承接待办。");
+    deleteTodo(attempt, todoId);
   });
   refresh();
 }

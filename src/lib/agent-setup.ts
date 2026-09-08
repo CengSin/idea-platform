@@ -1,6 +1,6 @@
 import type { Attempt, Idea } from "./types";
 
-export const AGENT_PROTOCOL_VERSION = 4;
+export const AGENT_PROTOCOL_VERSION = 5;
 
 export function agentSetupDelivery(idea: Idea) {
   return idea.parentIdeaId ? "copy_prompt" as const : "agents_md" as const;
@@ -28,7 +28,7 @@ export function buildAgentBootstrap(input: {
       : "本响应的能力与接口约定优先于本地 AGENTS.md 中的旧快照。",
     capabilities: {
       read_idea_context: true,
-      execution_queue: true,
+      attempt_todos: true,
       propose_iteration: true,
       update_attempt: true,
       update_idea: canUpdateIdea,
@@ -37,7 +37,7 @@ export function buildAgentBootstrap(input: {
       delete_work: true,
     },
     endpoints: {
-      execution: `${baseUrl}/api/v1/attempts/${attempt.id}/execution`,
+      todos: `${baseUrl}/api/v1/attempts/${attempt.id}/todos`,
       bootstrap: `${baseUrl}/api/v1/attempts/${attempt.id}/bootstrap`,
       attempt: `${baseUrl}/api/v1/attempts/${attempt.id}`,
       idea: `${baseUrl}/api/v1/ideas/${idea.id}`,
@@ -60,6 +60,7 @@ export function buildAgentBootstrap(input: {
       approach: attempt.approach,
       acceptance: idea.desiredOutputs,
       stop_conditions: idea.stopConditions ?? [],
+      todos: (attempt.todos ?? []).map((item) => ({ id: item.id, title: item.title, done: item.done })),
     },
     required_startup: [
       "每轮开始先获取 bootstrap 和 Idea Context，再以最新返回内容开展工作。",
@@ -69,14 +70,13 @@ export function buildAgentBootstrap(input: {
         ? "401 时停止写操作；从作品或承接详情页重新复制连接提示词后再继续。"
         : "401 时停止写操作；从作品或承接详情页下载最新 AGENTS.md 后再继续。",
     ],
-    execution_contract: {
-      endpoint: `${baseUrl}/api/v1/attempts/${attempt.id}/execution`,
-      method: "POST",
-      claim: { action: "claim", worker_id: "执行器标识" },
-      heartbeat: { action: "heartbeat", run_id: "领取返回的 run.id", lease_id: "领取返回的 run.leaseId" },
-      report: { action: "report", run_id: "run.id", lease_id: "run.leaseId", report: "完成内容、验证证据、未完成项" },
-      fail: { action: "fail", run_id: "run.id", lease_id: "run.leaseId", report: "失败原因与工作现场" },
-      rules: ["领取返回 run=null 时没有任务。每30秒心跳，租约有效期120秒；取消或409时停止执行。", "以领取任务的 instruction、acceptance、stopConditions 为本轮范围，条件由用户决定。", "回传结果只进入 waiting_review，不自动发布或验收。任务领取不等于公开变更授权。", "心跳中断不自动重跑代码；由用户检查后决定重试。"],
+    todos_contract: {
+      endpoint: `${baseUrl}/api/v1/attempts/${attempt.id}/todos`,
+      list: { method: "GET" },
+      add: { method: "POST", body: { title: "待办内容", id: "可选稳定 ID" } },
+      update: { method: "PATCH", body: { id: "待办 ID", title: "可选新标题", done: "可选布尔完成状态" } },
+      delete: { method: "DELETE", body: { id: "待办 ID" } },
+      rules: ["待办属于当前承接分支，仅该分支 Token 可读写。", "网页与 Agent 共用同一清单；完成后把 done 设为 true。", "待办变更不构成公开发布授权，公开写操作仍需 user_confirmed=true。"],
     },
     iteration_contract: {
       method: "POST",
@@ -183,10 +183,10 @@ ${notes}
 ## 工作流
 
 1. 按用户本轮需求实现并验证；验收与停止条件由用户决定，未设置时不要自行宣布通过验收或开启无限迭代。
-2. 公开写操作仍需用户对本次变更的明确授权，并传 user_confirmed=true；不能把领取任务当成发布授权。Agent Token 不能发布想法。
+2. 公开写操作仍需用户对本次变更的明确授权，并传 user_confirmed=true；不能把待办同步当成发布授权。Agent Token 不能发布想法。
 3. 在阶段完成或阻塞变化时同步 progress_note、status 和 blockers；记录完成内容、验证结果及下一步。阶段：understanding → prototyping → testing；发布作品后平台设置 published。
 4. 修改已有作品先核对 Bootstrap 的 work_ids，使用 PATCH；新交付才用 POST。DELETE 仅用于用户明确指定的删除。完整字段与约束以 Bootstrap 的 write_contracts 为准。
-5. 若使用执行队列，按 Bootstrap 的 execution_contract 领取任务、每30秒心跳并回传结果；回传后等待用户验收，不自动开始下一轮。
+5. 可用 Bootstrap 的 todos_contract 读取或更新本分支待办清单；完成后勾选 done，不把待办当成公开发布授权。
 6. 开发中发现基于当前作品的改进，可以按 iteration_contract 提交私有迭代草稿，复用 request_id 重试；等待用户审阅发布。
 7. 401/403 时停止写操作并重新获取连接配置；请求失败先读取当前状态再决定重试，不能报告虚假成功。
 ${idea.status === "draft" ? "\n当前来源 Idea 仍是草稿，相关项目和作品在发布前仅作者可见。\n" : ""}`;

@@ -17,7 +17,7 @@ function publicUrl(value?: string) {
 }
 
 // This allowlist is the only content passed into the unauthenticated UI.
-// Never pass a Database, account, execution prompt or private relation to it.
+// Never pass a Database, account, private attempt todos or private relation to it.
 export function buildPublicCatalog(db: Database) {
   return db.ideas
     .filter((idea) => idea.visibility === "public" && visibleStatuses.has(idea.status))

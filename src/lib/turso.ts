@@ -186,6 +186,7 @@ async function ensureSchema() {
     "ALTER TABLE ideas ADD COLUMN agent_request_id TEXT",
     "ALTER TABLE works ADD COLUMN revisions TEXT",
     "ALTER TABLE attempts ADD COLUMN execution TEXT",
+    "ALTER TABLE attempts ADD COLUMN todos TEXT",
     "ALTER TABLE agent_config ADD COLUMN openai_model TEXT",
     "ALTER TABLE works ADD COLUMN iteration TEXT",
     "ALTER TABLE notifications ADD COLUMN user_id TEXT",
@@ -315,7 +316,7 @@ function decodeAttempt(row: Row): Attempt {
     lastActiveAt: str(row.last_active_at),
     createdAt: str(row.created_at),
     workIds: parseJson(row.work_ids, []),
-    execution: parseJson(row.execution, []),
+    todos: parseJson(row.todos, []),
   };
   const projectDescription = optStr(row.project_description);
   const projectPurpose = optStr(row.project_purpose);
@@ -532,8 +533,8 @@ function contentInserts(db: Database): InStatement[] {
     stmts.push({
       sql: `INSERT INTO attempts (id, idea_id, owner_id, title, approach, project_description, project_purpose,
             execution_prompt, status, progress_note, visibility, blockers, started_at, last_active_at,
-            created_at, target_date, work_ids, graph, featured_on_graph, execution)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            created_at, target_date, work_ids, graph, featured_on_graph, execution, todos)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         attempt.id,
         attempt.ideaId,
@@ -554,7 +555,8 @@ function contentInserts(db: Database): InStatement[] {
         jsonText(attempt.workIds ?? []),
         attempt.graph ? jsonText(attempt.graph) : null,
         0,
-        jsonText(attempt.execution ?? []),
+        jsonText([]),
+        jsonText(attempt.todos ?? []),
       ],
     });
   }

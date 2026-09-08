@@ -114,7 +114,7 @@ export interface Idea {
 }
 
 export interface Attempt {
-  execution?: import("./agent-execution").ExecutionRun[];
+  todos?: import("./attempt-todos").AttemptTodo[];
   id: string;
   ideaId: string;
   ownerId: string;

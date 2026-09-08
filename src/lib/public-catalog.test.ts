@@ -56,7 +56,7 @@ test("public counts and works exclude private, abandoned, draft and mismatched r
   assert.equal(result.works[0].title, work.title);
 });
 
-test("guest payload cannot disclose account identity, private ancestry or execution details", () => {
+test("guest payload cannot disclose account identity, private ancestry or private details", () => {
   const result = buildPublicCatalog(fixture());
   assert.equal(result[0].authorName, "社区创作者");
   const serialized = JSON.stringify(result);

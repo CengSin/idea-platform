@@ -43,6 +43,7 @@ npm run dev
 | `POST` | `/api/v1/attempts` | 承接想法 |
 | `PATCH` | `/api/v1/attempts/:id` | 更新承接进展 |
 | `GET` | `/api/v1/attempts/:id/bootstrap` | 获取最新 Agent 能力、接口约定与分支上下文 |
+| `GET`/`POST`/`PATCH`/`DELETE` | `/api/v1/attempts/:id/todos` | 列出、添加、更新或删除承接待办 |
 | `POST` | `/api/v1/works` | 发布作品 |
 | `PATCH` | `/api/v1/works/:id` | 修改自己分支的作品，未传字段保持不变 |
 | `DELETE` | `/api/v1/works/:id` | 确认后删除自己分支的作品 |
@@ -56,7 +57,7 @@ npm run dev
 
 删除会清理作品引用及其动态、通知，保留来源想法、承接和衍生想法，不会删除外部站点或仓库。删去分支最后一个已发布作品时，原为 `published` 的承接回到 `testing`；暂停或放弃状态不变。Agent 配置包含 Bootstrap、作品管理和作者更新想法的接口说明，可从承接页或所属作品详情页重新生成。
 
-### idea-platform-agent 与执行调度
+### idea-platform-agent 与承接待办
 
 创建想法填写标题、问题和预期效果；补充价值、验收标准（`desiredOutputs`）与停止条件（`stopConditions`）可选。子想法记录本轮改动及原因，Context 返回可访问的上游想法和来源作品。承接的项目描述和目的仅在显式覆盖时保存；留空时读取想法的最新内容。
 
@@ -68,20 +69,16 @@ npm run dev
 
 可选邮件配置仍为 `RESEND_API_KEY`、`IDEA_AGENT_EMAIL_FROM`，未配置不影响站内提醒。邮件使用作品和分析批次作为幂等键。待处理提醒标签对所有人可见；分析队列、邮件状态和已忽略记录仍只返回给所属分支作者。忽略、重新分析和开关仍仅作者可操作。
 
-开发执行与提醒分析分开运行：承接页“执行调度”填写本轮任务和用户自定的验收、停止条件，再加入队列。外部 Agent 使用该分支 Token 调用 `/api/v1/attempts/<id>/execution`：
+承接页提供简单的**待办清单**（不是执行队列）：每项含 `id`、`title`、`done`、`createdAt`、`updatedAt`。所有者可在网页添加、勾选完成、编辑标题或删除。待办仅对分支所有者可见，不会改写公开承接/作品状态。
 
-- `POST {action:"claim", worker_id}` 领取任务；没有任务时返回 `run:null`。
-- `POST {action:"heartbeat", run_id, lease_id}` 每30秒续租；租约有效120秒。
-- `POST {action:"report", run_id, lease_id, report}` 回传结果，进入 `waiting_review`。
-- `POST {action:"fail", run_id, lease_id, report}` 记录失败。用户在网页验收、停止或重试。
+外部 Agent 使用该分支 Bearer Token 调用 `/api/v1/attempts/<id>/todos`：
 
-代码执行失联不会自动重跑；用户先检查本地现场后决定重试。取消使旧租约失效；重复回传同一已完成请求不会重复执行。私有运行状态不改写公开承接或作品状态，领取任务不构成公开发布授权。所有已有公开写接口继续要求原有确认。
+- `GET` 列出待办。
+- `POST { "title": "..." }` 添加；可传稳定 `id` 以便重试幂等。
+- `PATCH { "id": "...", "done": true }` 或 `{ "id": "...", "title": "新标题" }` 更新。
+- `DELETE { "id": "..." }` 删除。
 
-仓库提供 `scripts/idea-platform-worker.mjs` 作为本地执行器适配层。在目标代码仓库目录运行该脚本，配置 `IDEA_PLATFORM_URL`、`IDEA_ATTEMPT_ID`、`IDEA_AGENT_TOKEN`、`IDEA_AGENT_COMMAND`，可选 `IDEA_AGENT_ARGS`（JSON 字符串数组）。命令以当前目录为工作区，从 stdin 接收 `{run, context, bootstrap, instruction}`，stdout 必须返回 `{report:"完成内容、验证证据、未完成项"}`，诊断写 stderr。使用 `--once` 只领取一次，默认持续等待用户加入的新任务。不要把 Token 写进命令参数或 Git。
-
-使用已登录的 Codex CLI 时，可直接运行 `node /绝对路径/idea_platform/scripts/idea-platform-worker.mjs --codex`，无需设置 `IDEA_AGENT_COMMAND`；内置适配器使用 `codex exec`、`workspace-write` 沙箱和结构化报告，沿用本机模型配置，不开启越权模式。该执行器只做本地实现与测试，公开同步仍需用户另行授权。其他 Agent 可通过上述命令协议接入。适配层负责领取、心跳、取消终止和回传，网站服务器不会直接执行仓库代码。Bootstrap 协议 v3 包含完整实时接口约定，AGENTS.md / 子想法提示词仅保留启动和授权规则。已有本地文件不会被自动覆盖，需重新下载或复制并合并。
-
-当前生产使用的 Turso 与 Vercel Blob 通过版本条件写入保护并发领取。旧 MySQL 导入导出桥接不提供跨实例条件写入，不能作为多实例调度存储；使用它时应保持单个 Next.js 写入实例。每个分支保留最近20次开发运行。
+待办读写不构成公开发布授权；公开写接口仍要求 `user_confirmed=true`。Bootstrap 协议 v5 用 `todos_contract` / `attempt_todos` 取代旧的执行队列约定；请重新下载 `AGENTS.md` 或复制连接提示词。json-store 与 Turso 都会持久化 `attempt.todos`。
 
 ### 公开访问
 
@@ -138,6 +135,7 @@ All write operations require `user_confirmed: true`. Agent attempt updates and w
 | `POST` | `/api/v1/attempts` | Adopt an idea |
 | `PATCH` | `/api/v1/attempts/:id` | Update attempt progress |
 | `GET` | `/api/v1/attempts/:id/bootstrap` | Read current agent capabilities, contracts, and branch context |
+| `GET`/`POST`/`PATCH`/`DELETE` | `/api/v1/attempts/:id/todos` | List, add, update, or delete attempt todos |
 | `POST` | `/api/v1/works` | Publish a work |
 | `PATCH` | `/api/v1/works/:id` | Edit a work owned by the current branch owner |
 | `DELETE` | `/api/v1/works/:id` | Delete an owned work after confirmation |
@@ -147,9 +145,13 @@ When publishing a work, pass a public `external_url`. The platform reads `og:ima
 
 PATCH accepts title, summary, type, external/repository/cover URLs and a complete license object. Omitted fields are preserved; identity, attribution, publication time and counters cannot be edited. DELETE removes the work and dead references while preserving the idea, branch, derived ideas and external resources. Removing the last published work changes a published branch to `testing`. Existing projects can regenerate their appropriate Agent setup from the attempt or any owned work detail page.
 
+### Attempt todos
+
+Each attempt has a simple owner-private checklist (`id`, `title`, `done`, timestamps). Owners manage it on the attempt page; agents with the branch Bearer token can call `/api/v1/attempts/:id/todos` (GET/POST/PATCH/DELETE). Todo changes are not public publication authorization. Bootstrap protocol v5 exposes `todos_contract` instead of the removed execution queue/worker flow.
+
 ### Public access
 
-`/explore` is the guest entrance, and `/explore/:id` shows a public idea and its public works. Only published public ideas and works belonging to public, non-abandoned attempts are exposed. Pending reminder labels on published works are public; analysis jobs, email state, dismissed reminders, drafts, unlisted/private ideas, account data, notifications, and execution prompts are excluded. Public responses are not cached, so visibility changes apply on the next request. Participation still requires authentication; login and registration preserve the selected idea as the return destination.
+`/explore` is the guest entrance, and `/explore/:id` shows a public idea and its public works. Only published public ideas and works belonging to public, non-abandoned attempts are exposed. Pending reminder labels on published works are public; analysis jobs, email state, dismissed reminders, drafts, unlisted/private ideas, account data, notifications, and private attempt todos are excluded. Public responses are not cached, so visibility changes apply on the next request. Participation still requires authentication; login and registration preserve the selected idea as the return destination.
 
 Page reads reuse data only within the current request and never wait for external cover scraping. Covers are resolved on work publication, with browser fallbacks for older content. Navigation includes loading placeholders and pending feedback. Background updates run at most once every 30 seconds while the page is visible and no editor is active.
 
@@ -175,7 +177,7 @@ npm run dev:public      # start Next.js, then open the tunnel
 
 作品首次发布保存 v1；说明、封面、链接或许可发生变更时追加快照，无变化不增加版本。衍生想法绑定 `sourceWorkRevisionId`，Context 读取绑定版本的说明和链接。已有作品首次修改或创建衍生想法时补录当前快照；旧衍生想法不推测历史版本。快照记录平台元数据，**不是 Git 提交或部署文件快照**，如需固定源码，应提供固定提交/发布标签的链接。删除作品后，已公开衍生想法保留独立记录并显示来源不可见；尚未发布的绑定草稿不能再发布。
 
-Agent Bootstrap 协议 v4 增加 `propose_iteration` 和 `iteration_contract`。每轮读取最新 Bootstrap，使用原有分支 Token：
+Agent Bootstrap 协议 v5 保留 `propose_iteration` / `iteration_contract`，并以 `attempt_todos` / `todos_contract` 取代旧执行队列。每轮读取最新 Bootstrap，使用原有分支 Token：
 
 ```http
 POST /api/v1/works/<work_id>/iterations
