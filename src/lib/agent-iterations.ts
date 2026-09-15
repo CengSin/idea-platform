@@ -22,7 +22,7 @@ export function proposeIteration(db: Database, ownerId: string, attemptId: strin
     title: body.title as string, summary: body.summary as string, problem: body.problem as string,
     whyItMatters: body.why_it_matters as string || "", desiredOutputs: body.desired_outputs as string[] | undefined,
     stopConditions: body.stop_conditions as string[] | undefined,
-  }, id, at, { draft: true, agentRequestId: (body.request_id as string).trim(), sourceWorkRevisionId: body.source_work_revision_id as string | undefined });
+  }, id, at, { draft: true, relationKind: "iterate", agentRequestId: (body.request_id as string).trim(), sourceWorkRevisionId: body.source_work_revision_id as string | undefined });
   const created = idea.id === id;
   if (created) {
     idea.author.kind = "agent";

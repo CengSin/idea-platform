@@ -190,6 +190,7 @@ async function ensureSchema() {
     "ALTER TABLE agent_config ADD COLUMN openai_model TEXT",
     "ALTER TABLE works ADD COLUMN iteration TEXT",
     "ALTER TABLE notifications ADD COLUMN user_id TEXT",
+    "ALTER TABLE ideas ADD COLUMN relation_kind TEXT",
   ]) {
     try {
       await tursoClient().execute(sql);
@@ -298,6 +299,8 @@ function decodeIdea(row: Row): Idea {
   if (sourceWorkId) idea.sourceWorkId = sourceWorkId;
   if (optStr(row.source_work_revision_id)) idea.sourceWorkRevisionId = optStr(row.source_work_revision_id);
   if (optStr(row.agent_request_id)) idea.agentRequestId = optStr(row.agent_request_id);
+  const relationKind = optStr(row.relation_kind);
+  if (relationKind === "iterate" || relationKind === "derive") idea.relationKind = relationKind;
   return idea;
 }
 
@@ -501,8 +504,8 @@ function contentInserts(db: Database): InStatement[] {
     stmts.push({
       sql: `INSERT INTO ideas (id, title, summary, problem, why_it_matters, constraints, existing_attempts,
             open_questions, desired_outputs, tags, author, license, visibility, status, parent_idea_id,
-            source_work_id, graph, created_at, updated_at, stop_conditions, source_work_revision_id, agent_request_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            source_work_id, graph, created_at, updated_at, stop_conditions, source_work_revision_id, agent_request_id, relation_kind)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         idea.id,
         idea.title,
@@ -526,6 +529,7 @@ function contentInserts(db: Database): InStatement[] {
         jsonText(idea.stopConditions ?? []),
         idea.sourceWorkRevisionId ?? null,
         idea.agentRequestId ?? null,
+        idea.relationKind ?? null,
       ],
     });
   }

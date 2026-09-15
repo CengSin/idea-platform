@@ -30,6 +30,7 @@ test("Agent drafts are scoped, idempotent, private and notify their owner once",
   const retry = proposeIteration(db, "owner", "attempt", "work", body, "retry", at);
   assert.equal(first.created, true); assert.equal(retry.created, false);
   assert.equal(retry.idea.id, first.idea.id); assert.equal(first.idea.status, "draft");
+  assert.equal(first.idea.relationKind, "iterate");
   assert.equal(first.idea.visibility, "private"); assert.equal(first.idea.author.kind, "agent");
   assert.equal(db.notifications.length, 1); assert.equal(db.notifications[0].userId, "owner");
   assert.equal(db.events.length, 0); assert.equal(db.works[0].citations, 0);

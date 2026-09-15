@@ -11,8 +11,9 @@ import {
   deleteNextIdeaAction,
   updateNextIdeaAction,
 } from "@/lib/actions";
+import { IDEA_RELATION_KIND_LABEL, ideaRelationKind } from "@/lib/idea-relations";
 import { NEXT_IDEA_STAGE_LABEL, type NextIdeaStage } from "@/lib/next-ideas";
-import type { Idea } from "@/lib/types";
+import type { Idea, IdeaRelationKind } from "@/lib/types";
 import { ArrowRight, GitBranch, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -24,6 +25,7 @@ export type NextIdeaItem = {
   workCount: number;
   canManage: boolean;
   canDelete: boolean;
+  relationKind: IdeaRelationKind;
 };
 
 export function NextIdeas({
@@ -66,7 +68,7 @@ export function NextIdeas({
           </div>
           <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.035em]">这个作品，下一步可以长成什么？</h2>
           <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-muted">
-            每一步都基于这个作品的确定版本。草稿仅你可见，发布后其他人可以承接并交付新的作品。
+            发布前请选择：这是优化现有作品，还是长出一个独立的新方向。迭代会收进版本历史；衍生会在关系图谱上长出新分支。
           </p>
         </div>
         {canCreate ? (
@@ -86,7 +88,10 @@ export function NextIdeas({
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Chip tone={tone}>{item.idea.status === "draft" ? "私有草稿" : NEXT_IDEA_STAGE_LABEL[item.stage]}</Chip>
+                      <Chip tone={item.relationKind === "derive" ? "idea" : tone}>
+                        {item.idea.status === "draft" ? "私有草稿" : IDEA_RELATION_KIND_LABEL[item.relationKind]}
+                      </Chip>
+                      {item.idea.status !== "draft" ? <Chip tone={tone}>{NEXT_IDEA_STAGE_LABEL[item.stage]}</Chip> : null}
                       <span className="text-[11px] text-muted">
                         {item.idea.status === "draft" ? (item.idea.author.kind === "agent" ? "Agent 提交 · 待你审阅" : "待你审阅") : item.stage === "sprout"
                           ? "等待认领"
@@ -166,7 +171,7 @@ export function NextIdeas({
           startTransition(async () => {
             try {
               if (editing) await updateNextIdeaAction(editing.id, input);
-              else await createNextIdeaAction(workId, input, draft);
+              else await createNextIdeaAction(workId, { ...input, relationKind: input.relationKind }, draft);
               setEditorOpen(false);
               router.refresh();
             } catch (cause) {
@@ -225,7 +230,7 @@ function NextIdeaEditor({
   pending: boolean;
   error: string | null;
   onClose: () => void;
-  onSubmit: (input: { title: string; summary: string; problem: string; whyItMatters: string; desiredOutputs: string[]; stopConditions: string[] }, draft?: boolean) => void;
+  onSubmit: (input: { title: string; summary: string; problem: string; whyItMatters: string; desiredOutputs: string[]; stopConditions: string[]; relationKind: IdeaRelationKind }, draft?: boolean) => void;
 }) {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -233,6 +238,7 @@ function NextIdeaEditor({
   const [whyItMatters, setWhyItMatters] = useState("");
   const [criteria, setCriteria] = useState("");
   const [stop, setStop] = useState("");
+  const [relationKind, setRelationKind] = useState<IdeaRelationKind | "">("");
 
   useEffect(() => {
     if (!open) return;
@@ -242,23 +248,61 @@ function NextIdeaEditor({
     setWhyItMatters(idea?.whyItMatters ?? "");
     setCriteria(idea?.desiredOutputs.join("\n") ?? "");
     setStop(idea?.stopConditions?.join("\n") ?? "");
+    setRelationKind(idea ? ideaRelationKind(idea) ?? "derive" : "");
   }, [open, idea]);
 
-  const canSubmit = Boolean(title.trim() && summary.trim() && problem.trim());
+  const canSubmit = Boolean(title.trim() && summary.trim() && problem.trim() && (idea || relationKind));
+  const payload = {
+    title,
+    summary,
+    problem,
+    whyItMatters,
+    desiredOutputs: criteria.split("\n").map((item) => item.trim()).filter(Boolean),
+    stopConditions: stop.split("\n").map((item) => item.trim()).filter(Boolean),
+    relationKind: (relationKind || "derive") as IdeaRelationKind,
+  };
   return (
     <Dialog
       open={open}
       onClose={onClose}
+      wide={!idea}
       title={idea ? "编辑下一步" : "从这个作品发布下一步"}
-      subtitle="绑定当前作品版本。可以先存为私有草稿，审阅后再公开。"
+      subtitle={idea ? "可以更新说明。迭代或衍生的判定提交后不能自行更改。" : "先选择这是在优化现有作品，还是做一个新的东西。可以先存为私有草稿。"}
     >
       <form
         className="flex flex-col gap-4"
         onSubmit={(event) => {
           event.preventDefault();
-          if (canSubmit && !pending) onSubmit({ title, summary, problem, whyItMatters, desiredOutputs: criteria.split("\n").map(s => s.trim()).filter(Boolean), stopConditions: stop.split("\n").map(s => s.trim()).filter(Boolean) });
+          if (canSubmit && !pending) onSubmit(payload);
         }}
       >
+        {idea ? (
+          <p className="rounded-2xl border border-line bg-white/5 px-4 py-3 text-[13px] text-muted">
+            已判定为{IDEA_RELATION_KIND_LABEL[ideaRelationKind(idea) ?? "derive"]}，提交后不可自行更改。
+          </p>
+        ) : (
+          <fieldset className="relation-choice">
+            <legend>这个想法是</legend>
+            {([
+              ["iterate", "优化现有作品的功能/体验", "会合并进这个作品的版本历史，不单独展示为新分支"],
+              ["derive", "一个新的方向 / 独立产出物", "会在关系图谱上长出一条新的分支"],
+            ] as const).map(([value, label, hint]) => (
+              <label key={value} className={relationKind === value ? "is-selected" : ""}>
+                <input
+                  type="radio"
+                  name="relationKind"
+                  value={value}
+                  checked={relationKind === value}
+                  onChange={() => setRelationKind(value)}
+                />
+                <span>
+                  <strong>{label}</strong>
+                  <small>{hint}</small>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
         <Field label="下一步标题">
           <TextInput value={title} onChange={(event) => setTitle(event.target.value)} placeholder="一句话说清还可以继续做什么" autoFocus />
         </Field>
@@ -282,11 +326,11 @@ function NextIdeaEditor({
         </Field>
           </div>
         </details>
-        <p className="text-[12px] leading-relaxed text-muted">自动关联来源作品与上游背景。公开发布 · 允许认领与继续衍生 · 自动保留来源作品</p>
+        <p className="text-[12px] leading-relaxed text-muted">自动关联来源作品与上游背景。公开发布后，迭代收进版本时间线，衍生在图谱上长出新节点。</p>
         {error ? <p className="text-[13px] text-blocked">{error}</p> : null}
         <div className="flex justify-end gap-2">
           <Button type="button" onClick={onClose}>取消</Button>
-          {!idea && <Button type="button" disabled={!canSubmit || pending} onClick={() => onSubmit({ title, summary, problem, whyItMatters, desiredOutputs: criteria.split("\n").filter(Boolean), stopConditions: stop.split("\n").filter(Boolean) }, true)}>保存草稿</Button>}
+          {!idea && <Button type="button" disabled={!canSubmit || pending} onClick={() => onSubmit(payload, true)}>保存草稿</Button>}
           <Button type="submit" tone="idea" disabled={!canSubmit || pending}>
             {pending ? "正在保存…" : idea ? "保存修改" : "公开发布"}
           </Button>

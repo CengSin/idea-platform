@@ -124,7 +124,7 @@ export function ideaMetrics(db: Database, ideaId: string): IdeaMetrics {
       (w) => w.ideaId === ideaId && w.status === "published",
     ).length,
     forkCount: db.ideas.filter(
-      (i) => i.parentIdeaId === ideaId && i.status !== "draft",
+      (i) => i.parentIdeaId === ideaId && i.status !== "draft" && i.relationKind !== "iterate",
     ).length,
     totalAttemptCount: attempts.filter((a) => a.status !== "abandoned").length,
   };

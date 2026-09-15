@@ -43,6 +43,7 @@ test("databaseFromRows restores nested JSON and optional fields", () => {
         graph: '{"x":1,"y":2}',
         created_at: "2026-08-29T05:01:48.985Z",
         updated_at: "2026-08-29T05:01:48.985Z",
+        relation_kind: "derive",
       }),
     ],
     attempts: [
@@ -110,6 +111,7 @@ test("databaseFromRows restores nested JSON and optional fields", () => {
   assert.equal(db.users[0]?.displayName, "cengsin");
   assert.deepEqual(db.users[0]?.skills, ["go"]);
   assert.equal(db.ideas[0]?.author.userId, "user_38c0e310a872");
+  assert.equal(db.ideas[0]?.relationKind, "derive");
   assert.equal(db.attempts[0]?.projectDescription, "desc");
   assert.equal(db.notifications[0]?.read, true);
   assert.equal(db.notifications[0]?.userId, "user_38c0e310a872");

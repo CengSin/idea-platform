@@ -115,6 +115,7 @@ export async function getWorkBundle(id: string) {
       canManage: idea.author.userId === me.id,
       canDelete: !db.attempts.some((attempt) => attempt.ideaId === idea.id) &&
         !db.works.some((derivedWork) => derivedWork.ideaId === idea.id),
+      relationKind: idea.relationKind === "iterate" ? "iterate" as const : "derive" as const,
     }));
   return {
     db,

@@ -10,6 +10,7 @@ import { getIdeaBundle } from "@/lib/queries";
 import Link from "@/components/ui/NavigationLink";
 import { notFound } from "next/navigation";
 import { sourceContext } from "@/lib/agent-context";
+import { IDEA_RELATION_KIND_LABEL, ideaRelationKind, isIterateIdea } from "@/lib/idea-relations";
 import { GitBranch } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ export default async function IdeaDetailPage({
         }
       >
         {idea.status === "draft" && isOwner ? <DraftIdeaActions idea={idea} /> : null}
-        {idea.parentIdeaId && <div className="evolution-trail"><GitBranch size={15}/>{source ? <><Link href={`/ideas/${source.idea.id}`}>{source.idea.title}</Link><span>↝</span>{source.work ? <Link href={`/works/${source.work.id}${source.work.revision_id ? `?revision=${encodeURIComponent(source.work.revision_id)}#revision-${encodeURIComponent(source.work.revision_id)}` : ""}`}>{source.work.title} · {source.work.revision_number ? `v${source.work.revision_number}` : "历史版本未记录"}</Link> : <span>来源作品暂不可见</span>}<span>↝</span><span>{idea.status === "draft" ? "迭代草稿" : "本轮迭代"}</span></> : <span>来源暂不可见，保留这一步的独立记录。</span>}</div>}
+        {idea.parentIdeaId && <div className="evolution-trail"><GitBranch size={15}/>{source ? <><Link href={`/ideas/${source.idea.id}`}>{source.idea.title}</Link><span>↝</span>{source.work ? <Link href={`/works/${source.work.id}${source.work.revision_id ? `?revision=${encodeURIComponent(source.work.revision_id)}#revision-${encodeURIComponent(source.work.revision_id)}` : ""}`}>{source.work.title} · {source.work.revision_number ? `v${source.work.revision_number}` : "历史版本未记录"}</Link> : <span>来源作品暂不可见</span>}<span>↝</span><span>{idea.status === "draft" ? `${IDEA_RELATION_KIND_LABEL[ideaRelationKind(idea) ?? "derive"]}草稿` : IDEA_RELATION_KIND_LABEL[ideaRelationKind(idea) ?? "derive"]}</span></> : <span>来源暂不可见，保留这一步的独立记录。</span>}</div>}
         <IdeaHeader
           idea={idea}
           author={author}
@@ -72,17 +73,18 @@ export default async function IdeaDetailPage({
         </div>
 
         <section className="mt-12">
-          <h2 className="text-[18px] font-semibold tracking-[-0.03em]">衍生想法</h2>
+          <h2 className="text-[18px] font-semibold tracking-[-0.03em]">从这个想法长出的下一步</h2>
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             {forks.map((fork) => (
               <Link key={fork.id} href={`/ideas/${fork.id}`} className="paper-summary paper-progress lift pressable">
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-[14.5px] tracking-[-0.02em]">{fork.title}</div>
-                  <Chip>{IDEA_STATUS_LABEL[fork.status]}</Chip>
+                  <Chip tone={isIterateIdea(fork) ? "mute" : "idea"}>{IDEA_RELATION_KIND_LABEL[ideaRelationKind(fork) ?? "derive"]}</Chip>
                 </div>
-                <p className="mt-2 line-clamp-2 text-[13px] text-muted">{fork.summary}</p><p className="mt-3 text-[11px] text-muted">基于 {db.works.find(w => w.id === fork.sourceWorkId)?.title || "历史来源"} · {fork.sourceWorkRevisionId ? `v${db.works.find(w => w.id === fork.sourceWorkId)?.revisions?.find(r => r.id === fork.sourceWorkRevisionId)?.number ?? "?"}` : "版本未记录"}</p>
+                <p className="mt-2 line-clamp-2 text-[13px] text-muted">{fork.summary}</p><p className="mt-3 text-[11px] text-muted">{IDEA_STATUS_LABEL[fork.status]} · 基于 {db.works.find(w => w.id === fork.sourceWorkId)?.title || "历史来源"} · {fork.sourceWorkRevisionId ? `v${db.works.find(w => w.id === fork.sourceWorkId)?.revisions?.find(r => r.id === fork.sourceWorkRevisionId)?.number ?? "?"}` : "版本未记录"}</p>
               </Link>
             ))}
+            {forks.length === 0 ? <p className="text-[13px] text-muted">还没有基于这个想法的迭代或新方向。</p> : null}
           </div>
         </section>
       </PageFrame>

@@ -34,6 +34,7 @@ test("work owner can create a public, attributed next idea", () => {
   assert.equal(idea.status, "published");
   assert.equal(idea.parentIdeaId, "parent");
   assert.equal(idea.sourceWorkId, "work");
+  assert.equal(idea.relationKind, "derive");
   assert.deepEqual(idea.tags, ["社区"]);
   assert.equal(db.works[0].citations, 1);
   assert.equal(nextIdeaStage(db, idea.id), "sprout");
@@ -72,6 +73,14 @@ test("claimed next ideas cannot be deleted", () => {
 test("a non-owner cannot create a next idea for the work", () => {
   const db = fixture();
   assert.throws(() => createNextIdeaRecord(db, "stranger", "work", input, "next", at), status(403));
+});
+
+test("an iteration next idea is stored as iterate and cannot be reclassified on edit", () => {
+  const db = fixture();
+  const idea = createNextIdeaRecord(db, "owner", "work", { ...input, relationKind: "iterate" }, "next", at);
+  assert.equal(idea.relationKind, "iterate");
+  updateNextIdeaRecord(db, "owner", "next", { ...input, title: "更新", relationKind: "derive" }, at);
+  assert.equal(db.ideas[1].relationKind, "iterate");
 });
 
 test("subidea stores user conditions and legacy edits do not clear them", () => {

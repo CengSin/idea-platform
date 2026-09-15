@@ -138,6 +138,24 @@ test("public creator links and bio follow profile visibility", () => {
   assert.equal(buildPublicCatalog(db)[0].authorBio, undefined);
 });
 
+test("public catalog exposes relationKind for sourced ideas without leaking private ancestry", () => {
+  const db = fixture();
+  db.ideas.push({
+    ...idea,
+    id: "child",
+    parentIdeaId: idea.id,
+    sourceWorkId: work.id,
+    relationKind: "iterate",
+  });
+  db.works[0] = { ...work, attemptId: attempt.id };
+  db.attempts[0] = { ...attempt, workIds: [work.id] };
+  const catalog = buildPublicCatalog(db);
+  const child = catalog.find((item) => item.id === "child");
+  assert.equal(child?.relationKind, "iterate");
+  assert.equal(catalog.find((item) => item.id === idea.id)?.relationKind, "derive");
+  assert.equal(child?.source?.workId, work.id);
+});
+
 test("deprecated ideas remain publicly readable with their lifecycle status", () => {
   const db = fixture();
   db.ideas[0] = { ...idea, status: "deprecated" };

@@ -115,7 +115,7 @@ export async function createNextIdea(userId: string, workId: string, input: Next
   const id = `idea_${nanoid(8)}`;
   const at = nowIso();
   await mutateDb((db) => {
-    const idea = createNextIdeaRecord(db, userId, workId, input, id, at, { draft });
+    const idea = createNextIdeaRecord(db, userId, workId, input, id, at, { draft, relationKind: input.relationKind });
     if (draft) return;
     const me = db.users.find((item) => item.id === userId)!;
     db.events.unshift({
@@ -123,7 +123,9 @@ export async function createNextIdea(userId: string, workId: string, input: Next
       at,
       actorId: me.id,
       actorName: me.displayName,
-      text: `从作品中发布了下一步「${idea.title}」`,
+      text: idea.relationKind === "iterate"
+        ? `为作品规划了功能迭代「${idea.title}」`
+        : `从作品中发布了新方向「${idea.title}」`,
       ideaId: idea.id,
       workId,
     });

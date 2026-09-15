@@ -36,6 +36,7 @@ export type NotificationKind =
   | "work"
   | "agent"
   | "fork";
+export type IdeaRelationKind = "iterate" | "derive";
 
 export const ACTIVE_ATTEMPT_STATUSES: AttemptStatus[] = [
   "understanding",
@@ -107,6 +108,8 @@ export interface Idea {
   parentIdeaId?: string;
   sourceWorkId?: string;
   sourceWorkRevisionId?: string;
+  /** How a sourced idea relates to its origin. Legacy rows without this field are treated as derive. */
+  relationKind?: IdeaRelationKind;
   agentRequestId?: string;
   graph: { x: number; y: number };
   createdAt: string;

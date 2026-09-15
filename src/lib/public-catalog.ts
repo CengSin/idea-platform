@@ -29,16 +29,25 @@ export function buildPublicCatalog(db: Database) {
       const attemptIds = new Set(attempts.map((attempt) => attempt.id));
       const works = db.works
         .filter((work) => work.ideaId === idea.id && work.status === "published" && attemptIds.has(work.attemptId))
-        .map((work) => ({
-          id: work.id,
-          revisionNumber: currentWorkRevision(work).number,
-          title: work.title,
-          summary: work.summary,
-          type: work.type,
-          coverUrl: work.coverUrl?.startsWith("/covers/") ? work.coverUrl : publicUrl(work.coverUrl),
-          externalUrl: publicUrl(work.externalUrl),
-          reminders: publicReminders(work),
-        }));
+        .map((work) => {
+          const current = currentWorkRevision(work);
+          const revisions = (work.revisions?.length ? work.revisions : [current]).map((revision) => ({
+            number: revision.number,
+            title: revision.title,
+            recordedAt: revision.recordedAt || undefined,
+          }));
+          return {
+            id: work.id,
+            revisionNumber: current.number,
+            title: work.title,
+            summary: work.summary,
+            type: work.type,
+            coverUrl: work.coverUrl?.startsWith("/covers/") ? work.coverUrl : publicUrl(work.coverUrl),
+            externalUrl: publicUrl(work.externalUrl),
+            reminders: publicReminders(work),
+            revisions,
+          };
+        });
       const author = db.users.find((user) => user.id === idea.author.userId);
       const parent = db.ideas.find(i => i.id === idea.parentIdeaId && i.visibility === "public" && visibleStatuses.has(i.status));
       const source = parent && db.works.find(w => w.id === idea.sourceWorkId && w.ideaId === parent.id && w.status === "published" && db.attempts.some(a => a.id === w.attemptId && a.ideaId === parent.id && a.visibility === "public" && a.status !== "abandoned"));
@@ -47,6 +56,9 @@ export function buildPublicCatalog(db: Database) {
         id: idea.id,
         updatedAt: idea.updatedAt,
         source: parent && source ? { ideaId: parent.id, ideaTitle: parent.title, workId: source.id, workTitle: revision?.title ?? source.title, revisionNumber: revision?.number } : undefined,
+        relationKind: idea.parentIdeaId || idea.sourceWorkId
+          ? idea.relationKind === "iterate" ? "iterate" as const : "derive" as const
+          : undefined,
         hasUnavailableSource: Boolean(idea.parentIdeaId && (!parent || !source)),
         title: idea.title,
         status: idea.status,
