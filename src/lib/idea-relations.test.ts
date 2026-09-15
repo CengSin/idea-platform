@@ -4,10 +4,11 @@ import { createNextIdeaRecord } from "./next-ideas.ts";
 import { buildPublicCatalog } from "./public-catalog.ts";
 import {
   buildRelationGraph,
+  buildFamilyBranch,
+  previewWorkRows,
+  familyWorkCount,
   ideaRelationKind,
   isIterateIdea,
-  seedGraphPositions,
-  fitGraphView,
 } from "./idea-relations.ts";
 import { fixture, at } from "./agent-test-fixture.ts";
 
@@ -52,15 +53,37 @@ test("an unpublished derive idea is a sprout node, not a work", () => {
   assert.equal(graph.nodes.find((node) => node.id === "sprout")?.kind, "sprout");
 });
 
-test("layered seed places roots before derived branches", () => {
+test("family branch keeps independent ideas apart and aligns derives to their source work", () => {
   const db = fixture();
-  createNextIdeaRecord(db, "owner", "work", { ...input, relationKind: "derive" }, "child", at);
+  createNextIdeaRecord(db, "owner", "work", { ...input, title: "新方向", relationKind: "derive" }, "child", at);
+  db.ideas.push({ ...db.ideas[0], id: "lonely", title: "独处的念头", updatedAt: at });
+  const catalog = buildPublicCatalog(db);
+  const graph = buildRelationGraph(catalog);
+  const family = buildFamilyBranch("idea", graph);
+  const stray = buildFamilyBranch("lonely", graph);
+  assert.equal(family?.rows.length, 1);
+  assert.equal(family?.rows[0].work.id, "work");
+  assert.equal(family?.rows[0].next[0]?.idea.id, "child");
+  assert.equal(familyWorkCount(family!), 1);
+  assert.equal(stray?.rows.length, 0);
+  assert.equal(graph.nodes.some((node) => node.id === "lonely"), true);
+  assert.equal(family?.rows[0].next.some((branch) => branch.idea.id === "lonely"), false);
+});
+
+test("work preview keeps the selected path when extra implementations are collapsed", () => {
+  const db = fixture();
+  for (const id of ["w2", "w3", "w4"]) {
+    db.attempts.push({ ...db.attempts[0], id: `${id}-a`, workIds: [id] });
+    db.works.push({ ...db.works[0], id, attemptId: `${id}-a`, title: id, revisions: undefined });
+  }
+  createNextIdeaRecord(db, "owner", "w4", { ...input, title: "从第四个作品长出", relationKind: "derive" }, "late", at);
   const graph = buildRelationGraph(buildPublicCatalog(db));
-  const positions = seedGraphPositions(graph, 800, 600);
-  assert.equal(positions.size, graph.nodes.length);
-  assert.ok((positions.get("idea")?.x ?? 0) <= (positions.get("child")?.x ?? 0));
-  const fitted = fitGraphView(graph, positions, 400, 640);
-  assert.ok(fitted.k > 0 && fitted.k <= 1);
+  const family = buildFamilyBranch("idea", graph);
+  const preview = previewWorkRows(family!.rows, "late", false, 3);
+  assert.equal(preview.shown.length >= 3, true);
+  assert.equal(preview.shown.some((row) => row.work.id === "w4"), true);
+  assert.equal(preview.shown.find((row) => row.work.id === "w4")?.next[0]?.idea.id, "late");
+  assert.ok(preview.hidden.length >= 1);
 });
 
 test("iterate ideas stay in the public catalog but are not graph branches", () => {

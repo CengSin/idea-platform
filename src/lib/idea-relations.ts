@@ -181,161 +181,69 @@ export function buildRelationGraph(ideas: PublicIdea[], workspace = false): Rela
   };
 }
 
-export type GraphPoint = { x: number; y: number };
-
-const NODE_SIZE: Record<RelationGraphNodeKind, { w: number; h: number }> = {
-  idea: { w: 196, h: 86 },
-  work: { w: 188, h: 92 },
-  sprout: { w: 188, h: 86 },
+export type FamilyWorkRow = {
+  work: RelationGraphNode;
+  next: FamilyBranch[];
 };
 
-export function graphNodeSize(kind: RelationGraphNodeKind) {
-  return NODE_SIZE[kind];
+export type FamilyBranch = {
+  idea: RelationGraphNode;
+  rows: FamilyWorkRow[];
+};
+
+export const FAMILY_WORK_PREVIEW = 3;
+
+function outgoing(graph: RelationGraph, from: string, kind: RelationGraphEdge["kind"]) {
+  return graph.edges
+    .filter((edge) => edge.from === from && edge.kind === kind)
+    .map((edge) => graph.nodes.find((node) => node.id === edge.to))
+    .filter((node): node is RelationGraphNode => Boolean(node));
 }
 
-function incoming(graph: RelationGraph) {
-  const inbound = new Map<string, string[]>();
-  for (const node of graph.nodes) inbound.set(node.id, []);
-  for (const edge of graph.edges) inbound.get(edge.to)?.push(edge.from);
-  return inbound;
+/** One project family as a left-to-right tree: idea → works → derived ideas. */
+export function buildFamilyBranch(ideaId: string, graph: RelationGraph, seen = new Set<string>()): FamilyBranch | null {
+  const idea = graph.nodes.find((node) => node.id === ideaId);
+  if (!idea) return null;
+  if (seen.has(ideaId)) return { idea, rows: [] };
+  const visiting = new Set(seen);
+  visiting.add(ideaId);
+  const rows = outgoing(graph, ideaId, "owns").map((work) => ({
+    work,
+    next: outgoing(graph, work.id, "derive")
+      .map((child) => buildFamilyBranch(child.id, graph, visiting))
+      .filter((branch): branch is FamilyBranch => Boolean(branch)),
+  }));
+  return { idea, rows };
 }
 
-/** Stable layered seed so growth reads left-to-right before forces relax overlap. */
-export function seedGraphPositions(graph: RelationGraph, width: number, height: number): Map<string, GraphPoint> {
-  const positions = new Map<string, GraphPoint>();
-  if (!graph.nodes.length) return positions;
-  const inbound = incoming(graph);
-  const layer = new Map<string, number>();
-  const queue = graph.nodes.filter((node) => (inbound.get(node.id)?.length ?? 0) === 0).map((node) => node.id);
-  for (const id of queue) layer.set(id, 0);
-  for (let i = 0; i < queue.length; i++) {
-    const id = queue[i];
-    const depth = layer.get(id) ?? 0;
-    for (const edge of graph.edges) {
-      if (edge.from !== id) continue;
-      const next = Math.max(layer.get(edge.to) ?? 0, depth + 1);
-      if (!layer.has(edge.to)) queue.push(edge.to);
-      layer.set(edge.to, next);
-    }
-  }
-  for (const node of graph.nodes) if (!layer.has(node.id)) layer.set(node.id, 0);
-  const buckets = new Map<number, string[]>();
-  for (const node of graph.nodes) {
-    const depth = layer.get(node.id) ?? 0;
-    buckets.set(depth, [...(buckets.get(depth) ?? []), node.id]);
-  }
-  const depths = [...buckets.keys()].sort((a, b) => a - b);
-  const maxDepth = Math.max(1, depths.at(-1) ?? 0);
-  const padX = 120;
-  const padY = 80;
-  for (const depth of depths) {
-    const ids = buckets.get(depth) ?? [];
-    ids.forEach((id, index) => {
-      const x = padX + (maxDepth === 0 ? width / 2 - padX : (depth / maxDepth) * Math.max(240, width - padX * 2));
-      const y = padY + ((index + 1) / (ids.length + 1)) * Math.max(160, height - padY * 2);
-      positions.set(id, { x, y });
-    });
-  }
-  return positions;
+export function familyWorkCount(branch: FamilyBranch): number {
+  return branch.rows.reduce((count, row) => count + 1 + row.next.reduce((sum, child) => sum + familyWorkCount(child), 0), 0);
 }
 
-export function relaxGraphPositions(
-  graph: RelationGraph,
-  positions: Map<string, GraphPoint>,
-  width: number,
-  height: number,
-  ticks = 80,
-) {
-  const velocities = new Map(graph.nodes.map((node) => [node.id, { vx: 0, vy: 0 }]));
-  for (let tick = 0; tick < ticks; tick++) {
-    const alpha = 0.12 * (1 - tick / ticks);
-    for (let i = 0; i < graph.nodes.length; i++) {
-      for (let j = i + 1; j < graph.nodes.length; j++) {
-        const a = graph.nodes[i];
-        const b = graph.nodes[j];
-        const pa = positions.get(a.id)!;
-        const pb = positions.get(b.id)!;
-        let dx = pa.x - pb.x;
-        let dy = pa.y - pb.y;
-        let dist = Math.hypot(dx, dy) || 0.01;
-        const min = (graphNodeSize(a.kind).w + graphNodeSize(b.kind).w) * 0.42;
-        const force = ((min * min) / dist) * alpha * 0.04;
-        dx /= dist;
-        dy /= dist;
-        const va = velocities.get(a.id)!;
-        const vb = velocities.get(b.id)!;
-        va.vx += dx * force;
-        va.vy += dy * force;
-        vb.vx -= dx * force;
-        vb.vy -= dy * force;
-        if (dist < min) {
-          const overlap = (min - dist) * 0.45;
-          pa.x += dx * overlap;
-          pa.y += dy * overlap;
-          pb.x -= dx * overlap;
-          pb.y -= dy * overlap;
-        }
-      }
-    }
-    for (const edge of graph.edges) {
-      const pa = positions.get(edge.from);
-      const pb = positions.get(edge.to);
-      if (!pa || !pb) continue;
-      let dx = pb.x - pa.x;
-      let dy = pb.y - pa.y;
-      const dist = Math.hypot(dx, dy) || 0.01;
-      const rest = edge.kind === "owns" ? 150 : 210;
-      const force = (dist - rest) * alpha * 0.08;
-      dx /= dist;
-      dy /= dist;
-      const va = velocities.get(edge.from)!;
-      const vb = velocities.get(edge.to)!;
-      va.vx += dx * force;
-      va.vy += dy * force;
-      vb.vx -= dx * force;
-      vb.vy -= dy * force;
-    }
-    for (const node of graph.nodes) {
-      const p = positions.get(node.id)!;
-      const v = velocities.get(node.id)!;
-      v.vx += ((width / 2) - p.x) * alpha * 0.004;
-      v.vy += ((height / 2) - p.y) * alpha * 0.006;
-      v.vx *= 0.72;
-      v.vy *= 0.72;
-      p.x = Math.min(width - 40, Math.max(40, p.x + v.vx));
-      p.y = Math.min(height - 40, Math.max(40, p.y + v.vy));
-    }
-  }
-  return positions;
+export function familySproutCount(branch: FamilyBranch): number {
+  return branch.rows.reduce(
+    (count, row) => count + row.next.reduce((sum, child) => sum + (child.rows.length ? familySproutCount(child) : 1), 0),
+    0,
+  );
 }
 
-export function fitGraphView(
-  graph: RelationGraph,
-  positions: Map<string, GraphPoint>,
-  width: number,
-  height: number,
-) {
-  if (!graph.nodes.length) return { x: 0, y: 0, k: 1 };
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const node of graph.nodes) {
-    const point = positions.get(node.id);
-    if (!point) continue;
-    const box = graphNodeSize(node.kind);
-    minX = Math.min(minX, point.x);
-    minY = Math.min(minY, point.y);
-    maxX = Math.max(maxX, point.x + box.w);
-    maxY = Math.max(maxY, point.y + box.h);
+export function branchContains(branch: FamilyBranch, id: string): boolean {
+  if (branch.idea.id === id) return true;
+  return branch.rows.some((row) => row.work.id === id || row.next.some((child) => branchContains(child, id)));
+}
+
+function rowContains(row: FamilyWorkRow, id: string) {
+  return row.work.id === id || row.next.some((child) => branchContains(child, id));
+}
+
+/** Prefer rows that already grew a new direction; always keep the selected path visible. */
+export function previewWorkRows(rows: FamilyWorkRow[], selectedId: string | null, showAll = false, limit = FAMILY_WORK_PREVIEW) {
+  const ranked = [...rows].sort((a, b) => Number(b.next.length > 0) - Number(a.next.length > 0));
+  if (showAll || ranked.length <= limit) return { shown: ranked, hidden: [] as FamilyWorkRow[] };
+  const required = new Set(ranked.filter((row) => selectedId && rowContains(row, selectedId)));
+  const shown: FamilyWorkRow[] = [];
+  for (const row of ranked) {
+    if (shown.length < limit || required.has(row)) shown.push(row);
   }
-  const pad = 40;
-  const w = Math.max(1, maxX - minX);
-  const h = Math.max(1, maxY - minY);
-  const k = Math.min((width - pad * 2) / w, (height - pad * 2) / h, 1);
-  return {
-    k,
-    x: (width - w * k) / 2 - minX * k,
-    y: (height - h * k) / 2 - minY * k,
-  };
+  return { shown, hidden: ranked.filter((row) => !shown.includes(row)) };
 }
