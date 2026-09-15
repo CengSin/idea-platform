@@ -14,3 +14,4 @@ ENV.md
 .tunnel-url
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+docs/
