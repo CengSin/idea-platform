@@ -15,13 +15,11 @@ import {
   clearContent,
   createNextIdea,
   deleteNextIdea,
-  dismissAgentSuggestion,
   markNotificationsRead,
   publishIdea,
   publishIdeaDraft,
   removeProjectLink,
   saveIdeaDraft,
-  setWorkIterationStatus,
   updateNextIdea,
   updateIdeaDraft,
   deleteIdeaDraft,
@@ -104,19 +102,6 @@ export async function deleteNextIdeaAction(ideaId: string) {
   return result;
 }
 
-export async function dismissAgentSuggestionAction(workId: string, suggestionId: string) {
-  const me = await requireCurrentUser();
-  const result = await dismissAgentSuggestion(me.id, workId, suggestionId);
-  refresh();
-  return result;
-}
-
-export async function setWorkIterationStatusAction(workId: string, status: "open" | "closed") {
-  const me = await requireCurrentUser();
-  const result = await setWorkIterationStatus(me.id, workId, status);
-  refresh();
-  return result;
-}
 
 export async function generateAgentSetupAction(input: {
   attemptId: string;
@@ -210,26 +195,6 @@ export async function setIdeaDeprecatedAction(ideaId: string, deprecated: boolea
   refresh();
 }
 
-export async function runWorkAnalysisAction(workId: string) {
-  const me = await requireCurrentUser();
-  const { getEffectiveAgentConfig } = await import("./agent-config");
-  const config = await getEffectiveAgentConfig();
-  if (!config.openaiApiKey || !config.openaiModel) throw new Error("管理员尚未配置分析模型或 API Key。");
-  await mutateDb(db => {
-    const work = db.works.find(w => w.id === workId);
-    const attempt = db.attempts.find(a => a.id === work?.attemptId);
-    if (!work || attempt?.ownerId !== me.id) throw new Error("只能分析自己的作品。");
-    if (work.status !== "published" || attempt.status !== "published") throw new Error("请先完成并提交作品。");
-    if (work.iteration?.status === "closed") throw new Error("请先开启提醒。");
-    const job = work.iteration?.analysis;
-    if (job?.status === "running" && Date.parse(job.leaseUntil ?? "") > Date.now()) throw new Error("分析已在运行。");
-    if (work.iteration) delete work.iteration.analysis;
-  });
-  const { runIdeaAgentScan } = await import("./idea-agent-runner");
-  const result = await runIdeaAgentScan({ workId });
-  refresh();
-  return result;
-}
 
 export async function addAttemptTodoAction(attemptId: string, input: { id: string; title: string }) {
   const me = await requireCurrentUser();

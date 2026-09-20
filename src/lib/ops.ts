@@ -12,10 +12,6 @@ import {
   updateNextIdeaRecord,
   type NextIdeaInput,
 } from "./next-ideas";
-import {
-  dismissAgentSuggestionRecord,
-  setWorkIterationStatusRecord,
-} from "./idea-agent";
 import { type AttemptStatus, type Visibility } from "./types";
 import type { Idea, License, WorkType } from "./types";
 
@@ -166,30 +162,7 @@ export async function deleteNextIdea(userId: string, ideaId: string) {
   return { idea_id: ideaId, work_id: workId, deleted: true };
 }
 
-export async function dismissAgentSuggestion(userId: string, workId: string, suggestionId: string) {
-  await mutateDb((db) => dismissAgentSuggestionRecord(db, userId, workId, suggestionId));
-  return { work_id: workId, suggestion_id: suggestionId, status: "dismissed" as const };
-}
 
-export async function setWorkIterationStatus(userId: string, workId: string, status: "open" | "closed") {
-  const at = nowIso();
-  await mutateDb((db) => {
-    setWorkIterationStatusRecord(db, userId, workId, status);
-    const work = db.works.find((item) => item.id === workId)!;
-    const me = db.users.find((item) => item.id === userId)!;
-    db.events.unshift({
-      id: `evt_${nanoid(6)}`,
-      at,
-      actorId: userId,
-      actorName: me.displayName,
-      text: `${status === "closed" ? "关闭" : "重新开启"}了作品「${work.title}」的后续迭代`,
-      ideaId: work.ideaId,
-      attemptId: work.attemptId,
-      workId,
-    });
-  });
-  return { work_id: workId, iteration_status: status, updated_at: at };
-}
 
 function applyIdeaInput(idea: Idea, input: ReturnType<typeof cleanIdeaInput>) {
   idea.title = input.title;

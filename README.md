@@ -57,17 +57,11 @@ npm run dev
 
 删除会清理作品引用及其动态、通知，保留来源想法、承接和衍生想法，不会删除外部站点或仓库。删去分支最后一个已发布作品时，原为 `published` 的承接回到 `testing`；暂停或放弃状态不变。Agent 配置包含 Bootstrap、作品管理和作者更新想法的接口说明，可从承接页或所属作品详情页重新生成。
 
-### idea-platform-agent 与承接待办
+#### 承接待办与共创
 
 创建想法填写标题、问题和预期效果；补充价值、验收标准（`desiredOutputs`）与停止条件（`stopConditions`）可选。子想法记录本轮改动及原因，Context 返回可访问的上游想法和来源作品。承接的项目描述和目的仅在显式覆盖时保存；留空时读取想法的最新内容。
 
-`idea-platform-agent` 调用管理员配置的 OpenAI 兼容 Chat Completions 接口，根据作品说明、已同步进展、阻塞和已有子想法生成短提醒标签。允许没有提醒，数量不固定（最多六个）；不会自动创建需求，也不声称读取过仓库或实际运行过测试。JSON 输出经过服务端校验。兼容模式遵循 [OpenAI 的 JSON 输出说明](https://developers.openai.com/api/docs/guides/structured-outputs#json-mode)。
-
-后台 `/admin` 或环境变量可设置 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`IDEA_AGENT_MODEL`。模型 ID 必须由管理员填写；缺配置时显示未配置，不生成模板结果。后台保存值优先。密钥不会回显。
-
-`vercel.json` 每五分钟请求 `/api/v1/agent/scan`，需配置 `CRON_SECRET`。后台保存的定时密钥需与 Vercel 的 `CRON_SECRET` 一致。每次最多执行两个分析任务，单次模型请求超时20秒；剩余任务持久保存在作品的 `iteration.analysis`。上下文指纹防止重复分析，租约防止重叠执行和迟到结果覆盖；分析故障最多尝试三次并退避，之后可手动重试。关闭提醒取消未完成分析；重新开启或上下文变化后可再次分析。托管环境需支持此 Cron 频率；也可由现有外部调度器以 Bearer 密钥调用同一端点。
-
-可选邮件配置仍为 `RESEND_API_KEY`、`IDEA_AGENT_EMAIL_FROM`，未配置不影响站内提醒。邮件使用作品和分析批次作为幂等键。待处理提醒标签对所有人可见；分析队列、邮件状态和已忽略记录仍只返回给所属分支作者。忽略、重新分析和开关仍仅作者可操作。
+平台支持通过标准的开发工具 Agent（如 Cursor、Claude Code、本地构建工具）承接想法并推进落地。承接者可在本地环境中通过 `AGENTS.md` 自动化同步项目待办与作品发布进展。
 
 承接页提供简单的**待办清单**（不是执行队列）：每项含 `id`、`title`、`done`、`createdAt`、`updatedAt`。所有者可在网页添加、勾选完成、编辑标题或删除。待办仅对分支所有者可见，不会改写公开承接/作品状态。
 

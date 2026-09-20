@@ -190,8 +190,22 @@ export interface AgentSuggestion {
   acceptedIdeaId?: string;
 }
 
+export type AnalysisJob = {
+  id: string;
+  fingerprint: string;
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+  attempts: number;
+  queuedAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  leaseId?: string;
+  leaseUntil?: string;
+  nextAttemptAt?: string;
+  error?: string;
+};
+
 export interface WorkIteration {
-  analysis?: import("./idea-platform-agent").AnalysisJob;
+  analysis?: AnalysisJob;
   status: "open" | "closed";
   suggestions: AgentSuggestion[];
   scannedAt?: string;

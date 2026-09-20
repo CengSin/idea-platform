@@ -1,45 +1,43 @@
 import "server-only";
 
 import { readDb } from "./db";
-import { getAgentConfigView } from "./agent-config";
+import { dataBackend } from "./data-backend";
 
-export async function getIdeaAgentAdminDashboard() {
-  const [db, configuration] = await Promise.all([readDb(), getAgentConfigView()]);
+export async function getAdminDashboard() {
+  const db = await readDb();
   const completedWorks = db.works.filter((work) => {
     const attempt = db.attempts.find((item) => item.id === work.attemptId);
     return work.status === "published" && attempt?.status === "published";
   });
-  const scannedWorks = completedWorks.filter((work) => Boolean(work.iteration?.scannedAt));
-  const pendingSuggestions = completedWorks.reduce(
-    (count, work) => count + (work.iteration?.suggestions.filter((item) => item.status === "pending" && item.kind === "reminder").length ?? 0),
-    0,
-  );
-  const emailFailures = completedWorks.filter((work) => work.iteration?.email?.status === "failed").length;
+
   const recentWorks = [...completedWorks]
-    .sort((a, b) => (b.iteration?.scannedAt ?? b.publishedAt ?? "").localeCompare(a.iteration?.scannedAt ?? a.publishedAt ?? ""))
+    .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""))
     .slice(0, 12)
-    .map((work) => ({
-      id: work.id,
-      title: work.title,
-      iterationStatus: work.iteration?.status ?? "open",
-      scannedAt: work.iteration?.scannedAt,
-      analysisStatus: work.iteration?.analysis?.status ?? "not_scanned",
-      analysisError: work.iteration?.analysis?.error,
-      pendingSuggestions: work.iteration?.suggestions.filter((item) => item.status === "pending" && item.kind === "reminder").length ?? 0,
-      emailStatus: work.iteration?.email?.status ?? "not_scanned",
-    }));
+    .map((work) => {
+      const idea = db.ideas.find((i) => i.id === work.ideaId);
+      const attempt = db.attempts.find((a) => a.id === work.attemptId);
+      const author = db.users.find((u) => u.id === attempt?.ownerId);
+      return {
+        id: work.id,
+        title: work.title,
+        publishedAt: work.publishedAt,
+        type: work.type,
+        ideaTitle: idea?.title ?? "未知想法",
+        authorName: author?.displayName ?? "未知作者",
+      };
+    });
 
   return {
-    configuration,
     metrics: {
-      completedWorks: completedWorks.length,
-      waitingForScan: completedWorks.filter(
-        (work) => work.iteration?.status !== "closed" && (!work.iteration?.analysis || ["queued", "running", "failed"].includes(work.iteration.analysis.status)),
-      ).length,
-      scannedWorks: scannedWorks.length,
-      closedWorks: completedWorks.filter((work) => work.iteration?.status === "closed").length,
-      pendingSuggestions,
-      emailFailures,
+      totalIdeas: db.ideas.length,
+      totalAttempts: db.attempts.length,
+      totalWorks: db.works.length,
+      totalUsers: db.users.length,
+      publishedWorks: completedWorks.length,
+    },
+    system: {
+      backend: dataBackend(),
+      nodeEnv: process.env.NODE_ENV ?? "development",
     },
     recentWorks,
   };

@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { fixture, at } from "./agent-test-fixture.ts";
 import { proposeIteration } from "./agent-iterations.ts";
 import { addTodo } from "./attempt-todos.ts";
-import { enqueueAnalyses, claimAnalysis } from "./idea-platform-agent.ts";
 
 test("Turso persists todos, analysis leases, model and user stop rules with CAS", async () => {
   const dir = await mkdtemp(join(tmpdir(), "idea-agent-test-"));
@@ -19,7 +18,6 @@ test("Turso persists todos, analysis leases, model and user stop rules with CAS"
     db.ideas[0].stopConditions = ["本轮完成后停下"];
     proposeIteration(db, "owner", "attempt", "work", { request_id: "stable-request", title: "迭代", summary: "白板", problem: "关联缺失" }, "child", at);
     addTodo(db.attempts[0], { id: "t1", title: "本轮待办" }, at);
-    enqueueAnalyses(db, at, () => "analysis"); claimAnalysis(db, at, "lease");
     await store.writeTursoContent(db, { createOnly: true });
     const first = await store.readTursoContent();
     assert.deepEqual(first.value?.works[0].revisions, JSON.parse(JSON.stringify(db.works[0].revisions)));
@@ -28,7 +26,6 @@ test("Turso persists todos, analysis leases, model and user stop rules with CAS"
     assert.equal(first.value?.agentConfig?.openaiModel, "configured-model");
     assert.deepEqual(first.value?.ideas[0].stopConditions, db.ideas[0].stopConditions);
     assert.deepEqual(first.value?.attempts[0].todos, db.attempts[0].todos);
-    assert.equal(first.value?.works[0].iteration?.analysis?.leaseId, "lease");
     await store.writeTursoContent(first.value!, { etag: first.etag });
     await assert.rejects(store.writeTursoContent(first.value!, { etag: first.etag }), store.StorePreconditionFailedError);
   } finally {
