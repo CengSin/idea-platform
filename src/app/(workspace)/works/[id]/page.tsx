@@ -42,11 +42,19 @@ export default async function WorkPage({
       >
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
           <div>
-            <div className="paper-photo">
+            <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-md">
               <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-[340px] w-full object-cover" />
             </div>
-            <p className="mt-5 text-[11px] tracking-widest text-muted">作品 · v{currentWorkRevision(work).number}</p>
-            <h1 className="mt-2 text-[32px] font-semibold tracking-[-0.04em]">{work.title}</h1>
+            <div className="mt-6 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/70">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                已发布 · v{currentWorkRevision(work).number}
+              </span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                {WORK_TYPE_LABEL[work.type]}
+              </span>
+            </div>
+            <h1 className="mt-3 text-[32px] font-bold tracking-[-0.04em] text-slate-900">{work.title}</h1>
             {idea.status === "draft" ? (
               <div className="mt-4 rounded-2xl border border-idea/25 bg-idea/7 px-4 py-3 text-[13px] text-muted">
                 作品已保存到草稿项目，将在来源想法发布时一起对外可见。

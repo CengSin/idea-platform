@@ -20,51 +20,77 @@ export default async function MyIdeasPage() {
           </div>
           <PublishIdeaButton />
         </div>
-        <div className="table-shell">
-          <table className="w-full text-left text-[13.5px]">
-            <thead className="bg-white/4 text-[12px] tracking-[0.06em] text-muted">
-              <tr>
-                <th className="px-5 py-3 font-medium">想法</th>
-                <th className="px-5 py-3 font-medium">状态</th>
-                <th className="px-5 py-3 font-medium">有效承接</th>
-                <th className="px-5 py-3 font-medium">作品</th>
-                <th className="px-5 py-3 font-medium">衍生</th>
-                <th className="px-5 py-3 font-medium">最近更新</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mine.map((idea) => {
-                const m = ideaMetrics(db, idea.id);
-                return (
-                  <tr key={idea.id} className="row-hover border-t border-line">
-                    <td className="px-5 py-4">
-                      <Link href={`/ideas/${idea.id}`} className="tracking-[-0.02em]">
-                        {idea.title}
-                      </Link>
-                      {idea.sourceWorkId && <p className="mt-1 text-[11px] text-muted">↳ {db.works.find(w => w.id === idea.sourceWorkId)?.title || "来源作品暂不可见"}{idea.status === "draft" && idea.author.kind === "agent" ? " · Agent 待审阅" : idea.relationKind === "iterate" ? " · 功能迭代" : " · 新的方向"}</p>}
-                    </td>
-                    <td className="px-5 py-4">
+        {mine.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {mine.map((idea) => {
+              const m = ideaMetrics(db, idea.id);
+              const sourceWork = idea.sourceWorkId ? db.works.find((w) => w.id === idea.sourceWorkId) : null;
+              return (
+                <div
+                  key={idea.id}
+                  className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs transition-all duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-md"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-3">
                       <Chip tone={idea.status === "realized" ? "artifact" : "idea"}>
                         {IDEA_STATUS_LABEL[idea.status]}
                       </Chip>
-                    </td>
-                    <td className="px-5 py-4 text-muted">{m.activeAttemptCount}</td>
-                    <td className="px-5 py-4 text-muted">{m.workCount}</td>
-                    <td className="px-5 py-4 text-muted">{m.forkCount}</td>
-                    <td className="px-5 py-4 text-muted">{relativeTime(idea.updatedAt)}</td>
-                  </tr>
-                );
-              })}
-              {mine.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-muted">
-                    还没有想法或草稿。
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+                      <span className="text-[11.5px] text-slate-400">{relativeTime(idea.updatedAt)}</span>
+                    </div>
+
+                    <Link href={`/ideas/${idea.id}`} className="block">
+                      <h2 className="text-[16px] font-bold text-slate-900 tracking-[-0.02em] leading-snug group-hover:text-indigo-600 transition-colors">
+                        {idea.title}
+                      </h2>
+                      <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-slate-500">
+                        {idea.problem || idea.summary}
+                      </p>
+                    </Link>
+
+                    {sourceWork ? (
+                      <div className="mt-3 rounded-lg bg-slate-50 border border-slate-100 px-2.5 py-1 text-[11.5px] text-slate-600">
+                        ↳ 源自作品：<span className="font-medium text-slate-800">{sourceWork.title}</span>
+                        {idea.relationKind === "iterate" ? " · 功能迭代" : " · 新方向"}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-[12px] text-slate-500">
+                    <div className="flex items-center gap-3">
+                      <span title="有效承接数">⚡ {m.activeAttemptCount}</span>
+                      <span title="已孵化作品数">💎 {m.workCount}</span>
+                      <span title="衍生新方向数">🌱 {m.forkCount}</span>
+                    </div>
+                    <Link
+                      href={`/ideas/${idea.id}`}
+                      className="font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-0.5"
+                    >
+                      查看详情 →
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 p-12 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-2xs border border-slate-200/80 text-xl">
+              💡
+            </div>
+            <h2 className="mt-4 text-[16px] font-bold text-slate-800">还没有写下想法</h2>
+            <p className="mt-1 text-[13px] text-slate-500">
+              分享你生活或工作中的真实问题，让其他建造者与你一起实现它。
+            </p>
+            <div className="mt-5">
+              <Link
+                href="/ideas/new"
+                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-[13px] font-medium text-white shadow-xs hover:bg-slate-800 transition-colors"
+              >
+                写下第一个想法 →
+              </Link>
+            </div>
+          </div>
+        )}
       </PageFrame>
   );
 }

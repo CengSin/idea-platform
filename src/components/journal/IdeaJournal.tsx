@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Plus, Maximize2, Minimize2 } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
 import { FamilyBoard } from "@/components/graph/FamilyBoard";
+import { CuratedMasonry } from "@/components/journal/CuratedMasonry";
 import type { PublicIdea } from "@/lib/public-catalog";
 import { boardFamilies } from "@/lib/board-families";
 
@@ -15,7 +16,27 @@ export function IdeaJournal({ ideas, workspace = false }: { ideas: PublicIdea[];
   const [filter, setFilter] = useState("全部");
   const [query, setQuery] = useState("");
   const [full, setFull] = useState(false);
+  const [viewMode, setViewMode] = useState<"constellation" | "masonry">("constellation");
   const expandButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get("view");
+    if (v === "masonry" || v === "constellation") {
+      setViewMode(v);
+    }
+  }, []);
+
+  const handleSetViewMode = (mode: "constellation" | "masonry") => {
+    setViewMode(mode);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("view", mode);
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
   useEffect(() => {
     if (!full) return;
     const onKey = (e: KeyboardEvent) => {
@@ -27,16 +48,36 @@ export function IdeaJournal({ ideas, workspace = false }: { ideas: PublicIdea[];
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [full]);
+
   const families = boardFamilies(ideas, query, filter);
+
+  const filteredIdeas = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return ideas.filter((i) => {
+      const textMatch =
+        !q ||
+        `${i.title} ${i.summary} ${i.problem} ${i.authorName} ${i.tags?.join(" ") ?? ""} ${i.works.map((w) => w.title).join(" ")}`.toLowerCase().includes(q);
+      const statusMatch =
+        filter === "全部" ||
+        (filter === "待实现" && i.attemptCount === 0 && !i.works.length && i.status !== "deprecated") ||
+        (filter === "迭代中" && (Boolean(i.source) || i.attemptCount > 0) && i.status !== "deprecated") ||
+        (filter === "有作品" && i.works.length > 0) ||
+        (filter === "已弃用" && i.status === "deprecated");
+      return textMatch && statusMatch;
+    });
+  }, [ideas, query, filter]);
+
   const emptyTitle = ideas.length ? "还没有匹配的想法" : "让第一个想法留在这里";
   const emptyBody = ideas.length ? "换个关键词，或查看全部想法。" : "一个真实的问题，就是很好的开始。";
+
   return (
     <div id="ideas" className={`idea-whiteboard ${full ? "board-fullscreen" : ""}`}>
+      <div className="hero-glow-backdrop" aria-hidden="true" />
       <header className="board-heading">
         <div>
-          <p className="board-kicker">THE OPEN NOTEBOOK</p>
-          <h1>让想法，一步步发生<span>。</span></h1>
-          <p>从一个念头，到作品，再到新的可能。</p>
+          <p className="board-kicker">✦ EVERY IDEA DESERVES A BUILDER</p>
+          <h1>每一个念头，都在这里遇见它的建造者<span>。</span></h1>
+          <p>从一个微小的火花，到被独立实现，再长成惊艳的作品。分享你心中的问题，与更多创造者一起把它变成现实。</p>
         </div>
         <Link className="board-create" href={workspace ? "/ideas/new" : "/register"}><Plus size={17}/>写下想法</Link>
       </header>
@@ -45,6 +86,26 @@ export function IdeaJournal({ ideas, workspace = false }: { ideas: PublicIdea[];
           {["全部", "待实现", "迭代中", "有作品", "已弃用"].map((f) => (
             <button key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>{f}</button>
           ))}
+        </div>
+        <div className="board-view-switch" role="group" aria-label="展示模式切换">
+          <button
+            type="button"
+            className={viewMode === "constellation" ? "is-active" : ""}
+            aria-pressed={viewMode === "constellation"}
+            onClick={() => handleSetViewMode("constellation")}
+            title="查看灵感突触星云脉络"
+          >
+            🌌 脉络星云
+          </button>
+          <button
+            type="button"
+            className={viewMode === "masonry" ? "is-active" : ""}
+            aria-pressed={viewMode === "masonry"}
+            onClick={() => handleSetViewMode("masonry")}
+            title="查看灵感画廊策展画卷"
+          >
+            📑 策展画卷
+          </button>
         </div>
         <label className="board-search">
           <Search size={16}/>
@@ -56,27 +117,52 @@ export function IdeaJournal({ ideas, workspace = false }: { ideas: PublicIdea[];
         </button>
       </div>
       <p className="sr-only" role="status">找到 {families.reduce((n, g) => n + g.matches.size, 0)} 个想法，保留所在项目的关系。</p>
-      <div className="board-viewport family-viewport" tabIndex={0} role="region" aria-label="想法项目家族">
-        {families.length ? (
-          <FamilyBoard families={families} workspace={workspace} />
+      <div className={`board-viewport ${viewMode === "constellation" ? "family-viewport" : "masonry-viewport"}`} tabIndex={0} role="region" aria-label="想法项目家族">
+        {viewMode === "constellation" ? (
+          families.length ? (
+            <FamilyBoard families={families} workspace={workspace} />
+          ) : (
+            <div className="board-empty">
+              <span>✎</span>
+              <h2>{emptyTitle}</h2>
+              <p>{emptyBody}</p>
+              {ideas.length ? <button onClick={() => { setQuery(""); setFilter("全部"); }}>查看全部</button> : <Link href={workspace ? "/ideas/new" : "/register"}>写下想法 →</Link>}
+            </div>
+          )
         ) : (
-          <div className="board-empty">
-            <span>✎</span>
-            <h2>{emptyTitle}</h2>
-            <p>{emptyBody}</p>
-            {ideas.length ? <button onClick={() => { setQuery(""); setFilter("全部"); }}>查看全部</button> : <Link href={workspace ? "/ideas/new" : "/register"}>写下想法 →</Link>}
-          </div>
+          filteredIdeas.length ? (
+            <CuratedMasonry ideas={filteredIdeas} workspace={workspace} />
+          ) : (
+            <div className="board-empty">
+              <span>✎</span>
+              <h2>{emptyTitle}</h2>
+              <p>{emptyBody}</p>
+              {ideas.length ? <button onClick={() => { setQuery(""); setFilter("全部"); }}>查看全部</button> : <Link href={workspace ? "/ideas/new" : "/register"}>写下想法 →</Link>}
+            </div>
+          )
         )}
       </div>
       <footer className="board-footer">
-        <div className="board-legend">
-          <span><i className="legend-idea"/>想法</span>
-          <span><i className="legend-work"/>作品</span>
-          <span><i className="legend-sprout"/>新方向</span>
-          <span>折线 = 同一项目里的衍生</span>
-        </div>
-        <small>不相关的想法各走各的，不会画到一张网里</small>
-        <div className="board-zoom"><span className="board-zoom-hint">点击查看 · 卡片固定在家族里</span></div>
+        {viewMode === "constellation" ? (
+          <>
+            <div className="board-legend">
+              <span><i className="legend-idea"/>想法（待实现）</span>
+              <span><i className="legend-work"/>已上线作品</span>
+              <span><i className="legend-sprout"/>衍生新方向</span>
+              <span className="text-slate-400">· 突触连线串联起落地脉络</span>
+            </div>
+            <small className="text-slate-400">独立想法独立演进，专注陪伴每一次落地</small>
+            <div className="board-zoom"><span className="board-zoom-hint">点击卡片展开详情 · 探索下一步</span></div>
+          </>
+        ) : (
+          <>
+            <div className="board-legend">
+              <span className="text-slate-600 font-medium">✦ 策展画卷：杂志式沉浸探索每一颗灵感种子</span>
+            </div>
+            <small className="text-slate-400">选择心仪的念头，即可立即成为建造者承接落地</small>
+            <div className="board-zoom"><span className="board-zoom-hint">共 {filteredIdeas.length} 颗闪耀灵感</span></div>
+          </>
+        )}
       </footer>
     </div>
   );

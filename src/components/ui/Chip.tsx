@@ -8,10 +8,10 @@ export function Chip({
   tone?: "mute" | "idea" | "active" | "artifact";
 }) {
   const tones = {
-    mute: "border-line bg-white/6 text-muted",
-    idea: "border-idea/25 bg-idea/10 text-idea",
-    active: "border-active/25 bg-active/10 text-active",
-    artifact: "border-artifact/20 bg-artifact/10 text-artifact",
+    mute: "border-slate-200/80 bg-slate-100/80 text-slate-600 font-medium",
+    idea: "border-amber-200 bg-amber-50 text-amber-800 font-medium",
+    active: "border-indigo-200 bg-indigo-50 text-indigo-700 font-medium",
+    artifact: "border-emerald-200 bg-emerald-50 text-emerald-800 font-medium",
   };
   return (
     <span

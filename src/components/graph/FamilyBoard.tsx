@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, Plus, X } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
 import { boardFamilies } from "@/lib/board-families";
@@ -27,14 +27,14 @@ type Story = {
 };
 
 function kicker(node: RelationGraphNode) {
-  if (node.kind === "work") return node.versionLabel ? `作品 · ${node.versionLabel}` : "作品";
-  if (node.kind === "sprout" || node.sourceLabel?.startsWith("来自 ")) return "新方向";
+  if (node.kind === "work") return node.versionLabel ? `已发布 · ${node.versionLabel}` : "已发布作品";
+  if (node.kind === "sprout" || node.sourceLabel?.startsWith("来自 ")) return "新衍生方向";
   return "想法";
 }
 
 function meta(node: RelationGraphNode) {
   if (node.kind === "work") {
-    return node.iterations.length ? `${node.iterations.length} 项功能迭代已收起` : "版本时间线已收起";
+    return node.iterations.length ? `${node.iterations.length} 项迭代进展` : "已落地上线";
   }
   return node.sourceLabel || node.authorName || "";
 }
@@ -52,9 +52,20 @@ function StoryCard({
   onSelect: (id: string) => void;
   pin?: boolean;
 }) {
+  const isWork = node.kind === "work";
+  const isSprout = node.kind === "sprout" || node.sourceLabel?.startsWith("来自 ");
+  const badgeLabel = pin ? "待实现想法" : kicker(node);
+  const badgeColor = isWork
+    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+    : isSprout
+    ? "bg-violet-50 text-violet-700 border-violet-200"
+    : "bg-amber-50 text-amber-700 border-amber-200";
+  const badgeDot = isWork ? "bg-emerald-500" : isSprout ? "bg-violet-500" : "bg-amber-500";
+
   return (
     <button
       type="button"
+      data-node-id={node.id}
       className={`story-card story-${pin ? "pending" : node.kind}${node.deprecated ? " is-deprecated" : ""}${selected ? " is-active" : ""}${dim ? " is-dim" : ""}`}
       aria-pressed={selected}
       onClick={(event) => {
@@ -62,16 +73,90 @@ function StoryCard({
         onSelect(node.id);
       }}
     >
-      <span className="story-kicker">{pin ? "想法" : kicker(node)}</span>
-      <strong>{node.title}</strong>
-      <small>{pin ? (node.sourceLabel || meta(node)) : meta(node)}</small>
+      <div className="flex items-center justify-between w-full">
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-semibold border ${badgeColor}`}>
+          <span className={`inline-block h-1.5 w-1.5 rounded-full ${badgeDot}`} />
+          {badgeLabel}
+        </span>
+        {isWork ? (
+          <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60">
+            已上线
+          </span>
+        ) : null}
+      </div>
+      <strong className="text-[14px] font-bold text-slate-900 tracking-[-0.02em] leading-snug line-clamp-1 mt-1.5">
+        {node.title}
+      </strong>
+      {node.summary ? (
+        <p className="text-[11.5px] leading-relaxed text-slate-500 line-clamp-2 mt-0.5">
+          {node.summary}
+        </p>
+      ) : null}
+      <div className="mt-auto pt-2 border-t border-slate-100 flex items-center justify-between w-full text-[10.5px] text-slate-400">
+        <span className="truncate max-w-[140px]">{pin ? (node.sourceLabel || meta(node)) : meta(node)}</span>
+        <span className="text-indigo-600 font-medium shrink-0">详情 ↗</span>
+      </div>
     </button>
   );
 }
 
-function ExploreNext({ href }: { href: string }) {
+function PendingSparkCard({
+  story,
+  selected,
+  dim,
+  onSelect,
+}: {
+  story: Story;
+  selected: boolean;
+  dim: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const node = story.branch.idea;
+  const root = story.family.root;
   return (
-    <Link className="story-next" href={href} onClick={(event) => event.stopPropagation()}>
+    <button
+      type="button"
+      className={`story-card story-pending group text-left${node.deprecated ? " is-deprecated" : ""}${selected ? " is-active" : ""}${dim ? " is-dim" : ""}`}
+      aria-pressed={selected}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(node.id);
+      }}
+    >
+      <div className="flex items-center justify-between w-full">
+        <span className="story-kicker">
+          <span className="inline-block h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+          <span className="font-semibold text-amber-600">✦ 灵感火花</span>
+        </span>
+        {root.attemptCount > 0 ? (
+          <span className="text-[11px] font-medium text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-full">
+            {root.attemptCount} 人承接中
+          </span>
+        ) : (
+          <span className="text-[11px] text-slate-400">待认领</span>
+        )}
+      </div>
+      <strong className="text-[14px] font-bold text-slate-900 leading-snug line-clamp-2 mt-1 group-hover:text-amber-600 transition-colors">
+        {node.title}
+      </strong>
+      {root.problem || node.summary ? (
+        <p className="text-[12px] leading-relaxed text-slate-500 line-clamp-2 mt-1">
+          {root.problem || node.summary}
+        </p>
+      ) : null}
+      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between w-full text-[11px] text-slate-400">
+        <span>{node.sourceLabel || root.authorName || "匿名"}</span>
+        <span className="text-amber-700 font-medium group-hover:underline flex items-center gap-0.5">
+          探索念头 →
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function ExploreNext({ id, href }: { id?: string; href: string }) {
+  return (
+    <Link data-node-id={id} className="story-next" href={href} onClick={(event) => event.stopPropagation()}>
       <Plus size={14} /> 探索下一步
     </Link>
   );
@@ -113,7 +198,7 @@ function WorkRows({
                 ))}
               </div>
             ) : (
-              <ExploreNext href={`${row.work.href}#next-ideas`} />
+              <ExploreNext id={`next-${row.work.id}`} href={`${row.work.href}#next-ideas`} />
             )}
           </div>
         ))}
@@ -211,6 +296,360 @@ function Drawer({ node, onClose }: { node: RelationGraphNode; onClose: () => voi
   );
 }
 
+type TreeConnection = {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  kind: "work" | "sprout" | "next";
+};
+
+function extractConnections(branch: FamilyBranch): TreeConnection[] {
+  const connections: TreeConnection[] = [];
+  for (const row of branch.rows) {
+    connections.push({
+      id: `${branch.idea.id}->${row.work.id}`,
+      sourceId: branch.idea.id,
+      targetId: row.work.id,
+      kind: "work",
+    });
+    if (row.next.length > 0) {
+      for (const child of row.next) {
+        connections.push({
+          id: `${row.work.id}->${child.idea.id}`,
+          sourceId: row.work.id,
+          targetId: child.idea.id,
+          kind: "sprout",
+        });
+        connections.push(...extractConnections(child));
+      }
+    } else {
+      connections.push({
+        id: `${row.work.id}->next`,
+        sourceId: row.work.id,
+        targetId: `next-${row.work.id}`,
+        kind: "next",
+      });
+    }
+  }
+  return connections;
+}
+
+type CurvePath = {
+  id: string;
+  d: string;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  kind: "work" | "sprout" | "next";
+  active: boolean;
+  dim: boolean;
+};
+
+function SynapseCurves({
+  containerRef,
+  branch,
+  selectedId,
+  dependencyKey,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  branch: FamilyBranch;
+  selectedId: string | null;
+  dependencyKey?: string;
+}) {
+  const [curves, setCurves] = useState<CurvePath[]>([]);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  const updateCurves = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const width = Math.max(container.scrollWidth, container.clientWidth, containerRect.width);
+    const height = Math.max(container.scrollHeight, container.clientHeight, containerRect.height);
+    setSize({ width, height });
+
+    const connections = extractConnections(branch);
+    const newCurves: CurvePath[] = [];
+
+    for (const conn of connections) {
+      const srcEl = container.querySelector(`[data-node-id="${conn.sourceId}"]`) as HTMLElement | null;
+      const tgtEl = container.querySelector(`[data-node-id="${conn.targetId}"]`) as HTMLElement | null;
+      if (!srcEl || !tgtEl) continue;
+
+      const srcRect = srcEl.getBoundingClientRect();
+      const tgtRect = tgtEl.getBoundingClientRect();
+
+      // Determine flow direction (horizontal on desktop, vertical when stacked on small screens)
+      const isHorizontal = tgtRect.left >= srcRect.right - 10;
+
+      let x1: number, y1: number, x2: number, y2: number, d: string;
+
+      if (isHorizontal) {
+        x1 = srcRect.right - containerRect.left;
+        y1 = srcRect.top + srcRect.height / 2 - containerRect.top;
+        x2 = tgtRect.left - containerRect.left;
+        y2 = tgtRect.top + tgtRect.height / 2 - containerRect.top;
+        const dx = Math.max((x2 - x1) * 0.52, 24);
+        d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${(x1 + dx).toFixed(1)} ${y1.toFixed(1)}, ${(x2 - dx).toFixed(1)} ${y2.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+      } else {
+        x1 = srcRect.left + srcRect.width / 2 - containerRect.left;
+        y1 = srcRect.bottom - containerRect.top;
+        x2 = tgtRect.left + tgtRect.width / 2 - containerRect.left;
+        y2 = tgtRect.top - containerRect.top;
+        const dy = Math.max((y2 - y1) * 0.5, 14);
+        d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${x1.toFixed(1)} ${(y1 + dy).toFixed(1)}, ${x2.toFixed(1)} ${(y2 - dy).toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+      }
+
+      const active = selectedId === conn.sourceId || selectedId === conn.targetId;
+      const dim = srcEl.classList.contains("is-dim") || tgtEl.classList.contains("is-dim");
+
+      newCurves.push({
+        id: conn.id,
+        d,
+        sourceX: x1,
+        sourceY: y1,
+        targetX: x2,
+        targetY: y2,
+        kind: conn.kind,
+        active,
+        dim,
+      });
+    }
+
+    setCurves(newCurves);
+  }, [containerRef, branch, selectedId]);
+
+  useEffect(() => {
+    updateCurves();
+    const timer = setTimeout(updateCurves, 50);
+
+    const container = containerRef.current;
+    if (!container) return () => clearTimeout(timer);
+
+    const observer = new ResizeObserver(() => {
+      updateCurves();
+    });
+    observer.observe(container);
+    window.addEventListener("resize", updateCurves);
+
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+      window.removeEventListener("resize", updateCurves);
+    };
+  }, [updateCurves, dependencyKey]);
+
+  return (
+    <svg
+      className="synapse-canvas"
+      width={size.width}
+      height={size.height}
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: size.width ? `${size.width}px` : "100%",
+        height: size.height ? `${size.height}px` : "100%",
+        pointerEvents: "none",
+        zIndex: 0,
+        overflow: "visible",
+      }}
+    >
+      <defs>
+        <linearGradient id="gradient-work" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.75" />
+          <stop offset="100%" stopColor="#10b981" stopOpacity="0.8" />
+        </linearGradient>
+        <linearGradient id="gradient-sprout" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#10b981" stopOpacity="0.75" />
+          <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.85" />
+        </linearGradient>
+        <linearGradient id="gradient-next" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
+          <stop offset="100%" stopColor="#6366f1" stopOpacity="0.55" />
+        </linearGradient>
+        <filter id="synapse-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      {curves.map((curve) => {
+        const strokeColor =
+          curve.kind === "work" ? "#10b981" : curve.kind === "sprout" ? "#8b5cf6" : "#6366f1";
+        const sourceColor =
+          curve.kind === "work" ? "#f59e0b" : curve.kind === "sprout" ? "#10b981" : "#10b981";
+        const targetColor =
+          curve.kind === "work" ? "#10b981" : curve.kind === "sprout" ? "#8b5cf6" : "#6366f1";
+        const strokeDasharray = curve.kind === "next" ? "5 5" : undefined;
+        const strokeWidth = curve.active ? 3.5 : 2.5;
+        const gradId = `synapse-grad-${curve.id.replace(/[^a-zA-Z0-9]/g, "-")}`;
+
+        return (
+          <g
+            key={curve.id}
+            className={`synapse-group ${curve.active ? "is-active" : ""}`}
+            style={{ opacity: curve.dim ? 0.25 : 1, transition: "opacity 0.2s ease" }}
+          >
+            <defs>
+              <linearGradient
+                id={gradId}
+                gradientUnits="userSpaceOnUse"
+                x1={curve.sourceX}
+                y1={curve.sourceY}
+                x2={curve.targetX}
+                y2={curve.targetY}
+              >
+                <stop offset="0%" stopColor={sourceColor} stopOpacity="0.85" />
+                <stop offset="100%" stopColor={targetColor} stopOpacity="0.95" />
+              </linearGradient>
+            </defs>
+            {/* Ambient Halo Glow */}
+            <path
+              d={curve.d}
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth={curve.active ? 9 : 6}
+              strokeOpacity={curve.active ? 0.35 : 0.18}
+              strokeLinecap="round"
+            />
+            {/* Smooth Cubic Bezier Path */}
+            <path
+              d={curve.d}
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth={strokeWidth}
+              strokeDasharray={strokeDasharray}
+              strokeLinecap="round"
+            />
+            {/* Source Terminal Anchor Dot */}
+            <circle
+              cx={curve.sourceX}
+              cy={curve.sourceY}
+              r={curve.active ? 4.5 : 3.5}
+              fill={sourceColor}
+              stroke="#ffffff"
+              strokeWidth={1.5}
+            />
+            {/* Target Terminal Anchor Dot */}
+            <circle
+              cx={curve.targetX}
+              cy={curve.targetY}
+              r={curve.active ? 5 : 4}
+              fill={targetColor}
+              stroke="#ffffff"
+              strokeWidth={1.5}
+            />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function FamilyStoryItem({
+  story,
+  expanded,
+  onToggle,
+  selected,
+  onSelect,
+  dimOf,
+  revealAll,
+  onShowAll,
+}: {
+  story: Story;
+  expanded: boolean;
+  onToggle: () => void;
+  selected: string | null;
+  onSelect: (id: string) => void;
+  dimOf: (node: RelationGraphNode) => boolean;
+  revealAll: boolean;
+  onShowAll: () => void;
+}) {
+  const treeCanvasRef = useRef<HTMLDivElement>(null);
+
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        className="family-compact group"
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggle();
+        }}
+      >
+        <span className="family-compact-tag">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          项目星系
+        </span>
+        <strong className="group-hover:text-indigo-600 transition-colors">
+          {story.family.root.title}
+        </strong>
+        <span className="family-compact-arrow">→</span>
+        <div className="flex items-center gap-2 text-slate-500 text-[12px]">
+          <span className="rounded-md bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+            💎 {familyWorkCount(story.branch)} 个作品
+          </span>
+          {familySproutCount(story.branch) ? (
+            <span className="rounded-md bg-violet-50 px-2 py-0.5 font-medium text-violet-700">
+              🌱 {familySproutCount(story.branch)} 个新方向
+            </span>
+          ) : null}
+        </div>
+        <span className="family-compact-status text-indigo-600 font-medium group-hover:translate-x-0.5 transition-transform">
+          展开脉络 ↓
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <section
+      className="family-story"
+      aria-label={`${story.family.root.title} 的演进`}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="family-story-head flex items-center justify-between">
+        <div>
+          <h2>项目家族 · {story.family.root.title}</h2>
+          <small>
+            {familyWorkCount(story.branch)} 个作品
+            {familySproutCount(story.branch) ? ` · ${familySproutCount(story.branch)} 个新方向` : ""}
+            · 功能迭代收在作品里
+          </small>
+        </div>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="text-[12px] font-medium text-slate-400 hover:text-slate-600 px-2.5 py-1 rounded-lg hover:bg-slate-100 transition-colors"
+        >
+          收起 ↑
+        </button>
+      </div>
+      <div className="family-tree-canvas relative" ref={treeCanvasRef}>
+        <SynapseCurves
+          containerRef={treeCanvasRef}
+          branch={story.branch}
+          selectedId={selected}
+          dependencyKey={`${story.family.root.id}-${revealAll}-${selected}`}
+        />
+        <FamilyTree
+          branch={story.branch}
+          selected={selected}
+          dimOf={dimOf}
+          onSelect={onSelect}
+          showAll={revealAll}
+          onShowAll={onShowAll}
+        />
+      </div>
+    </section>
+  );
+}
+
 export function FamilyBoard({
   families,
   workspace = false,
@@ -229,17 +668,37 @@ export function FamilyBoard({
 
   const grown = stories.filter((story) => !story.pending);
   const pending = stories.filter((story) => story.pending);
-  const [openId, setOpenId] = useState<string | null>(null);
+
+  // Expand all grown families by default for a vibrant, alive canvas
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(grown.map((s) => s.family.root.id)));
   const [showAllWorks, setShowAllWorks] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
 
-  const selectedStory = selected ? stories.find((story) => branchContains(story.branch, selected)) : null;
-  const expandedId = openId
-    ?? (selectedStory && !selectedStory.pending ? selectedStory.family.root.id : null)
-    ?? grown[0]?.family.root.id
-    ?? null;
-  const featured = grown.find((story) => story.family.root.id === expandedId);
-  const compact = grown.filter((story) => story.family.root.id !== expandedId);
+  // Auto-expand story if a node inside it is selected
+  useEffect(() => {
+    if (!selected) return;
+    const story = stories.find((s) => branchContains(s.branch, selected));
+    if (story && !story.pending) {
+      setExpandedIds((prev) => {
+        if (prev.has(story.family.root.id)) return prev;
+        const next = new Set(prev);
+        next.add(story.family.root.id);
+        return next;
+      });
+    }
+  }, [selected, stories]);
+
+  const toggleFamily = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const nodes = useMemo(() => {
     const map = new Map<string, RelationGraphNode>();
@@ -277,69 +736,38 @@ export function FamilyBoard({
   return (
     <div className={`family-board${selectedNode ? " has-drawer" : ""}`}>
       <div className="family-board-stage" onClick={() => setSelected(null)}>
-        {featured ? (
-          <section
-            className="family-story"
-            aria-label={`${featured.family.root.title} 的演进`}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="family-story-head">
-              <h2>项目家族 · {featured.family.root.title}</h2>
-              <small>
-                {familyWorkCount(featured.branch)} 个作品
-                {familySproutCount(featured.branch) ? ` · ${familySproutCount(featured.branch)} 个新方向` : ""}
-                · 功能迭代收在作品里
-              </small>
-            </div>
-            <FamilyTree
-              branch={featured.branch}
-              selected={selected}
-              dimOf={dimOf(featured)}
-              onSelect={setSelected}
-              showAll={revealAll(featured)}
-              onShowAll={() => setShowAllWorks((current) => new Set(current).add(featured.family.root.id))}
-            />
-          </section>
-        ) : null}
+        {grown.map((story) => (
+          <FamilyStoryItem
+            key={story.family.root.id}
+            story={story}
+            expanded={expandedIds.has(story.family.root.id)}
+            onToggle={() => toggleFamily(story.family.root.id)}
+            selected={selected}
+            onSelect={setSelected}
+            dimOf={dimOf(story)}
+            revealAll={revealAll(story)}
+            onShowAll={() => setShowAllWorks((current) => new Set(current).add(story.family.root.id))}
+          />
+        ))}
         {pending.length > 0 ? (
           <section className="pending-story" onClick={(event) => event.stopPropagation()}>
             <div className="family-story-head">
-              <h2>待实现的念头</h2>
-              <small>没有作品，也就没有连线</small>
+              <h2>✦ 待实现的初生念头</h2>
+              <small>独立火花正在等待建造者认领 · 点击展开详情</small>
             </div>
             <div className="pending-grid">
               {pending.map((story) => (
-                <StoryCard
+                <PendingSparkCard
                   key={story.family.root.id}
-                  node={story.branch.idea}
+                  story={story}
                   selected={selected === story.branch.idea.id}
                   dim={dimOf(story)(story.branch.idea)}
                   onSelect={setSelected}
-                  pin
                 />
               ))}
             </div>
           </section>
         ) : null}
-        {compact.map((story) => (
-          <button
-            type="button"
-            className="family-compact"
-            key={story.family.root.id}
-            onClick={(event) => {
-              event.stopPropagation();
-              setSelected(null);
-              setOpenId(story.family.root.id);
-            }}
-          >
-            <span className="family-compact-tag">已落地</span>
-            <strong>{story.family.root.title}</strong>
-            <span className="family-compact-arrow">→</span>
-            <span>作品 {familyWorkCount(story.branch)}</span>
-            {familySproutCount(story.branch) ? <span>· 新方向 {familySproutCount(story.branch)}</span> : null}
-            <span className="family-compact-status">独立项目</span>
-          </button>
-        ))}
       </div>
       {selectedNode ? <Drawer node={selectedNode} onClose={() => setSelected(null)} /> : null}
     </div>
