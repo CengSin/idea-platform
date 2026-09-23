@@ -842,6 +842,119 @@ button:active, .pressable:active { transition-duration: 60ms; }
   color: #0f172a;
 }
 .board-heading h1 span { color: #ea580c; }
+
+.holo-stage { perspective: 1200px; }
+.holo-card {
+  --px: 0.5;
+  --py: 0.35;
+  --rx: 0deg;
+  --ry: 0deg;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 280px;
+  border-radius: 28px;
+  color: #f8f5ff;
+  background:
+    linear-gradient(90deg, rgba(8, 6, 16, 0.78) 0%, rgba(8, 6, 16, 0.42) 46%, rgba(8, 6, 16, 0.22) 100%),
+    url("/covers/holo-card-bg.jpg") center / cover no-repeat;
+  box-shadow: 0 24px 50px rgba(24, 12, 40, 0.28);
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+.holo-card.is-lit { transition: none; }
+.holo-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(
+    calc(120deg + (var(--px) - 0.5) * 80deg),
+    #ff4d8d,
+    #ffe14a,
+    #3dffe0,
+    #4d7cff,
+    #e14dff,
+    #ff4d8d
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 4;
+}
+.holo-foil,
+.holo-spark,
+.holo-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.holo-foil {
+  z-index: 1;
+  opacity: 0.55;
+  mix-blend-mode: color-dodge;
+  background:
+    linear-gradient(
+      115deg,
+      transparent 0%,
+      rgba(255, 60, 140, 0.55) 18%,
+      rgba(255, 220, 70, 0.55) 32%,
+      rgba(70, 255, 190, 0.6) 48%,
+      rgba(70, 120, 255, 0.55) 64%,
+      rgba(220, 70, 255, 0.55) 80%,
+      transparent 100%
+    );
+  background-size: 220% 220%;
+  background-position: calc(var(--px) * 100%) calc(var(--py) * 100%);
+  transition: opacity 0.3s ease;
+}
+.holo-card.is-lit .holo-foil { opacity: 0.95; }
+.holo-spark {
+  z-index: 2;
+  opacity: 0.35;
+  mix-blend-mode: screen;
+  background-image:
+    repeating-linear-gradient(
+      92deg,
+      rgba(255, 255, 255, 0.0) 0 2px,
+      rgba(255, 255, 255, 0.45) 2px 3px,
+      rgba(255, 255, 255, 0.0) 3px 9px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 80, 180, 0.0) 0 10px,
+      rgba(120, 255, 220, 0.35) 12px,
+      rgba(255, 80, 180, 0.0) 16px
+    );
+  background-position: calc((var(--px) - 0.5) * 80px) calc((var(--py) - 0.5) * -60px);
+  transition: opacity 0.3s ease;
+}
+.holo-card.is-lit .holo-spark { opacity: 0.7; }
+.holo-glare {
+  z-index: 3;
+  background: radial-gradient(
+    circle at calc(var(--px) * 100%) calc(var(--py) * 100%),
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.12) 18%,
+    transparent 42%
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.35;
+}
+.holo-card.is-lit .holo-glare { opacity: 1; }
+.holo-content { position: relative; z-index: 5; }
+.holo-content h2,
+.holo-content p { text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55); }
+.holo-content a { color: inherit; text-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  .holo-card { transform: none; transition: none; }
+  .holo-foil, .holo-spark, .holo-glare { transition: none; }
+}
 .board-heading p:last-child {
   color: #64748b;
   margin-top: 8px;

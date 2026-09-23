@@ -37,8 +37,8 @@ export function IdeaJournal({ ideas, workspace = false }: { ideas: PublicIdea[];
     <div id="ideas" className="idea-whiteboard">
       <header className="board-heading">
         <div>
-          <h1>想法被写下，被人实现，再共享出去<span>。</span></h1>
-          <p>公开的作品上，可以长出下一轮。</p>
+          <h1>共享，实现，追踪<span>。</span></h1>
+          <p>想法先被共享，再被实现，进度一直能被追踪。</p>
         </div>
       </header>
       <div className="board-toolbar">
