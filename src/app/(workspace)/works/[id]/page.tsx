@@ -11,6 +11,8 @@ import { getWorkBundle } from "@/lib/queries";
 import { ExternalLink } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
 import { notFound } from "next/navigation";
+import { IdeaLifecycleRail } from "@/components/idea/IdeaLifecycleRail";
+
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -72,18 +74,26 @@ export default async function WorkPage({
           <aside className="space-y-4">
             {bundle.canManage ? <WorkActions work={work} /> : null}
             {bundle.canManage ? <AgentUpgradePanel attemptId={attempt.id} derived={Boolean(idea.parentIdeaId)} /> : null}
-            <div className="glass rounded-3xl p-5">
-              <div className="text-[12px] tracking-[0.08em] text-muted">来源想法</div>
-              <Link href={`/ideas/${idea.id}`} className="mt-2 block text-[16px] tracking-[-0.02em]">
+            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-2xs">
+              <div className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-400">来源想法</div>
+              <Link href={`/ideas/${idea.id}`} className="mt-2 block text-[16px] font-bold text-slate-900 hover:text-orange-600">
                 {idea.title}
               </Link>
-              <div className="mt-3 text-[13px] text-muted">
+              <div className="mt-3 text-[13px] text-slate-500">
                 实现轨道{" "}
-                <Link href={`/attempts/${attempt.id}`} className="text-active">
+                <Link href={`/attempts/${attempt.id}`} className="font-medium text-indigo-600 hover:underline">
                   {attempt.title}
                 </Link>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-4 border-t border-slate-100 pt-3">
+                <IdeaLifecycleRail
+                  ideaCount={1}
+                  buildCount={1}
+                  productCount={1}
+                  size="sm"
+                />
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Chip>{WORK_TYPE_LABEL[work.type]}</Chip>
                 <Chip tone="artifact">{work.publishedAt ? formatDate(work.publishedAt) : "草稿"}</Chip>
               </div>

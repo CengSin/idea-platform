@@ -25,31 +25,34 @@ export function AuthForm({
 
   return (
     <main className="relative z-10 grid min-h-dvh place-items-center px-5 py-10">
-      <div className="paper-sheet grid w-full max-w-[980px] overflow-hidden lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="relative hidden min-h-[650px] overflow-hidden border-r border-line p-12 lg:flex lg:flex-col lg:justify-between">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(232,184,106,0.2),transparent_42%),radial-gradient(circle_at_90%_86%,rgba(111,212,203,0.16),transparent_38%)]" />
+      <div className="grid w-full max-w-[980px] overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="relative hidden min-h-[650px] overflow-hidden border-r border-slate-100 bg-slate-50/60 p-12 lg:flex lg:flex-col lg:justify-between">
           <div className="relative">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-idea/30 bg-idea/10 text-idea">
-              <NotebookPen className="h-7 w-7" />
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-2xs">
+              <Sparkles className="h-5 w-5 text-orange-400" />
             </span>
-            <h1 className="mt-10 max-w-md text-[42px] font-medium leading-[1.3] tracking-[-0.05em]">
-              让一个想法，找到愿意把它做出来的人。
+            <div className="mt-8 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              IDEA PLATFORM
+            </div>
+            <h1 className="mt-4 max-w-md text-[38px] font-bold leading-[1.25] tracking-tight text-slate-950">
+              让一个想法，<br />
+              找到愿意把它做出来的人。
             </h1>
-            <p className="mt-5 max-w-md text-[15px] leading-7 text-muted">
-              发现项目、明确目的、生成可执行的承接提示词，并追踪它如何长成作品。
+            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-slate-600">
+              共享还没实现的问题，让别人沿着自己的方向实现它，再把开源作品带回来。
             </p>
           </div>
-          <div className="relative grid gap-3 text-[13px] text-artifact/85">
+          <div className="relative grid gap-3 text-[13px] text-slate-700">
             {[
-              "保留项目描述、目的与来源",
-              "多人可以沿不同方向独立承接",
-              "每个成果都回到它的起点",
+              "保留最初的想法、背景与作者署名",
+              "同一个想法，允许多位开发者独立实现",
+              "作品落地后，继续衍生新的想法与方向",
             ].map((item) => (
               <div key={item} className="flex items-center gap-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-active/10 text-active">
-                  <Sparkles className="h-3.5 w-3.5" />
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-slate-800">
+                  <Sparkles className="h-3 w-3" />
                 </span>
-                {item}
+                <span>{item}</span>
               </div>
             ))}
           </div>

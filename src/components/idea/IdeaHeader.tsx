@@ -8,6 +8,8 @@ import { formatDateTime, formatLicense, VISIBILITY_LABEL } from "@/lib/format";
 import type { Idea, IdeaMetrics, User } from "@/lib/types";
 import { Users } from "lucide-react";
 import { useState, useTransition } from "react";
+import { IdeaLifecycleRail } from "@/components/idea/IdeaLifecycleRail";
+
 
 export function IdeaHeader({
   idea,
@@ -71,11 +73,14 @@ export function IdeaHeader({
             {idea.status === "deprecated" ? "想法已弃用" : myAttemptId ? "项目已创建" : idea.status === "draft" && isOwner ? "为草稿创建项目" : "承接这个想法"}
           </Button>
         </div>
-        <div className="flex items-center gap-3 text-[13px] text-muted">
-          <span>
-            {metrics.totalAttemptCount} 人承接 · {metrics.workCount} 个作品 · {metrics.forkCount}{" "}
-            次衍生
-          </span>
+        <div className="w-full sm:w-[280px] rounded-xl border border-slate-200/80 bg-white/80 p-2.5 shadow-2xs">
+          <IdeaLifecycleRail
+            ideaCount={1}
+            buildCount={metrics.activeAttemptCount || metrics.totalAttemptCount}
+            productCount={metrics.workCount}
+            status={idea.status}
+            size="sm"
+          />
         </div>
       </div>
     </header>

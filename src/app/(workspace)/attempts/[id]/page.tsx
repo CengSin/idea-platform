@@ -11,6 +11,8 @@ import {
 import { getAttemptBundle } from "@/lib/queries";
 import Link from "@/components/ui/NavigationLink";
 import { notFound } from "next/navigation";
+import { IdeaLifecycleRail } from "@/components/idea/IdeaLifecycleRail";
+
 
 export const dynamic = "force-dynamic";
 
@@ -44,20 +46,29 @@ export default async function AttemptPage({
           </span>
         }
       >
-        <div className="paper-sheet flex items-start justify-between gap-6">
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-[28px] font-semibold tracking-[-0.04em]">{attempt.title}</h1>
+              <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-slate-900">{attempt.title}</h1>
               <Chip tone={statusTone}>{ATTEMPT_STATUS_LABEL[status]}</Chip>
             </div>
-            <p className="mt-2 text-[14px] text-muted">
-              来源{" "}
-              <Link href={`/ideas/${idea.id}`} className="text-idea">
+            <p className="mt-2 text-[14px] text-slate-500">
+              来源想法{" "}
+              <Link href={`/ideas/${idea.id}`} className="font-semibold text-orange-600 hover:underline">
                 {idea.title}
               </Link>
-              {" · "}
-              {owner.displayName}
+              {" · 实现者 "}
+              <span className="font-medium text-slate-800">{owner.displayName}</span>
             </p>
+          </div>
+
+          <div className="w-full sm:w-[280px] shrink-0 rounded-2xl border border-slate-100 bg-slate-50/60 p-2.5">
+            <IdeaLifecycleRail
+              ideaCount={1}
+              buildCount={1}
+              productCount={works.length}
+              size="sm"
+            />
           </div>
         </div>
         {idea.status === "draft" ? (
