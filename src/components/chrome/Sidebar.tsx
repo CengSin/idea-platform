@@ -35,6 +35,7 @@ export function Sidebar({ unread = 0, user, isAdmin = false }: { unread?: number
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={item.href === "/works" ? false : undefined}
                 aria-current={isActive ? "page" : undefined}
                 className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
                   isActive

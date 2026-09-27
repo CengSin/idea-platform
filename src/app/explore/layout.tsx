@@ -1,10 +1,12 @@
 import { Sparkles, ArrowUpRight } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
+import { getCurrentUser } from "@/lib/auth";
 
 // Visibility changes must take effect immediately; never statically cache public content.
 export const dynamic = "force-dynamic";
 
-export default function ExploreLayout({ children }: { children: React.ReactNode }) {
+export default async function ExploreLayout({ children }: { children: React.ReactNode }) {
+  const me = await getCurrentUser();
   return (
     <div className="explore-shell relative z-10 min-h-dvh">
       <a href="#explore-content" className="skip-link">跳到主要内容</a>
@@ -19,20 +21,21 @@ export default function ExploreLayout({ children }: { children: React.ReactNode 
               <span className="text-orange-500">.</span>
             </span>
           </Link>
-          <nav aria-label="游客导航" className="flex items-center gap-2 sm:gap-6">
+          <nav aria-label={me ? "用户导航" : "游客导航"} className="flex items-center gap-2 sm:gap-6">
             <Link href="/explore#explore-ideas" className="hidden text-[13px] font-medium text-slate-600 hover:text-slate-950 sm:block">
               探索想法
             </Link>
-            <Link href="/login" className="rounded-xl px-3.5 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-950">
-              登录
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-950 px-4 py-2 text-[13px] font-semibold text-white shadow-2xs transition hover:bg-slate-800"
-            >
-              <span>写下想法</span>
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
+            {me ? (
+              <>
+                <Link href="/works" prefetch={false} className="rounded-xl px-3.5 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-950">我的作品</Link>
+                <Link href="/profile" className="inline-flex items-center gap-1.5 rounded-xl bg-slate-950 px-4 py-2 text-[13px] font-semibold text-white shadow-2xs transition hover:bg-slate-800">{me.displayName}<ArrowUpRight className="h-3.5 w-3.5" /></Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="rounded-xl px-3.5 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-950">登录</Link>
+                <Link href="/register" className="inline-flex items-center gap-1.5 rounded-xl bg-slate-950 px-4 py-2 text-[13px] font-semibold text-white shadow-2xs transition hover:bg-slate-800"><span>写下想法</span><ArrowUpRight className="h-3.5 w-3.5" /></Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
