@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const hasSession = Boolean(request.cookies.get("idea_session")?.value);
 
-  if (AUTH_PATHS.has(pathname) || pathname === "/explore" || pathname.startsWith("/explore/")) {
+  if (AUTH_PATHS.has(pathname) || pathname === "/explore" || pathname.startsWith("/explore/") || pathname === "/works") {
     return NextResponse.next();
   }
 

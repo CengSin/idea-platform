@@ -188,3 +188,24 @@ export function buildPublicActivities(db: Database, limit = 10): PublicActivityI
 }
 
 export type PublicIdea = ReturnType<typeof buildPublicCatalog>[number];
+
+export function buildPublicWorksPage(db: Database, userId?: string) {
+  const user = userId ? db.users.find((item) => item.id === userId && item.visibility === "public") : undefined;
+  if (userId && !user) return null;
+
+  const eligibleWorkIds = userId
+    ? new Set(db.works.filter((work) =>
+        db.attempts.some((attempt) => attempt.id === work.attemptId && attempt.ownerId === userId) ||
+        work.credits.some((credit) => credit.userId === userId),
+      ).map((work) => work.id))
+    : undefined;
+  const works = buildPublicCatalog(db)
+    .flatMap((idea) => idea.works.map((work) => ({ ...work, ideaId: idea.id, ideaTitle: idea.title })))
+    .filter((work) => !eligibleWorkIds || eligibleWorkIds.has(work.id))
+    .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
+
+  return {
+    user: user ? { id: user.id, displayName: user.displayName, bio: user.bio, initials: user.initials, accent: user.accent } : null,
+    works,
+  };
+}

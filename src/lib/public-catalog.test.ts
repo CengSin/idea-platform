@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildPublicCatalog } from "./public-catalog.ts";
+import { buildPublicCatalog, buildPublicWorksPage } from "./public-catalog.ts";
 import { authDestination } from "./auth-destination.ts";
 import type { Database, Idea, Attempt, Work } from "./types.ts";
 
@@ -162,4 +162,26 @@ test("deprecated ideas remain publicly readable with their lifecycle status", ()
   const [result] = buildPublicCatalog(db);
   assert.equal(result.status, "deprecated");
   assert.equal(result.title, idea.title);
+});
+
+test("shareable works only contain published works from public idea and attempt chains", () => {
+  const db = fixture();
+  db.users[0].visibility = "public";
+  db.attempts.push({ ...attempt, id: "hidden-attempt", visibility: "private" });
+  db.works.push(
+    { ...work, id: "hidden-work", attemptId: "hidden-attempt" },
+    { ...work, id: "draft-work", status: "draft" },
+  );
+  assert.deepEqual(buildPublicWorksPage(db, "private-author")?.works.map((item) => item.id), [work.id]);
+  db.ideas[0] = { ...db.ideas[0], visibility: "private" };
+  assert.deepEqual(buildPublicWorksPage(db, "private-author")?.works, []);
+});
+
+test("credited public works are included without exposing private profiles", () => {
+  const db = fixture();
+  db.users.push({ ...db.users[0], id: "credit-user", displayName: "Credit User", visibility: "public" });
+  db.works[0].credits = [{ userId: "credit-user", name: "Credit User", role: "设计" }];
+  assert.deepEqual(buildPublicCatalog(db)[0].works.map((item) => item.id), [work.id]);
+  assert.deepEqual(buildPublicWorksPage(db, "credit-user")?.works.map((item) => item.id), [work.id]);
+  assert.equal(buildPublicWorksPage(db, "private-author"), null);
 });

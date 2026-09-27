@@ -121,7 +121,7 @@ export default async function AdminPage() {
             <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-900">
               <Database className="h-4 w-4 text-emerald-600" /> 最近发布的落地作品
             </div>
-            <Link href="/works" className="text-[12px] font-medium text-indigo-600 hover:text-indigo-700">
+            <Link href="/works?all=1" className="text-[12px] font-medium text-indigo-600 hover:text-indigo-700">
               查看全部作品 →
             </Link>
           </div>
