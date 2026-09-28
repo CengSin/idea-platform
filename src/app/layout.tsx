@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://idea.z-agent.ccwu.cc";
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="grain antialiased">
         <div className="atmosphere" aria-hidden="true" />
         {children}
+        <Analytics />
       </body>
     </html>
   );
