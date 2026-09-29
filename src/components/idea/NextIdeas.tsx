@@ -33,11 +33,13 @@ export function NextIdeas({
   workTitle,
   items,
   canCreate,
+  deriveOnly = false,
 }: {
   workId: string;
   workTitle: string;
   items: NextIdeaItem[];
   canCreate: boolean;
+  deriveOnly?: boolean;
 }) {
   const router = useRouter();
   const sheets = useSheets();
@@ -68,7 +70,7 @@ export function NextIdeas({
           </div>
           <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.035em]">这个作品，下一步可以长成什么？</h2>
           <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-muted">
-            发布前请选择：这是优化现有作品，还是长出一个独立的新方向。迭代会收进版本历史；衍生会在关系图谱上长出新分支。
+            {deriveOnly ? canCreate ? "从已有网站提出独立的新方向。新想法会由你署名，并关联到来源网站。" : "站长尚未开放共创，暂不能从这个网站提出新方向。" : "发布前请选择：这是优化现有作品，还是长出一个独立的新方向。迭代会收进版本历史；衍生会在关系图谱上长出新分支。"}
           </p>
         </div>
         {canCreate ? (
@@ -163,6 +165,7 @@ export function NextIdeas({
 
       <NextIdeaEditor
         open={editorOpen}
+        deriveOnly={deriveOnly}
         idea={editing}
         pending={pending}
         error={error}
@@ -219,6 +222,7 @@ export function NextIdeas({
 
 function NextIdeaEditor({
   open,
+  deriveOnly,
   idea,
   pending,
   error,
@@ -226,6 +230,7 @@ function NextIdeaEditor({
   onSubmit,
 }: {
   open: boolean;
+  deriveOnly: boolean;
   idea: Idea | null;
   pending: boolean;
   error: string | null;
@@ -248,8 +253,8 @@ function NextIdeaEditor({
     setWhyItMatters(idea?.whyItMatters ?? "");
     setCriteria(idea?.desiredOutputs.join("\n") ?? "");
     setStop(idea?.stopConditions?.join("\n") ?? "");
-    setRelationKind(idea ? ideaRelationKind(idea) ?? "derive" : "");
-  }, [open, idea]);
+    setRelationKind(idea ? ideaRelationKind(idea) ?? "derive" : deriveOnly ? "derive" : "");
+  }, [open, idea, deriveOnly]);
 
   const canSubmit = Boolean(title.trim() && summary.trim() && problem.trim() && (idea || relationKind));
   const payload = {
@@ -267,7 +272,7 @@ function NextIdeaEditor({
       onClose={onClose}
       wide={!idea}
       title={idea ? "编辑下一步" : "从这个作品发布下一步"}
-      subtitle={idea ? "可以更新说明。迭代或衍生的判定提交后不能自行更改。" : "先选择这是在优化现有作品，还是做一个新的东西。可以先存为私有草稿。"}
+      subtitle={idea ? "可以更新说明。迭代或衍生的判定提交后不能自行更改。" : deriveOnly ? "提出一个独立的新方向，并保留来源网站的关联。可以先存为私有草稿。" : "先选择这是在优化现有作品，还是做一个新的东西。可以先存为私有草稿。"}
     >
       <form
         className="flex flex-col gap-4"
@@ -286,7 +291,7 @@ function NextIdeaEditor({
             {([
               ["iterate", "优化现有作品的功能/体验", "会合并进这个作品的版本历史，不单独展示为新分支"],
               ["derive", "一个新的方向 / 独立产出物", "会在关系图谱上长出一条新的分支"],
-            ] as const).map(([value, label, hint]) => (
+            ] as const).filter(([value]) => !deriveOnly || value === "derive").map(([value, label, hint]) => (
               <label key={value} className={relationKind === value ? "is-selected" : ""}>
                 <input
                   type="radio"
@@ -326,7 +331,7 @@ function NextIdeaEditor({
         </Field>
           </div>
         </details>
-        <p className="text-[12px] leading-relaxed text-muted">自动关联来源作品与上游背景。公开发布后，迭代收进版本时间线，衍生在图谱上长出新节点。</p>
+        <p className="text-[12px] leading-relaxed text-muted">{deriveOnly ? "自动关联来源网站。公开发布后，新方向会成为独立想法，不获得原网站的代码或商用许可。" : "自动关联来源作品与上游背景。公开发布后，迭代收进版本时间线，衍生在图谱上长出新节点。"}</p>
         {error ? <p className="text-[13px] text-blocked">{error}</p> : null}
         <div className="flex justify-end gap-2">
           <Button type="button" onClick={onClose}>取消</Button>

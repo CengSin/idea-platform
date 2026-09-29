@@ -61,7 +61,7 @@ export function WorkActions({ work }: { work: Work }) {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
           const fields: Record<string, unknown> = {
-            title: data.get("title"), summary: data.get("summary"), type: data.get("type"),
+            title: data.get("title"), summary: data.get("summary"),
             external_url: data.get("external_url"), repository_url: data.get("repository_url"),
             license: {
               implementation: data.get("implementation") === "on",
@@ -69,6 +69,7 @@ export function WorkActions({ work }: { work: Work }) {
               commercialUse: data.get("commercialUse"),
             },
           };
+          if (data.get("type")) fields.type = data.get("type");
           const cover = String(data.get("cover_url") ?? "").trim();
           if (cover !== initialCover) fields.cover_url = cover;
           void submit("PATCH", fields);
@@ -76,9 +77,9 @@ export function WorkActions({ work }: { work: Work }) {
           <fieldset disabled={pending} className="space-y-4 disabled:opacity-60">
             <Field label="作品名称"><TextInput name="title" defaultValue={work.title} required maxLength={200} autoFocus /></Field>
             <Field label="作品简介"><TextArea name="summary" defaultValue={work.summary} maxLength={10000} rows={4} /></Field>
-            <Field label="作品类型"><Select name="type" defaultValue={work.type}>
+            {work.origin === "imported_web" ? <p className="text-[13px] text-muted">作品类型：网站</p> : <Field label="作品类型"><Select name="type" defaultValue={work.type}>
               {Object.entries(WORK_TYPE_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </Select></Field>
+            </Select></Field>}
             <Field label="作品链接"><TextInput name="external_url" type="url" defaultValue={work.externalUrl ?? ""} placeholder="https://example.com" /></Field>
             <Field label="代码仓库链接（可选）"><TextInput name="repository_url" type="url" defaultValue={work.repositoryUrl ?? ""} placeholder="https://github.com/…" /></Field>
             <Field label="封面链接（可选）" hint="支持站内路径或 http/https 链接。清空封面，或修改作品链接而不改封面时，会重新提取网站预览。">

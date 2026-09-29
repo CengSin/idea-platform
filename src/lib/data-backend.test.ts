@@ -84,3 +84,17 @@ test("parseDatabaseDump preserves private agent configuration", () => {
   });
   assert.equal(parsed?.agentConfig?.openaiApiKey, "sk-private");
 });
+
+test("JSON database round trip retains imported website metadata and accepts legacy records", () => {
+  const old = { version: 3, users: [], ideas: [{ id: "old-idea" }], attempts: [], works: [{ id: "old-work" }], events: [], notifications: [], follows: [] };
+  const legacy = parseDatabaseDump(JSON.parse(JSON.stringify(old)));
+  assert.equal(legacy?.ideas[0]?.importedWorkId, undefined);
+  assert.equal(legacy?.works[0]?.origin, undefined);
+  const modern = structuredClone(old);
+  Object.assign(modern.ideas[0], { importedWorkId: "imported-work" });
+  Object.assign(modern.works[0], { origin: "imported_web", originalPublishedAt: "2025-01-01", collaborationOpen: false });
+  const restored = parseDatabaseDump(JSON.parse(JSON.stringify(modern)));
+  assert.equal(restored?.ideas[0]?.importedWorkId, "imported-work");
+  assert.equal(restored?.works[0]?.originalPublishedAt, "2025-01-01");
+  assert.equal(restored?.works[0]?.collaborationOpen, false);
+});

@@ -81,7 +81,12 @@ export function createNextIdeaRecord(
   const work = db.works.find((item) => item.id === workId && (item.status === "published" || (options.draft && item.status === "draft")));
   if (!work) throw new NextIdeaMutationError(404, "来源作品不存在或尚未发布");
   const attempt = db.attempts.find((item) => item.id === work.attemptId);
-  if (!attempt || attempt.ownerId !== userId) {
+  const requestedKind = options.relationKind ?? input.relationKind ?? "derive";
+  if (requestedKind !== "iterate" && requestedKind !== "derive") {
+    throw new NextIdeaMutationError(400, "请选择这是功能迭代还是新的方向");
+  }
+  const canDeriveImported = work.origin === "imported_web" && work.collaborationOpen === true && requestedKind === "derive";
+  if (!attempt || (attempt.ownerId !== userId && !canDeriveImported)) {
     throw new NextIdeaMutationError(403, "只有作品所属承接的作者可以发布下一步");
   }
   const parent = db.ideas.find((item) => item.id === work.ideaId);
@@ -97,10 +102,6 @@ export function createNextIdeaRecord(
   if (options.agentRequestId) {
     const existing = db.ideas.find(i => i.sourceWorkId === workId && i.author.userId === userId && i.agentRequestId === options.agentRequestId);
     if (existing) return existing;
-  }
-  const requestedKind = options.relationKind ?? input.relationKind ?? "derive";
-  if (requestedKind !== "iterate" && requestedKind !== "derive") {
-    throw new NextIdeaMutationError(400, "请选择这是功能迭代还是新的方向");
   }
   const clean = cleanInput(input);
   const siblingIndex = db.ideas.filter((item) => item.sourceWorkId === workId).length;

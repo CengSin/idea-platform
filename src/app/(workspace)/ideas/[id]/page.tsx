@@ -27,6 +27,7 @@ export default async function IdeaDetailPage({
     bundle;
   const source = sourceContext(db, idea, currentUserId);
   const isOwner = idea.author.userId === currentUserId;
+  const importedWork = idea.importedWorkId ? works.find((work) => work.id === idea.importedWorkId) : undefined;
 
   return (
       <PageFrame
@@ -41,6 +42,7 @@ export default async function IdeaDetailPage({
         }
       >
         {idea.status === "draft" && isOwner ? <DraftIdeaActions idea={idea} /> : null}
+        {idea.importedWorkId ? <div className="paper-sheet mb-5 text-[13px] text-muted">这个问题是创作者收录已有网站时补充的说明，不代表原网站开发前的历史记录。</div> : null}
         {idea.parentIdeaId && <div className="evolution-trail"><GitBranch size={15}/>{source ? <><Link href={`/ideas/${source.idea.id}`}>{source.idea.title}</Link><span>↝</span>{source.work ? <Link href={`/works/${source.work.id}${source.work.revision_id ? `?revision=${encodeURIComponent(source.work.revision_id)}#revision-${encodeURIComponent(source.work.revision_id)}` : ""}`}>{source.work.title} · {source.work.revision_number ? `v${source.work.revision_number}` : "历史版本未记录"}</Link> : <span>来源作品暂不可见</span>}<span>↝</span><span>{idea.status === "draft" ? `${IDEA_RELATION_KIND_LABEL[ideaRelationKind(idea) ?? "derive"]}草稿` : IDEA_RELATION_KIND_LABEL[ideaRelationKind(idea) ?? "derive"]}</span></> : <span>来源暂不可见，保留这一步的独立记录。</span>}</div>}
         <IdeaHeader
           idea={idea}
@@ -48,10 +50,11 @@ export default async function IdeaDetailPage({
           metrics={metrics}
           myAttemptId={myAttempt?.id}
           isOwner={isOwner}
+          importedCollaborationOpen={importedWork?.collaborationOpen === true}
         />
 
         <section className="paper-sheet mt-8">
-          <h2 className="text-[17px] font-medium">{idea.sourceWorkId ? "为什么改" : "我遇到的问题"}</h2>
+          <h2 className="text-[17px] font-medium">{idea.importedWorkId ? "入驻时补充的问题" : idea.sourceWorkId ? "为什么改" : "我遇到的问题"}</h2>
           <p className="mt-3 whitespace-pre-wrap text-[14px] leading-7 text-muted">{idea.problem}</p>
           {idea.whyItMatters && <><h3 className="mt-6 text-[14px] font-medium">希望带来的改变</h3><p className="mt-2 whitespace-pre-wrap text-[14px] leading-7 text-muted">{idea.whyItMatters}</p></>}
           {(idea.desiredOutputs.length > 0 || (idea.stopConditions?.length ?? 0) > 0) && <div className="mt-6 grid gap-5 sm:grid-cols-2">{[{title:"验收标准",items:idea.desiredOutputs},{title:"停止条件",items:idea.stopConditions ?? []}].filter(s=>s.items.length).map(section=><div key={section.title}><h3 className="text-[13px] font-medium">{section.title}</h3><ul className="mt-2 list-disc pl-5 text-[13px] leading-7 text-muted">{section.items.map((item,index)=><li key={index}>{item}</li>)}</ul></div>)}</div>}
@@ -59,7 +62,7 @@ export default async function IdeaDetailPage({
 
         <Lineage
           db={db}
-          attempts={attempts}
+          attempts={attempts.filter((attempt) => attempt.id !== importedWork?.attemptId)}
           works={works}
           currentUserId={currentUserId}
           ideaTitle={idea.title}

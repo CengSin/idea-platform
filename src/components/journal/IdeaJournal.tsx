@@ -18,7 +18,7 @@ export function Author({ idea }: { idea: PublicIdea }) {
       </span>
       <span>
         {idea.authorName}
-        <small>分享了一个想法</small>
+        <small>{idea.isImportedProblem ? "收录了已有网站" : "分享了一个想法"}</small>
       </span>
     </>
   );
@@ -42,13 +42,13 @@ export function IdeaJournal({
 }) {
   return (
     <div className="explore-main-flow">
-      {/* 1. Hero / Featured Lifecycle */}
+      {}
       <ExploreHero ideas={ideas} workspace={workspace} />
 
-      {/* 2. Happening Now */}
+      {}
       {activities.length > 0 && <HappeningNow activities={activities} />}
 
-      {/* 3. Explore Ideas */}
+      {}
       <ExploreCatalog ideas={ideas} workspace={workspace} />
     </div>
   );

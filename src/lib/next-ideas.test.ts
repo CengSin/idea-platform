@@ -75,6 +75,19 @@ test("a non-owner cannot create a next idea for the work", () => {
   assert.throws(() => createNextIdeaRecord(db, "stranger", "work", input, "next", at), status(403));
 });
 
+test("imported website permits independent directions only while collaboration is open", () => {
+  const db = fixture();
+  db.users.push({ ...db.users[0], id: "other", displayName: "其他作者" });
+  db.works[0].origin = "imported_web";
+  db.works[0].collaborationOpen = true;
+  const idea = createNextIdeaRecord(db, "other", "work", { ...input, relationKind: "derive" }, "other-next", at);
+  assert.equal(idea.author.userId, "other");
+  assert.throws(() => createNextIdeaRecord(db, "other", "work", { ...input, relationKind: "iterate" }, "other-iteration", at), status(403));
+  db.works[0].collaborationOpen = false;
+  assert.throws(() => createNextIdeaRecord(db, "other", "work", input, "closed-next", at), status(403));
+  assert.equal(db.ideas.find((item) => item.id === "other-next")?.status, "published");
+});
+
 test("an iteration next idea is stored as iterate and cannot be reclassified on edit", () => {
   const db = fixture();
   const idea = createNextIdeaRecord(db, "owner", "work", { ...input, relationKind: "iterate" }, "next", at);

@@ -12,8 +12,8 @@ export function isDefaultCover(url?: string | null) {
   const trimmed = url?.trim() ?? "";
   if (!trimmed) return true;
   if (trimmed === DEFAULT_COVER) return true;
-  // The old local fallback was stored as this relative path. An absolute URL
-  // with the same pathname can be a site's intentional Open Graph image.
+
+
   if (trimmed === "/covers/hushcity.jpg") return true;
   try {
     const parsed = new URL(trimmed, "https://idea.local");
@@ -81,9 +81,9 @@ export function coverCandidates(coverUrl?: string, externalUrl?: string) {
     seen.add(value);
     out.push(value);
   };
-  // A stored site mark is usually the result of an earlier preview fallback,
-  // not an explicit cover. Give the site's large preview endpoints a chance
-  // before falling back to that small icon.
+
+
+
   if (!coverUrl || !isSiteMarkUrl(coverUrl)) add(coverUrl);
   if (externalUrl) {
     for (const candidate of siteIconCandidates(externalUrl)) add(candidate);
@@ -108,6 +108,20 @@ function decodeHtmlEntities(value: string) {
     .replace(/&apos;|&#39;/gi, "'")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">");
+}
+
+export function extractPageText(html: string) {
+  const meta = new Map<string, string>();
+  for (const tag of html.match(/<meta\b[^>]*>/gi) ?? []) {
+    const attrs = attributes(tag);
+    const key = (attrs.get("property") ?? attrs.get("name") ?? "").toLowerCase();
+    const value = attrs.get("content")?.trim();
+    if (key && value && !meta.has(key)) meta.set(key, value);
+  }
+  const titleTag = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+  const title = meta.get("og:title") ?? meta.get("twitter:title") ?? (titleTag ? decodeHtmlEntities(titleTag[1].replace(/<[^>]*>/g, "").trim()) : "");
+  const description = meta.get("og:description") ?? meta.get("twitter:description") ?? meta.get("description") ?? "";
+  return { title: title.slice(0, 200), description: description.slice(0, 1000) };
 }
 
 function attributes(tag: string) {

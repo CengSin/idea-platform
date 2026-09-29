@@ -2,10 +2,11 @@ import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import {
   DEFAULT_COVER,
+  extractPageText,
   extractPreviewImages,
   isPlaceholderCover,
   type CoverPreview as LinkPreview,
-} from "./cover";
+} from "./cover.ts";
 
 export type { LinkPreview };
 
@@ -25,7 +26,7 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-export { extractPreviewImage, extractPreviewImages } from "./cover";
+export { extractPreviewImage, extractPreviewImages } from "./cover.ts";
 
 function isPrivateIPv4(address: string) {
   const octets = address.split(".").map(Number);
@@ -84,6 +85,51 @@ async function assertPublicHttpUrl(url: URL) {
   const addresses = await lookup(hostname, { all: true, verbatim: true });
   if (!addresses.length || addresses.some((item) => isPrivateAddress(item.address))) {
     throw new Error("private_address_not_allowed");
+  }
+}
+
+export async function validatePublicWebsiteUrl(input: string) {
+  const normalized = normalizeWebsiteUrl(input);
+  try {
+    await assertPublicHttpUrl(new URL(normalized));
+  } catch {
+    throw new Error("网站链接必须是可公开访问的 HTTP(S) 地址，不能指向内网或包含账号密码");
+  }
+  return normalized;
+}
+
+export function normalizeWebsiteUrl(input: string) {
+  let url: URL;
+  try {
+    url = new URL(input.trim());
+  } catch {
+    throw new Error("网站链接无效");
+  }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hostname === "localhost" || url.hostname.endsWith(".localhost") || url.hostname.endsWith(".local") || url.hostname.endsWith(".internal") || (isIP(url.hostname) && isPrivateAddress(url.hostname))) {
+    throw new Error("网站链接必须是可公开访问的 HTTP(S) 地址，不能指向内网或包含账号密码");
+  }
+  url.hash = "";
+  return url.toString();
+}
+
+export async function resolveWebsitePreview(input: string) {
+  const url = await validatePublicWebsiteUrl(input);
+  try {
+    const page = await fetchHtml(url);
+    const text = extractPageText(page.html);
+    let imageUrl: string | undefined;
+    for (const preview of extractPreviewImages(page.html, page.pageUrl)) {
+      try {
+        await assertPublicHttpUrl(new URL(preview.imageUrl));
+        imageUrl = preview.imageUrl;
+        break;
+      } catch {
+        continue;
+      }
+    }
+    return { url, ...text, imageUrl, fetched: true };
+  } catch {
+    return { url, title: "", description: "", imageUrl: undefined, fetched: false };
   }
 }
 
@@ -169,7 +215,7 @@ export async function resolveLinkPreview(inputUrl: string): Promise<LinkPreview 
         remember(normalizedUrl, preview);
         return preview;
       } catch {
-        // Try the next public candidate (favicon / apple-touch-icon).
+
       }
     }
     remember(normalizedUrl, null);

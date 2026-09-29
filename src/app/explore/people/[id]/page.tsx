@@ -18,7 +18,7 @@ export default async function PublicCreator({
 
   return (
     <div className="mx-auto max-w-[960px] py-8 sm:py-12 select-none">
-      {/* Back link */}
+      {}
       <Link
         className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-900 mb-8"
         href="/explore#explore-ideas"
@@ -27,7 +27,7 @@ export default async function PublicCreator({
         <span>回到探索广场</span>
       </Link>
 
-      {/* Creator Profile Header */}
+      {}
       <header className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-9 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
@@ -68,7 +68,7 @@ export default async function PublicCreator({
         </p>
       </header>
 
-      {/* Ideas Section */}
+      {}
       <section className="mt-10">
         <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
           <div className="flex items-center gap-2">
@@ -94,7 +94,7 @@ export default async function PublicCreator({
                     <h3 className="text-[16px] font-bold text-slate-900 group-hover:text-orange-600">
                       {i.title}
                     </h3>
-                    {i.status === "deprecated" ? (
+                    {i.isImportedProblem ? <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] text-emerald-700">已有作品入驻</span> : i.status === "deprecated" ? (
                       <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-500">
                         已弃用
                       </span>
@@ -125,12 +125,12 @@ export default async function PublicCreator({
         </div>
       </section>
 
-      {/* Works Section */}
+      {}
       <section className="mt-12">
         <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
           <div className="flex items-center gap-2">
             <Package className="h-4 w-4 text-emerald-600" />
-            <h2 className="text-[20px] font-bold text-slate-900">从这些想法长出的作品</h2>
+            <h2 className="text-[20px] font-bold text-slate-900">作品与入驻网站</h2>
           </div>
           <span className="font-mono text-[11px] text-slate-400">{works.length} WORKS</span>
         </div>
@@ -144,7 +144,7 @@ export default async function PublicCreator({
               >
                 <div>
                   <span className="font-mono text-[11px] text-emerald-700 font-medium uppercase">
-                    源自「{w.idea.title}」
+                    {w.origin === "imported_web" ? "已有作品入驻 · 入驻时补充的问题" : "源自"}「{w.idea.title}」
                   </span>
                   <h3 className="mt-1 text-[17px] font-bold text-slate-900">{w.title}</h3>
                   <p className="mt-1 text-[13px] text-slate-600">{w.summary}</p>
@@ -155,7 +155,7 @@ export default async function PublicCreator({
                     href={`/explore/${w.idea.id}#work-${w.id}`}
                     className="text-[12px] font-medium text-slate-600 hover:underline"
                   >
-                    查看源想法
+                    {w.origin === "imported_web" ? "查看入驻记录" : "查看源想法"}
                   </Link>
 
                   {w.externalUrl && (

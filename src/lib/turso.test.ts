@@ -40,6 +40,7 @@ test("databaseFromRows restores nested JSON and optional fields", () => {
         status: "evolving",
         parent_idea_id: null,
         source_work_id: null,
+        imported_work_id: "work_1",
         graph: '{"x":1,"y":2}',
         created_at: "2026-08-29T05:01:48.985Z",
         updated_at: "2026-08-29T05:01:48.985Z",
@@ -82,6 +83,9 @@ test("databaseFromRows restores nested JSON and optional fields", () => {
         saves: 0,
         citations: 0,
         iteration: '{"status":"open","suggestions":[],"scannedAt":"2026-09-03T00:00:00.000Z","email":{"status":"pending"}}',
+        origin: "imported_web",
+        original_published_at: "2025-01-01",
+        collaboration_open: 0,
       }),
     ],
     events: [],
@@ -112,10 +116,14 @@ test("databaseFromRows restores nested JSON and optional fields", () => {
   assert.deepEqual(db.users[0]?.skills, ["go"]);
   assert.equal(db.ideas[0]?.author.userId, "user_38c0e310a872");
   assert.equal(db.ideas[0]?.relationKind, "derive");
+  assert.equal(db.ideas[0]?.importedWorkId, "work_1");
   assert.equal(db.attempts[0]?.projectDescription, "desc");
   assert.equal(db.notifications[0]?.read, true);
   assert.equal(db.notifications[0]?.userId, "user_38c0e310a872");
   assert.equal(db.works[0]?.iteration?.email?.status, "pending");
+  assert.equal(db.works[0]?.origin, "imported_web");
+  assert.equal(db.works[0]?.originalPublishedAt, "2025-01-01");
+  assert.equal(db.works[0]?.collaborationOpen, false);
   assert.deepEqual(db.follows[0], { userId: "user_38c0e310a872", ideaId: "idea_1" });
   assert.equal(db.agentConfig?.openaiBaseUrl, "https://api.example.com/v1");
   assert.equal(db.agentConfig?.cronSecret, "cron-private");

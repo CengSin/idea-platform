@@ -8,6 +8,7 @@ import { HoloCard } from "@/components/journal/HoloCard";
 
 function stageLabel(idea: PublicIdea) {
   if (idea.status === "deprecated") return "已弃用";
+  if (idea.isImportedProblem) return "已有网站入驻";
   if (idea.works.length > 0) return "已有作品";
   if (idea.attemptCount > 0) return "实现中";
   return "待实现";
@@ -84,7 +85,7 @@ export function CuratedMasonry({
               >
                 打开这个想法 <ArrowUpRight className="h-4 w-4" />
               </Link>
-              {!workspace && featured.status !== "deprecated" ? (
+              {!workspace && featured.status !== "deprecated" && (!featured.isImportedProblem || featured.collaborationOpen) ? (
                 <Link
                   href={`/login?next=${encodeURIComponent(`/ideas/${featured.id}`)}`}
                   className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-black/35 px-5 py-2.5 text-[13.5px] font-medium text-white backdrop-blur-sm hover:bg-black/50"

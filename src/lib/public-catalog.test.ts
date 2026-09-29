@@ -177,6 +177,21 @@ test("shareable works only contain published works from public idea and attempt 
   assert.deepEqual(buildPublicWorksPage(db, "private-author")?.works, []);
 });
 
+test("imported website public projection includes dates and collaboration without private account data", () => {
+  const db = fixture();
+  db.ideas[0] = { ...idea, importedWorkId: work.id };
+  db.works[0] = { ...work, origin: "imported_web", originalPublishedAt: "2025-01-01", collaborationOpen: false, publishedAt: "2026-09-29" };
+  const [entry] = buildPublicCatalog(db);
+  assert.equal(entry.isImportedProblem, true);
+  assert.equal(entry.attemptCount, 0);
+  assert.equal(entry.collaborationOpen, false);
+  assert.equal(entry.works[0].origin, "imported_web");
+  assert.equal(entry.works[0].originalPublishedAt, "2025-01-01");
+  assert.equal(entry.works[0].publishedAt, "2026-09-29");
+  assert.equal(JSON.stringify(entry).includes("PRIVATE_NAME"), false);
+  assert.equal(buildPublicWorksPage(db)?.works[0].origin, "imported_web");
+});
+
 test("credited public works are included without exposing private profiles", () => {
   const db = fixture();
   db.users.push({ ...db.users[0], id: "credit-user", displayName: "Credit User", visibility: "public" });

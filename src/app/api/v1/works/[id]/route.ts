@@ -7,20 +7,21 @@ import { getAgentRequestIdentity, getCurrentUser } from "@/lib/auth";
 import { canAccessIdea, workForViewer } from "@/lib/content-access";
 import { deleteWork, updateWork } from "@/lib/ops";
 import { WorkMutationError, workRequestBody } from "@/lib/work-management";
+import { isSameOriginRequest } from "@/lib/request-origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function mutate(req: Request, id: string, operation: "update" | "delete") {
   try {
-    // An explicit invalid credential must never fall back to the browser session.
+
     const agent = req.headers.has("authorization") ? await getAgentRequestIdentity(req) : null;
     const me = req.headers.has("authorization") ? agent?.user : await getCurrentUser();
     if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     if (!req.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
       throw new WorkMutationError(415, "请使用 Content-Type: application/json");
     }
-    if (!agent && req.headers.get("origin") && req.headers.get("origin") !== new URL(req.url).origin) {
+    if (!agent && !isSameOriginRequest(req)) {
       throw new WorkMutationError(403, "不允许跨站修改作品");
     }
     let raw: unknown;

@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS ideas (
   status TEXT NOT NULL,
   parent_idea_id TEXT,
   source_work_id TEXT,
+  imported_work_id TEXT,
   graph TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -98,7 +99,10 @@ CREATE TABLE IF NOT EXISTS works (
   saves INTEGER NOT NULL DEFAULT 0,
   citations INTEGER NOT NULL DEFAULT 0,
   graph TEXT,
-  iteration TEXT
+  iteration TEXT,
+  origin TEXT,
+  original_published_at TEXT,
+  collaboration_open INTEGER
 );
 CREATE TABLE IF NOT EXISTS events (
   id TEXT PRIMARY KEY,
@@ -191,6 +195,10 @@ async function ensureSchema() {
     "ALTER TABLE works ADD COLUMN iteration TEXT",
     "ALTER TABLE notifications ADD COLUMN user_id TEXT",
     "ALTER TABLE ideas ADD COLUMN relation_kind TEXT",
+    "ALTER TABLE ideas ADD COLUMN imported_work_id TEXT",
+    "ALTER TABLE works ADD COLUMN origin TEXT",
+    "ALTER TABLE works ADD COLUMN original_published_at TEXT",
+    "ALTER TABLE works ADD COLUMN collaboration_open INTEGER",
   ]) {
     try {
       await tursoClient().execute(sql);
@@ -297,6 +305,7 @@ function decodeIdea(row: Row): Idea {
   const sourceWorkId = optStr(row.source_work_id);
   if (parentIdeaId) idea.parentIdeaId = parentIdeaId;
   if (sourceWorkId) idea.sourceWorkId = sourceWorkId;
+  if (optStr(row.imported_work_id)) idea.importedWorkId = optStr(row.imported_work_id);
   if (optStr(row.source_work_revision_id)) idea.sourceWorkRevisionId = optStr(row.source_work_revision_id);
   if (optStr(row.agent_request_id)) idea.agentRequestId = optStr(row.agent_request_id);
   const relationKind = optStr(row.relation_kind);
@@ -358,6 +367,9 @@ function decodeWork(row: Row): Work {
   if (externalUrl) work.externalUrl = externalUrl;
   if (repositoryUrl) work.repositoryUrl = repositoryUrl;
   if (publishedAt) work.publishedAt = publishedAt;
+  if (str(row.origin) === "imported_web") work.origin = "imported_web";
+  if (optStr(row.original_published_at)) work.originalPublishedAt = optStr(row.original_published_at);
+  if (row.collaboration_open != null) work.collaborationOpen = Boolean(num(row.collaboration_open));
   const graph = parseJson<Work["graph"] | null>(row.graph, null);
   if (graph) work.graph = graph;
   const iteration = parseJson<Work["iteration"] | null>(row.iteration, null);
@@ -504,8 +516,8 @@ function contentInserts(db: Database): InStatement[] {
     stmts.push({
       sql: `INSERT INTO ideas (id, title, summary, problem, why_it_matters, constraints, existing_attempts,
             open_questions, desired_outputs, tags, author, license, visibility, status, parent_idea_id,
-            source_work_id, graph, created_at, updated_at, stop_conditions, source_work_revision_id, agent_request_id, relation_kind)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            source_work_id, graph, created_at, updated_at, stop_conditions, source_work_revision_id, agent_request_id, relation_kind, imported_work_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         idea.id,
         idea.title,
@@ -530,6 +542,7 @@ function contentInserts(db: Database): InStatement[] {
         idea.sourceWorkRevisionId ?? null,
         idea.agentRequestId ?? null,
         idea.relationKind ?? null,
+        idea.importedWorkId ?? null,
       ],
     });
   }
@@ -567,8 +580,9 @@ function contentInserts(db: Database): InStatement[] {
   for (const work of db.works) {
     stmts.push({
       sql: `INSERT INTO works (id, attempt_id, idea_id, title, summary, type, cover_url, external_url,
-            repository_url, status, credits, license, published_at, views, saves, citations, graph, iteration, revisions)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            repository_url, status, credits, license, published_at, views, saves, citations, graph, iteration, revisions,
+            origin, original_published_at, collaboration_open)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         work.id,
         work.attemptId,
@@ -589,6 +603,9 @@ function contentInserts(db: Database): InStatement[] {
         work.graph ? jsonText(work.graph) : null,
         work.iteration ? jsonText(work.iteration) : null,
         work.revisions ? jsonText(work.revisions) : null,
+        work.origin ?? null,
+        work.originalPublishedAt ?? null,
+        work.origin === "imported_web" ? (work.collaborationOpen ? 1 : 0) : null,
       ],
     });
   }

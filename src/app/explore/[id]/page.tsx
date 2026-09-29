@@ -8,6 +8,7 @@ import { getPublicCatalog } from "@/lib/public-queries";
 import { WorkReminders } from "@/components/idea/WorkReminders";
 import { IdeaLifecycleRail } from "@/components/idea/IdeaLifecycleRail";
 import { IDEA_RELATION_KIND_LABEL } from "@/lib/idea-relations";
+import { formatDate } from "@/lib/format";
 import { ArrowLeft, ArrowUpRight, GitBranch, Package, Sparkles } from "lucide-react";
 
 type Props = { params: Promise<{ id: string }> };
@@ -29,7 +30,7 @@ export default async function PublicIdeaPage({ params }: Props) {
 
   return (
     <article className="journal-detail-container mx-auto max-w-[1080px] py-8 sm:py-12">
-      {/* Back to Explore */}
+      {}
       <Link
         className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-900 mb-8"
         href="/explore#explore-ideas"
@@ -38,7 +39,7 @@ export default async function PublicIdeaPage({ params }: Props) {
         <span>回到探索广场</span>
       </Link>
 
-      {/* Evolution Trail if derived from a work */}
+      {}
       {idea.source && (
         <div className="mb-6 inline-flex flex-wrap items-center gap-2 rounded-xl border border-amber-200/80 bg-amber-50/50 px-3.5 py-2 font-mono text-[12px] text-amber-900">
           <Sparkles className="h-3.5 w-3.5 text-amber-600" />
@@ -61,11 +62,11 @@ export default async function PublicIdeaPage({ params }: Props) {
         <p className="mb-6 text-[12px] text-slate-400">来源作品暂不可见，保留这一步的独立记录。</p>
       )}
 
-      {/* Header */}
+      {}
       <header className="border-b border-slate-200/80 pb-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            {isDeprecated ? "IDEA RECORD / 保留记录" : "AN OPEN INVITATION / 开放共创邀请"}
+            {idea.isImportedProblem ? "IMPORTED WEBSITE / 已有作品入驻" : isDeprecated ? "IDEA RECORD / 保留记录" : "AN OPEN INVITATION / 开放共创邀请"}
           </span>
 
           {isDeprecated && (
@@ -82,12 +83,13 @@ export default async function PublicIdeaPage({ params }: Props) {
         <p className="mt-4 max-w-3xl text-[16px] leading-relaxed text-slate-600 sm:text-[17px]">
           {idea.summary}
         </p>
+        {idea.isImportedProblem ? <p className="mt-3 text-[13px] text-slate-500">这里的问题由创作者在作品入驻时补充，不代表网站开发前的历史记录。</p> : null}
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
           <Author idea={idea} />
 
-          {/* Integrated Lifecycle Rail */}
-          <div className="w-full sm:w-[320px] rounded-2xl border border-slate-200/80 bg-white p-3 shadow-2xs">
+          {}
+          {!idea.isImportedProblem ? <div className="w-full sm:w-[320px] rounded-2xl border border-slate-200/80 bg-white p-3 shadow-2xs">
             <IdeaLifecycleRail
               ideaCount={1}
               buildCount={idea.attemptCount}
@@ -95,17 +97,17 @@ export default async function PublicIdeaPage({ params }: Props) {
               status={idea.status}
               size="sm"
             />
-          </div>
+          </div> : null}
         </div>
       </header>
 
-      {/* Two-Column Grid */}
+      {}
       <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-12">
-        {/* Main Content (8 cols) */}
+        {}
         <div className="space-y-10 lg:col-span-8">
-          {/* Problem & Why it matters */}
+          {}
           {[
-            { n: "01", title: "我遇到的核心问题", text: idea.problem },
+            { n: "01", title: idea.isImportedProblem ? "入驻时补充的问题" : "我遇到的核心问题", text: idea.problem },
             {
               n: "02",
               title: "希望发生的改变",
@@ -125,7 +127,7 @@ export default async function PublicIdeaPage({ params }: Props) {
               </section>
             ))}
 
-          {/* Criteria & Open Questions */}
+          {}
           {[
             { n: "03", title: "作者的验收标准", items: idea.desiredOutputs },
             { n: "04", title: "还想一起探索的问题", items: idea.openQuestions },
@@ -149,14 +151,14 @@ export default async function PublicIdeaPage({ params }: Props) {
               </section>
             ))}
 
-          {/* Public Works Section */}
+          {}
           <section id="works" className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
               <div>
                 <span className="font-mono text-[10.5px] font-semibold uppercase tracking-wider text-emerald-700">
-                  MADE FROM THIS IDEA
+                  {idea.isImportedProblem ? "IMPORTED WEBSITE" : "MADE FROM THIS IDEA"}
                 </span>
-                <h2 className="mt-1 text-[22px] font-bold text-slate-900">想法之后，发生了什么？</h2>
+                <h2 className="mt-1 text-[22px] font-bold text-slate-900">{idea.isImportedProblem ? "已收录的网站" : "想法之后，发生了什么？"}</h2>
               </div>
               <span className="text-[12.5px] text-slate-500 font-mono">
                 {idea.attemptCount} 个实现方向 · {idea.works.length} 个作品
@@ -180,11 +182,13 @@ export default async function PublicIdeaPage({ params }: Props) {
                       />
                       <div className="mt-4">
                         <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span className="font-medium text-slate-700">作品 · v{w.revisionNumber}</span>
+                          <span className="font-medium text-slate-700">{w.origin === "imported_web" ? "已有网站" : `作品 · v${w.revisionNumber}`}</span>
                           <span className="font-mono uppercase">{w.type}</span>
                         </div>
                         <h3 className="mt-1 text-[17px] font-bold text-slate-900">{w.title}</h3>
+                        {w.origin === "imported_web" ? <p className="mt-2 text-[11px] font-semibold text-emerald-700">已有作品入驻 · {w.collaborationOpen ? "开放共创" : "仅展示"}</p> : null}
                         <p className="mt-2 text-[13px] leading-relaxed text-slate-600">{w.summary}</p>
+                        {w.origin === "imported_web" ? <p className="mt-2 text-[11px] text-slate-500">{w.originalPublishedAt ? `原发布时间 ${formatDate(w.originalPublishedAt)} · ` : ""}平台收录 {w.publishedAt ? formatDate(w.publishedAt) : ""}</p> : null}
                         <WorkReminders reminders={w.reminders} />
                       </div>
                     </div>
@@ -200,8 +204,9 @@ export default async function PublicIdeaPage({ params }: Props) {
                           打开作品 <ArrowUpRight size={15} />
                         </a>
                       )}
+                      {w.origin === "imported_web" && w.collaborationOpen ? <Link href={`/login?next=${encodeURIComponent(`/works/${w.id}#next-ideas`)}`} className="ml-4 text-[12px] font-semibold text-emerald-700 underline underline-offset-2">从网站提出新方向</Link> : null}
 
-                      {/* Next Ideas from this work */}
+                      {}
                       {catalog.filter((child) => child.source?.workId === w.id && child.relationKind !== "iterate").length > 0 && (
                         <div className="mt-3 rounded-lg bg-amber-50/80 p-2.5 text-[11.5px] text-amber-900">
                           <div className="font-semibold text-amber-800">↳ 从这个作品长出的新方向:</div>
@@ -236,24 +241,24 @@ export default async function PublicIdeaPage({ params }: Props) {
           </section>
         </div>
 
-        {/* Aside Column: Participate & Attribution (4 cols) */}
+        {}
         <aside className="space-y-6 lg:col-span-4">
           <div className="sticky top-24 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs">
             <span className="font-mono text-[10.5px] font-semibold uppercase tracking-wider text-slate-400">
-              {isDeprecated ? "KEPT FOR REFERENCE" : "LET’S MAKE IT REAL"}
+              {idea.isImportedProblem ? "WEBSITE RECORD" : isDeprecated ? "KEPT FOR REFERENCE" : "LET’S MAKE IT REAL"}
             </span>
 
             <h2 className="mt-2 text-[22px] font-bold text-slate-900">
-              {isDeprecated ? "供后来者参考" : "你也想到一种可能？"}
+              {idea.isImportedProblem && !idea.collaborationOpen ? "网站展示中" : isDeprecated ? "供后来者参考" : "你也想到一种可能？"}
             </h2>
 
             <p className="mt-2 text-[13px] leading-relaxed text-slate-600">
-              {isDeprecated
+              {idea.isImportedProblem && !idea.collaborationOpen ? "创作者尚未开放共创，你仍可查看和分享网站。" : isDeprecated
                 ? "这个方向已停止推进。你仍可以阅读已有成果或分享给需要的人。"
                 : "沿着自己的方向实现它，再把成果带回来。一个想法，可以拥有很多种答案。"}
             </p>
 
-            {!isDeprecated ? (
+            {!isDeprecated && (!idea.isImportedProblem || idea.collaborationOpen) ? (
               <Link
                 className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-[13.5px] font-semibold text-white shadow-sm transition hover:bg-slate-800"
                 href={`/login?next=${encodeURIComponent(`/ideas/${idea.id}`)}`}
@@ -263,7 +268,7 @@ export default async function PublicIdeaPage({ params }: Props) {
               </Link>
             ) : (
               <div className="mt-4 rounded-lg bg-slate-100 p-3 text-[12px] text-slate-500">
-                已弃用，暂不接受新的承接。
+                {idea.isImportedProblem ? "当前仅展示，暂不接受新的承接。" : "已弃用，暂不接受新的承接。"}
               </div>
             )}
 
@@ -275,14 +280,14 @@ export default async function PublicIdeaPage({ params }: Props) {
               参与需要登录，阅读和分享无需账号。
             </small>
 
-            {/* Attribution */}
+            {}
             <div className="mt-6 border-t border-slate-100 pt-5 text-[12px]">
-              <span className="text-slate-400">最初的想法，来自</span>
+              <span className="text-slate-400">{idea.isImportedProblem ? "入驻时补充的问题，由谁提出" : "最初的想法，来自"}</span>
               <div className="mt-2">
                 <Author idea={idea} />
               </div>
               <p className="mt-3 text-[11.5px] text-slate-400">
-                每份实现都回到这个起点，保留想法的来源与作者署名。
+                {idea.isImportedProblem ? "网站已经存在，平台收录并保留创作者署名。" : "每份实现都回到这个起点，保留想法的来源与作者署名。"}
               </p>
             </div>
           </div>

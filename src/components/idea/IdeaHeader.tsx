@@ -17,12 +17,14 @@ export function IdeaHeader({
   metrics,
   myAttemptId,
   isOwner = false,
+  importedCollaborationOpen = false,
 }: {
   idea: Idea;
   author?: User;
   metrics: IdeaMetrics;
   myAttemptId?: string;
   isOwner?: boolean;
+  importedCollaborationOpen?: boolean;
 }) {
   const sheets = useSheets();
   const [pending, start] = useTransition();
@@ -35,6 +37,7 @@ export function IdeaHeader({
           <h1 className="text-[32px] font-semibold leading-[1.15] tracking-[-0.04em]">
             {idea.title} {idea.status === "deprecated" && <span className="idea-deprecated-badge">已弃用</span>}
           </h1>
+          {idea.importedWorkId ? <p className="mt-2 text-[12px] text-emerald-700">已有作品入驻 · 入驻时补充的问题</p> : null}
           <p className="mt-3 max-w-[640px] text-[14.5px] leading-relaxed text-muted">
             {idea.summary}
           </p>
@@ -67,13 +70,13 @@ export function IdeaHeader({
           <Button
             tone="idea"
             onClick={() => sheets.openAdopt(idea)}
-            disabled={!!myAttemptId || idea.status === "deprecated"}
+            disabled={!!myAttemptId || idea.status === "deprecated" || (Boolean(idea.importedWorkId) && !importedCollaborationOpen && !isOwner)}
           >
             <Users className="h-4 w-4" />
-            {idea.status === "deprecated" ? "想法已弃用" : myAttemptId ? "项目已创建" : idea.status === "draft" && isOwner ? "为草稿创建项目" : "承接这个想法"}
+            {idea.status === "deprecated" ? "想法已弃用" : myAttemptId ? "项目已创建" : idea.importedWorkId && !importedCollaborationOpen && !isOwner ? "网站暂未开放共创" : idea.status === "draft" && isOwner ? "为草稿创建项目" : "承接这个想法"}
           </Button>
         </div>
-        <div className="w-full sm:w-[280px] rounded-xl border border-slate-200/80 bg-white/80 p-2.5 shadow-2xs">
+        {!idea.importedWorkId ? <div className="w-full sm:w-[280px] rounded-xl border border-slate-200/80 bg-white/80 p-2.5 shadow-2xs">
           <IdeaLifecycleRail
             ideaCount={1}
             buildCount={metrics.activeAttemptCount || metrics.totalAttemptCount}
@@ -81,7 +84,7 @@ export function IdeaHeader({
             status={idea.status}
             size="sm"
           />
-        </div>
+        </div> : null}
       </div>
     </header>
   );

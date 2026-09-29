@@ -6,6 +6,7 @@ import { CoverImage } from "@/components/ui/CoverImage";
 import { WorkActions } from "@/components/idea/WorkActions";
 import { AgentUpgradePanel } from "@/components/idea/AgentUpgradePanel";
 import { NextIdeas } from "@/components/idea/NextIdeas";
+import { ImportedCollaboration } from "@/components/works/ImportedCollaboration";
 import { formatDate, formatLicense, WORK_TYPE_LABEL } from "@/lib/format";
 import { getWorkBundle } from "@/lib/queries";
 import { ExternalLink } from "lucide-react";
@@ -49,13 +50,14 @@ export default async function WorkPage({
             <div className="mt-6 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/70">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                已发布 · v{currentWorkRevision(work).number}
+                {work.origin === "imported_web" ? "已有网站入驻" : `已发布 · v${currentWorkRevision(work).number}`}
               </span>
               <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
                 {WORK_TYPE_LABEL[work.type]}
               </span>
             </div>
             <h1 className="mt-3 text-[32px] font-bold tracking-[-0.04em] text-slate-900">{work.title}</h1>
+            {work.origin === "imported_web" ? <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] text-emerald-900"><strong>已有作品入驻</strong><p className="mt-1">{work.originalPublishedAt ? `原发布时间 ${formatDate(work.originalPublishedAt)} · ` : ""}平台收录 {work.publishedAt ? formatDate(work.publishedAt) : ""}。关联问题由作者在入驻时补充。</p></div> : null}
             {idea.status === "draft" ? (
               <div className="mt-4 rounded-2xl border border-idea/25 bg-idea/7 px-4 py-3 text-[13px] text-muted">
                 作品已保存到草稿项目，将在来源想法发布时一起对外可见。
@@ -73,26 +75,27 @@ export default async function WorkPage({
           </div>
           <aside className="space-y-4">
             {bundle.canManage ? <WorkActions work={work} /> : null}
-            {bundle.canManage ? <AgentUpgradePanel attemptId={attempt.id} derived={Boolean(idea.parentIdeaId)} /> : null}
+            {bundle.canManage && work.origin === "imported_web" ? <ImportedCollaboration workId={work.id} initiallyOpen={work.collaborationOpen === true} /> : null}
+            {bundle.canManage && work.origin !== "imported_web" ? <AgentUpgradePanel attemptId={attempt.id} derived={Boolean(idea.parentIdeaId)} /> : null}
             <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-2xs">
-              <div className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-400">来源想法</div>
+              <div className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-400">{work.origin === "imported_web" ? "入驻时补充的问题" : "来源想法"}</div>
               <Link href={`/ideas/${idea.id}`} className="mt-2 block text-[16px] font-bold text-slate-900 hover:text-orange-600">
                 {idea.title}
               </Link>
-              <div className="mt-3 text-[13px] text-slate-500">
+              {work.origin !== "imported_web" ? <div className="mt-3 text-[13px] text-slate-500">
                 实现轨道{" "}
                 <Link href={`/attempts/${attempt.id}`} className="font-medium text-indigo-600 hover:underline">
                   {attempt.title}
                 </Link>
-              </div>
-              <div className="mt-4 border-t border-slate-100 pt-3">
+              </div> : null}
+              {work.origin !== "imported_web" ? <div className="mt-4 border-t border-slate-100 pt-3">
                 <IdeaLifecycleRail
                   ideaCount={1}
                   buildCount={1}
                   productCount={1}
                   size="sm"
                 />
-              </div>
+              </div> : null}
               <div className="mt-4 flex flex-wrap gap-2">
                 <Chip>{WORK_TYPE_LABEL[work.type]}</Chip>
                 <Chip tone="artifact">{work.publishedAt ? formatDate(work.publishedAt) : "草稿"}</Chip>
@@ -114,16 +117,17 @@ export default async function WorkPage({
             </div>
           </aside>
         </div>
-        <details className="revision-history paper-sheet mt-8" open={Boolean(requestedRevision)}>
+        {work.origin !== "imported_web" ? <details className="revision-history paper-sheet mt-8" open={Boolean(requestedRevision)}>
           <summary>作品版本 · {work.revisions?.length || 1} 份记录</summary>
           <ol>{(work.revisions?.length ? [...work.revisions].reverse() : [currentWorkRevision(work)]).map(revision => <li key={revision.id} id={`revision-${revision.id}`} className={requestedRevision === revision.id ? "revision-selected" : undefined}><strong>v{revision.number} · {revision.title}</strong><span className="ml-3 text-[11px] text-muted">{revision.recordedAt ? formatDate(revision.recordedAt) : "现有作品，历史未记录"}</span><p>{revision.summary}</p>{revision.repositoryUrl && <a className="text-active text-[12px]" href={revision.repositoryUrl} target="_blank" rel="noreferrer">查看此版本记录的仓库 ↗</a>}</li>)}</ol>
           <p className="text-[11px] text-muted">版本记录保存作品说明与链接；链接所指的网站或仓库内容可能继续更新。</p>
-        </details>
+        </details> : null}
         <NextIdeas
           workId={work.id}
           workTitle={work.title}
           items={nextIdeas}
-          canCreate={bundle.canManage}
+          canCreate={bundle.canManage || (work.origin === "imported_web" && work.collaborationOpen === true)}
+          deriveOnly={!bundle.canManage && work.origin === "imported_web"}
         />
       </PageFrame>
   );

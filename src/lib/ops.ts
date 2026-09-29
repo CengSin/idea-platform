@@ -4,8 +4,9 @@ import { DEFAULT_COVER } from "./cover";
 import { mutateDb, readDb, resetDb } from "./db";
 import { recomputeIdeaStatus } from "./format";
 import { isPlaceholderCover } from "./cover";
-import { resolveLinkPreview } from "./link-preview";
-import { applyWorkDelete, applyWorkUpdate, ownedWork, parseWorkPatch } from "./work-management";
+import { resolveLinkPreview, validatePublicWebsiteUrl } from "./link-preview";
+import { canAdoptImportedIdea } from "./web-project-import";
+import { applyWorkDelete, applyWorkUpdate, ownedWork, parseWorkPatch, WorkMutationError } from "./work-management";
 import {
   createNextIdeaRecord,
   deleteNextIdeaRecord,
@@ -240,6 +241,7 @@ export async function publishIdeaDraft(userId: string, ideaId: string) {
       const parent = db.ideas.find(i => i.id === source?.ideaId);
       const branch = db.attempts.find(a => a.id === source?.attemptId);
       if (!source || source.status !== "published" || !parent || ["draft", "archived"].includes(parent.status) || parent.visibility !== "public" || branch?.visibility !== "public" || branch?.status === "abandoned") throw new Error("来源作品尚未公开，暂不能发布这条迭代。");
+      if (source.origin === "imported_web" && branch?.ownerId !== userId && !source.collaborationOpen) throw new Error("这个入驻网站已关闭共创，暂不能发布新方向。");
       if (idea.sourceWorkRevisionId && !source.revisions?.some(r => r.id === idea.sourceWorkRevisionId)) throw new Error("来源版本不存在，无法发布这条迭代。");
       idea.parentIdeaId = parent.id;
       idea.visibility = "public";
@@ -305,6 +307,7 @@ export async function adoptIdea(userId: string, input: {
     if (idea.status === "draft" && idea.author.userId !== userId) {
       throw new Error("草稿仅作者本人可以创建项目");
     }
+    if (!canAdoptImportedIdea(db, idea, userId)) throw new Error("这个入驻网站尚未开放共创");
     const me = db.users.find((u) => u.id === userId)!;
     const existing = db.attempts.find(
       (a) =>
@@ -461,6 +464,11 @@ export async function publishWork(userId: string, input: {
 export async function updateWork(userId: string, workId: string, raw: unknown, scopeAttemptId?: string) {
   const { work } = ownedWork(await readDb(), userId, workId, scopeAttemptId);
   const patch = parseWorkPatch(raw);
+  if (work.origin === "imported_web" && patch.externalUrl !== undefined) {
+    if (!patch.externalUrl) throw new WorkMutationError(400, "入驻网站必须保留公开链接。");
+    try { patch.externalUrl = await validatePublicWebsiteUrl(patch.externalUrl); }
+    catch { throw new WorkMutationError(400, "网站链接无效或不可公开访问。"); }
+  }
   const externalChanged = patch.externalUrl !== undefined && patch.externalUrl !== (work.externalUrl ?? "");
   if ((patch.coverUrl !== undefined && isPlaceholderCover(patch.coverUrl)) || (externalChanged && patch.coverUrl === undefined)) {
     const externalUrl = patch.externalUrl ?? work.externalUrl;
@@ -478,7 +486,7 @@ async function mutateWork(userId: string, workId: string, operation: "update" | 
   const at = nowIso();
   const eventId = `evt_${nanoid(6)}`;
   const db = await mutateDb((db) => {
-    // Recheck ownership inside the store transaction, including on conflict retries.
+
     const { work, attempt } = operation === "delete"
       ? applyWorkDelete(db, userId, workId, at, scopeAttemptId)
       : applyWorkUpdate(db, userId, workId, patch!, at, scopeAttemptId);

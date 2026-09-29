@@ -2,7 +2,7 @@ import { Sparkles, ArrowUpRight } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
 import { getCurrentUser } from "@/lib/auth";
 
-// Visibility changes must take effect immediately; never statically cache public content.
+
 export const dynamic = "force-dynamic";
 
 export default async function ExploreLayout({ children }: { children: React.ReactNode }) {
@@ -28,10 +28,12 @@ export default async function ExploreLayout({ children }: { children: React.Reac
             {me ? (
               <>
                 <Link href="/works" prefetch={false} className="rounded-xl px-3.5 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-950">我的作品</Link>
+                <Link href="/works/import" className="hidden rounded-xl px-3.5 py-2 text-[13px] font-medium text-emerald-700 hover:text-emerald-900 sm:block">收录已有网站</Link>
                 <Link href="/profile" className="inline-flex items-center gap-1.5 rounded-xl bg-slate-950 px-4 py-2 text-[13px] font-semibold text-white shadow-2xs transition hover:bg-slate-800">{me.displayName}<ArrowUpRight className="h-3.5 w-3.5" /></Link>
               </>
             ) : (
               <>
+                <Link href="/login?next=%2Fworks%2Fimport" className="hidden text-[13px] font-medium text-emerald-700 hover:text-emerald-900 md:inline">收录已有网站</Link>
                 <Link href="/login" className="rounded-xl px-3.5 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-950">登录</Link>
                 <Link href="/register" className="inline-flex items-center gap-1.5 rounded-xl bg-slate-950 px-4 py-2 text-[13px] font-semibold text-white shadow-2xs transition hover:bg-slate-800"><span>写下想法</span><ArrowUpRight className="h-3.5 w-3.5" /></Link>
               </>

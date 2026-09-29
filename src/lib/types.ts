@@ -91,6 +91,7 @@ export interface ExistingAttemptRef {
 
 export interface Idea {
   id: string;
+  importedWorkId?: string;
   title: string;
   summary: string;
   problem: string;
@@ -108,7 +109,7 @@ export interface Idea {
   parentIdeaId?: string;
   sourceWorkId?: string;
   sourceWorkRevisionId?: string;
-  /** How a sourced idea relates to its origin. Legacy rows without this field are treated as derive. */
+
   relationKind?: IdeaRelationKind;
   agentRequestId?: string;
   graph: { x: number; y: number };
@@ -159,6 +160,9 @@ export interface WorkRevision {
 export interface Work {
   revisions?: WorkRevision[];
   id: string;
+  origin?: "imported_web";
+  originalPublishedAt?: string;
+  collaborationOpen?: boolean;
   attemptId: string;
   ideaId: string;
   title: string;

@@ -34,10 +34,10 @@ export function IdeaNode({
   const participants = idea.participants || [];
   const primaryWork = idea.works[0];
 
-  // Sourced from work (iteration or derive)
+
   const source = idea.source;
 
-  // Find ideas that sprouted from this idea's works
+
   const sproutedIdeas = allIdeas.filter(
     (item) => item.source && idea.works.some((w) => w.id === item.source?.workId)
   );
@@ -56,7 +56,7 @@ export function IdeaNode({
       }`}
     >
       <div>
-        {/* Top: Origin Trace / Eyebrow */}
+        {}
         {source ? (
           <div className="mb-3 flex items-center gap-1.5 font-mono text-[11px] text-amber-700">
             <Sparkles className="h-3 w-3 shrink-0" />
@@ -72,7 +72,7 @@ export function IdeaNode({
           </div>
         ) : null}
 
-        {/* Header: Author + Meta */}
+        {}
         <div className="flex items-center justify-between gap-3 text-[12px]">
           <div className="flex items-center gap-2.5 min-w-0">
             <span
@@ -98,11 +98,13 @@ export function IdeaNode({
             </div>
           </div>
 
-          {/* Status Badge */}
+          {}
           {isDeprecated ? (
             <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10.5px] font-medium text-slate-500">
               已弃用
             </span>
+          ) : idea.isImportedProblem ? (
+            <span className="shrink-0 rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-[10.5px] font-medium text-emerald-700">已有作品入驻</span>
           ) : idea.works.length > 0 ? (
             <span className="shrink-0 rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-[10.5px] font-medium text-emerald-700">
               已有作品
@@ -118,7 +120,7 @@ export function IdeaNode({
           )}
         </div>
 
-        {/* Idea Title & Problem / Summary */}
+        {}
         <div className="mt-4">
           <Link href={detailHref} className="block group-hover:text-orange-600 transition-colors">
             <h3 className="text-[18px] font-bold tracking-tight text-slate-900 sm:text-[20px]">
@@ -130,20 +132,12 @@ export function IdeaNode({
           </p>
         </div>
 
-        {/* Lifecycle Rail (Core Visual Symbol) */}
-        <div className="my-5 border-y border-slate-100 py-3">
-          <IdeaLifecycleRail
-            ideaCount={1}
-            buildCount={idea.attemptCount}
-            productCount={idea.works.length}
-            status={idea.status}
-            size="sm"
-          />
-        </div>
+        {}
+        {idea.isImportedProblem ? <p className="my-5 border-y border-slate-100 py-3 text-[12px] text-slate-500">已有网站在平台收录；这里的问题描述由作者入驻时补充。</p> : <div className="my-5 border-y border-slate-100 py-3"><IdeaLifecycleRail ideaCount={1} buildCount={idea.attemptCount} productCount={idea.works.length} status={idea.status} size="sm" /></div>}
 
-        {/* Collaboration & Social Graph State */}
+        {}
         <div className="flex flex-col gap-3 text-[12px]">
-          {/* 1. Implementation Participants */}
+          {}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               {participants.length > 0 ? (
@@ -167,19 +161,19 @@ export function IdeaNode({
               ) : (
                 <div className="flex items-center gap-1.5 text-slate-400">
                   <GitBranch className="h-3.5 w-3.5" />
-                  <span>等待第一个开发者承接</span>
+                  <span>{idea.isImportedProblem && !idea.collaborationOpen ? "当前仅展示" : "等待第一个开发者承接"}</span>
                 </div>
               )}
             </div>
 
-            {/* Discussion Extension Point */}
+            {}
             <div className="flex items-center gap-1 text-slate-400 text-[11.5px]">
               <MessageSquare className="h-3.5 w-3.5" />
               <span>围绕 Idea 交流</span>
             </div>
           </div>
 
-          {/* 2. Product Outcome Preview (if any) */}
+          {}
           {primaryWork ? (
             <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3">
               <div className="flex items-center justify-between gap-2">
@@ -209,7 +203,7 @@ export function IdeaNode({
                 )}
               </div>
 
-              {/* Next Idea Sprouting indicator */}
+              {}
               {sproutedIdeas.length > 0 ? (
                 <div className="mt-2 border-t border-slate-200/60 pt-2 text-[11.5px] text-amber-800">
                   <span className="font-medium">↳ 从该作品长出新想法：</span>
@@ -226,7 +220,7 @@ export function IdeaNode({
         </div>
       </div>
 
-      {/* Bottom Action Footer */}
+      {}
       <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
         <Link
           href={detailHref}
@@ -235,7 +229,7 @@ export function IdeaNode({
           查看完整记录
         </Link>
 
-        {!isDeprecated && (
+        {!isDeprecated && (!idea.isImportedProblem || idea.collaborationOpen) && (
           <Link
             href={participateHref}
             className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-slate-800"

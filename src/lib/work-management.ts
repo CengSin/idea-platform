@@ -1,4 +1,5 @@
 import { ensureWorkRevision, recordWorkRevision } from "./work-revisions.ts";
+import { normalizeWebsiteUrl } from "./link-preview.ts";
 import type { Database, License, Work, WorkType } from "./types";
 
 export class WorkMutationError extends Error {
@@ -94,8 +95,19 @@ export function ownedWork(db: Database, userId: string, workId: string, scopeAtt
 
 export function applyWorkUpdate(db: Database, userId: string, workId: string, patch: WorkPatch, at: string, scopeAttemptId?: string) {
   const { work, attempt } = ownedWork(db, userId, workId, scopeAttemptId);
+  if (work.origin === "imported_web") {
+    if (patch.type && patch.type !== "website") throw new WorkMutationError(400, "入驻网站的作品类型必须保持为网站。");
+    if (patch.externalUrl !== undefined) {
+      if (!patch.externalUrl) throw new WorkMutationError(400, "入驻网站必须保留公开链接。");
+      let nextUrl: string;
+      try { nextUrl = normalizeWebsiteUrl(patch.externalUrl); } catch { throw new WorkMutationError(400, "网站链接无效。"); }
+      const duplicate = db.works.find((item) => item.id !== workId && item.origin === "imported_web" && item.status === "published" && item.externalUrl && normalizeWebsiteUrl(item.externalUrl) === nextUrl);
+      if (duplicate) throw new WorkMutationError(409, "这个网站已经入驻。");
+      patch.externalUrl = nextUrl;
+    }
+  }
   ensureWorkRevision(work, at);
-  // Explicit allowlist: callers cannot overwrite identity, attribution or counters.
+
   for (const key of ["title", "summary", "type", "externalUrl", "repositoryUrl", "coverUrl", "license"] as const) {
     if (patch[key] !== undefined) Object.assign(work, { [key]: patch[key] });
   }
@@ -113,7 +125,7 @@ export function applyWorkDelete(db: Database, userId: string, workId: string, at
   attempt.progressNote = `已删除作品「${work.title}」${attempt.status === "testing" ? "，继续测试与完善。" : "。"}`;
   db.events = db.events.filter((event) => event.workId !== workId);
   db.notifications = db.notifications.filter((notification) => notification.href !== `/works/${workId}`);
-  // Keep derived ideas and their parent idea attribution; only remove the dead work link.
+
   for (const idea of db.ideas) {
     if (idea.sourceWorkId === workId) {
       idea.parentIdeaId ||= work.ideaId;

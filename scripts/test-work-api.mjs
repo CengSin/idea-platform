@@ -79,7 +79,7 @@ try {
     }
   }
   const bootstrap = await apiRequest("GET", "/api/v1/attempts/branch/bootstrap", undefined, 200);
-  assert.equal(bootstrap.protocol_version, 2);
+  assert.equal(bootstrap.protocol_version, 5);
   assert.equal(bootstrap.capabilities.update_idea, true);
   assert.deepEqual(bootstrap.current.work_ids, ["work", "second"]);
   await apiRequest("GET", "/api/v1/attempts/branch/bootstrap", undefined, 401, "expired-token");
@@ -102,7 +102,10 @@ try {
   await request("PATCH", "work", { ...confirmed, title: "bad-origin" }, 403, null, { Cookie: "idea_session=test-owner-session", Origin: "https://evil.example" });
   await request("PATCH", "work", { ...confirmed, title: "bad-token" }, 401, "invalid", { Cookie: "idea_session=test-owner-session" });
   const result = await request("PATCH", "work", { ...confirmed, title: "已编辑", repository_url: "" }, 200);
-  assert.deepEqual(result.work, { ...database.works[0], title: "已编辑", repositoryUrl: "" });
+  const { revisions, ...editedWork } = result.work;
+  assert.deepEqual(editedWork, { ...database.works[0], title: "已编辑", repositoryUrl: "" });
+  assert.equal(revisions.length, 2);
+  assert.equal(revisions[1].title, "已编辑");
   const cookieResult = await request("PATCH", "work", { ...confirmed, summary: "网页会话更新" }, 200, null, { Cookie: "idea_session=test-owner-session", Origin: base });
   assert.equal(cookieResult.work.summary, "网页会话更新");
   await Promise.all([
@@ -113,7 +116,7 @@ try {
   assert.equal(concurrent.work.title, "并发名称");
   assert.equal(concurrent.work.summary, "并发简介");
   const cleared = await request("PATCH", "work", { ...confirmed, cover_url: "", external_url: "" }, 200);
-  assert.equal(cleared.work.coverUrl, "/covers/hushcity.jpg");
+  assert.equal(cleared.work.coverUrl, "/covers/notebook.svg");
   const removed = await request("DELETE", "work", confirmed, 200);
   assert.equal(removed.deleted, true);
   assert.equal(removed.attempt_status, "published");

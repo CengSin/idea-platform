@@ -42,16 +42,18 @@ export interface PublicActivityItem {
 }
 
 
-// This allowlist is the only content passed into the unauthenticated UI.
-// Never pass a Database, account, private attempt todos or private relation to it.
+
+
 export function buildPublicCatalog(db: Database) {
   return db.ideas
     .filter((idea) => idea.visibility === "public" && visibleStatuses.has(idea.status))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .map((idea) => {
+      const importedWork = idea.importedWorkId ? db.works.find((work) => work.id === idea.importedWorkId && work.origin === "imported_web") : undefined;
       const attempts = db.attempts.filter((attempt) =>
         attempt.ideaId === idea.id && attempt.visibility === "public" && attempt.status !== "abandoned",
       );
+      const participationAttempts = attempts.filter((attempt) => attempt.id !== importedWork?.attemptId);
       const attemptIds = new Set(attempts.map((attempt) => attempt.id));
       const works = db.works
         .filter((work) => work.ideaId === idea.id && work.status === "published" && attemptIds.has(work.attemptId))
@@ -64,6 +66,9 @@ export function buildPublicCatalog(db: Database) {
           }));
           return {
             id: work.id,
+            origin: work.origin,
+            originalPublishedAt: work.originalPublishedAt,
+            collaborationOpen: work.origin === "imported_web" ? work.collaborationOpen === true : undefined,
             revisionNumber: current.number,
             title: work.title,
             summary: work.summary,
@@ -82,7 +87,7 @@ export function buildPublicCatalog(db: Database) {
       const source = parent && db.works.find(w => w.id === idea.sourceWorkId && w.ideaId === parent.id && w.status === "published" && db.attempts.some(a => a.id === w.attemptId && a.ideaId === parent.id && a.visibility === "public" && a.status !== "abandoned"));
       const revision = source && source.revisions?.find(r => r.id === idea.sourceWorkRevisionId);
 
-      const participants: PublicParticipant[] = attempts.map((attempt) => {
+      const participants: PublicParticipant[] = participationAttempts.map((attempt) => {
         const user = db.users.find((u) => u.id === attempt.ownerId);
         const isUserPublic = user?.visibility === "public";
         return {
@@ -98,6 +103,8 @@ export function buildPublicCatalog(db: Database) {
 
       return {
         id: idea.id,
+        isImportedProblem: Boolean(idea.importedWorkId),
+        collaborationOpen: importedWork?.collaborationOpen === true,
         createdAt: idea.createdAt,
         updatedAt: idea.updatedAt,
         source: parent && source ? { ideaId: parent.id, ideaTitle: parent.title, workId: source.id, workTitle: revision?.title ?? source.title, revisionNumber: revision?.number } : undefined,
@@ -119,7 +126,7 @@ export function buildPublicCatalog(db: Database) {
         authorBio: isAuthorPublic ? author.bio : undefined,
         authorInitials: isAuthorPublic ? (author.initials || author.displayName.slice(0, 1).toUpperCase()) : "创",
         authorAccent: isAuthorPublic ? author.accent : undefined,
-        attemptCount: attempts.length,
+        attemptCount: participationAttempts.length,
         participants,
         works,
       };
@@ -141,11 +148,11 @@ export function buildPublicActivities(db: Database, limit = 10): PublicActivityI
 
   const events = (db.events ?? [])
     .filter((event) => {
-      // Must refer to a public idea if ideaId is present
+
       if (event.ideaId && !publicIdeaMap.has(event.ideaId)) return false;
-      // Must refer to a public work if workId is present
+
       if (event.workId && !publicWorkMap.has(event.workId)) return false;
-      // At least one public entity should be present
+
       return Boolean(event.ideaId || event.workId);
     })
     .sort((a, b) => b.at.localeCompare(a.at))

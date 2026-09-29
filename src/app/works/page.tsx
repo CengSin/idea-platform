@@ -5,7 +5,7 @@ import { CoverImage } from "@/components/ui/CoverImage";
 import { WorkReminders } from "@/components/idea/WorkReminders";
 import { ShareWorks } from "@/components/works/ShareWorks";
 import { getCurrentUser } from "@/lib/auth";
-import { WORK_TYPE_LABEL } from "@/lib/format";
+import { formatDate, WORK_TYPE_LABEL } from "@/lib/format";
 import { getPublicWorksPage } from "@/lib/public-queries";
 
 export const dynamic = "force-dynamic";
@@ -45,11 +45,12 @@ export default async function WorksPage({ searchParams }: Props) {
             {user ? `${user.displayName}的作品` : "公开作品"}
           </h1>
           <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-slate-500">
-            {user?.bio || "从一个想法开始，看看已经落地的作品。"}
+            {user?.bio || "看看这里已经公开的作品。"}
           </p>
           <p className="mt-3 text-[12px] text-slate-400">{works.length} 件公开作品</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link href={me ? "/works/import" : "/login?next=%2Fworks%2Fimport"} className="rounded-full bg-emerald-700 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-800">收录已有网站</Link>
           {isMine ? <ShareWorks userId={user!.id} /> : null}
           {me && !isMine ? <Link href={`/works?user=${encodeURIComponent(me.id)}`} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 hover:border-slate-300">我的作品</Link> : null}
           {user ? <Link href="/works?all=1" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 hover:border-slate-300">全部作品</Link> : null}
@@ -68,12 +69,13 @@ export default async function WorksPage({ searchParams }: Props) {
             <Link key={work.id} href={`/explore/${work.ideaId}#work-${work.id}`} className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs transition hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl">
               <div className="relative aspect-video overflow-hidden bg-slate-100">
                 <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} alt={work.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                <span className="absolute right-3 top-3 rounded-full border border-white/10 bg-slate-900/80 px-2.5 py-1 text-[11px] font-medium text-emerald-300 backdrop-blur-md">v{work.revisionNumber} · {WORK_TYPE_LABEL[work.type]}</span>
+                <span className="absolute right-3 top-3 rounded-full border border-white/10 bg-slate-900/80 px-2.5 py-1 text-[11px] font-medium text-emerald-300 backdrop-blur-md">{work.origin === "imported_web" ? "已有网站" : `v${work.revisionNumber}`} · {WORK_TYPE_LABEL[work.type]}</span>
               </div>
               <div className="flex flex-1 flex-col p-5">
-                <span className="mb-2 self-start rounded-full border border-violet-100 bg-violet-50 px-2.5 py-0.5 text-[11px] font-medium text-violet-700">✦ 起源于：{work.ideaTitle}</span>
+                <span className="mb-2 self-start rounded-full border border-violet-100 bg-violet-50 px-2.5 py-0.5 text-[11px] font-medium text-violet-700">{work.origin === "imported_web" ? "已有作品入驻 · 入驻时补充的问题" : "✦ 起源于"}：{work.ideaTitle}</span>
                 <h2 className="text-[17px] font-semibold tracking-tight text-slate-900 group-hover:text-indigo-600">{work.title}</h2>
                 <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-slate-500">{work.summary}</p>
+                {work.origin === "imported_web" ? <p className="mt-2 text-[11px] text-slate-400">{work.originalPublishedAt ? `原发布时间 ${formatDate(work.originalPublishedAt)} · ` : ""}平台收录 {work.publishedAt ? formatDate(work.publishedAt) : ""}</p> : null}
                 <WorkReminders reminders={work.reminders} compact />
                 <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-4 text-[12px] text-slate-500"><span>查看作品与来源</span><span className="font-medium text-slate-700">详情 →</span></div>
               </div>
