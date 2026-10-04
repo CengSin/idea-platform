@@ -10,6 +10,8 @@ import {
 import { getSnapshot } from "@/lib/queries";
 import Link from "@/components/ui/NavigationLink";
 
+export const metadata = { title: "承接中 · 想法共享" };
+
 export const dynamic = "force-dynamic";
 
 export default async function AttemptsPage() {
