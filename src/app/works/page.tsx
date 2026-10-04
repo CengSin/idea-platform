@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageSocialMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import Link from "@/components/ui/NavigationLink";
 import { CoverImage } from "@/components/ui/CoverImage";
@@ -14,7 +15,7 @@ type Props = { searchParams: Promise<{ user?: string; all?: string; mine?: strin
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { user: userId } = await searchParams;
-  if (!userId) return { title: "作品", alternates: { canonical: "/works" } };
+  if (!userId) return { title: "作品", ...pageSocialMetadata({ title: "作品 · Idea Platform", url: "/works" }) };
   const page = await getPublicWorksPage(userId);
   const title = page?.user ? `${page.user.displayName}的作品` : "作品";
   const description = page?.user ? `看看${page.user.displayName}公开发布的作品。` : undefined;
@@ -22,8 +23,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   return {
     title,
     description,
-    alternates: { canonical: url },
-    openGraph: { title, description, url },
+    ...pageSocialMetadata({ title: `${title} · Idea Platform`, description, url }),
   };
 }
 

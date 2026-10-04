@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { pageSocialMetadata } from "@/lib/seo";
 import Link from "@/components/ui/NavigationLink";
 import { CoverImage } from "@/components/ui/CoverImage";
 import { Author } from "@/components/journal/IdeaJournal";
@@ -17,7 +18,13 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const idea = (await getPublicCatalog()).find((i) => i.id === id);
-  return { title: idea ? `${idea.title}` : "想法未公开" };
+  if (!idea) return { title: "想法未公开", robots: { index: false } };
+  const description = idea.summary || undefined;
+  return {
+    title: idea.title,
+    description,
+    ...pageSocialMetadata({ title: `${idea.title} · Idea Platform`, description, url: `/explore/${id}` }),
+  };
 }
 
 export default async function PublicIdeaPage({ params }: Props) {

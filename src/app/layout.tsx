@@ -11,30 +11,19 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: { default: title, template: "%s · Idea Platform" },
   description,
-  alternates: {
-    canonical: "/",
-  },
+  // 不在根布局写死 canonical / og:url，否则所有页面都会继承成首页地址；需要的页面各自声明。
+  // 分享图由 app/opengraph-image.tsx 生成（PNG），不再引用会跳到 SVG 的 /og-image.jpg。
   openGraph: {
     type: "website",
     locale: "zh_CN",
-    url: "/",
     siteName: "Idea Platform",
     title,
     description,
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1280,
-        height: 720,
-        alt: "Idea Platform 中彼此连接并持续生长的想法网络",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: ["/og-image.jpg"],
   },
 };
 

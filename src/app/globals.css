@@ -37,6 +37,12 @@ body {
 
 body {
   margin: 0;
+  /* 防止装饰层或个别宽元素在窄屏（320px）撑出横向滚动；clip 不建滚动容器，不影响 sticky 导航。 */
+  overflow-x: clip;
+}
+
+.explore-shell {
+  overflow-x: clip;
 }
 
 button,
