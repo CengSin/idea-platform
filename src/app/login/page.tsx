@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { authDestination } from "@/lib/auth-destination";
 
-export const metadata = { title: "登录 · 想法共享" };
+export const metadata = { title: "登录" };
 
 export default async function LoginPage({
   searchParams,

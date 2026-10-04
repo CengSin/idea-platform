@@ -25,7 +25,7 @@ export function WorkGallery({ works }: { works: Work[] }) {
             className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl"
           >
             <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
-              <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+              <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} alt={work.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
               <div className="absolute top-3 right-3">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/80 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-medium text-emerald-300 shadow-xs border border-white/10">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />

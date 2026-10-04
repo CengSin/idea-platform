@@ -1,11 +1,10 @@
 import { PageFrame } from "@/components/chrome/PageFrame";
 import { Chip } from "@/components/ui/Chip";
-import { PublishIdeaButton } from "@/components/idea/PublishIdeaButton";
 import { IDEA_STATUS_LABEL, ideaMetrics, relativeTime } from "@/lib/format";
 import { getSnapshot } from "@/lib/queries";
 import Link from "@/components/ui/NavigationLink";
 
-export const metadata = { title: "我的想法 · 想法共享" };
+export const metadata = { title: "我的想法" };
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +14,11 @@ export default async function MyIdeasPage() {
 
   return (
     <PageFrame>
-        <div className="mb-6 flex items-end justify-between">
+        <div className="mb-6">
           <div>
             <h1 className="text-[28px] font-semibold tracking-[-0.04em]">我的想法</h1>
             <p className="mt-1 text-[13.5px] text-muted">先在草稿中推进，准备好后再把想法、项目与作品一起发布。</p>
           </div>
-          <PublishIdeaButton />
         </div>
         {mine.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

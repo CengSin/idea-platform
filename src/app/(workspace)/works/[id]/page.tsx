@@ -13,10 +13,19 @@ import { ExternalLink } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
 import { notFound } from "next/navigation";
 import { IdeaLifecycleRail } from "@/components/idea/IdeaLifecycleRail";
+import type { Metadata } from "next";
+import { getSnapshot } from "@/lib/queries";
+import { workById } from "@/lib/format";
 
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const { db } = await getSnapshot();
+  return { title: workById(db, id)?.title ?? "作品" };
+}
 
 export default async function WorkPage({
   params, searchParams,
@@ -45,7 +54,7 @@ export default async function WorkPage({
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
           <div>
             <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-md">
-              <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-[340px] w-full object-cover" />
+              <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} alt={work.title} className="h-[340px] w-full object-cover" />
             </div>
             <div className="mt-6 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/70">
