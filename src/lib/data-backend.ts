@@ -13,10 +13,40 @@ export type DataDump = Database & {
   auth?: AuthDump;
 };
 
+export class DataBackendConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DataBackendConfigError";
+  }
+}
+
+function isVercelProduction() {
+  return process.env.VERCEL_ENV === "production";
+}
+
+/**
+ * Resolve the storage backend, failing closed on misconfiguration.
+ *
+ * Production must read Turso: a missing or garbled DATA_BACKEND used to fall back
+ * to a stale Vercel Blob snapshot silently (2026-09-08 incident, 3 ideas instead of 9).
+ * Anywhere else an unrecognised value is also an error instead of a silent fallback.
+ */
 export function dataBackend(): DataBackend {
-  const value = (process.env.DATA_BACKEND ?? "vercel").trim().toLowerCase();
+  const raw = (process.env.DATA_BACKEND ?? "").trim();
+  const value = raw.toLowerCase();
+  if (isVercelProduction()) {
+    if (value !== "turso") {
+      throw new DataBackendConfigError(
+        `DATA_BACKEND must be "turso" in production (got ${raw ? "an unrecognised value" : "nothing"}); refusing to fall back to Vercel Blob`,
+      );
+    }
+    return "turso";
+  }
   if (value === "turso") return "turso";
-  return "vercel";
+  if (value === "" || value === "vercel" || value === "blob" || value === "local") return "vercel";
+  throw new DataBackendConfigError(
+    `DATA_BACKEND has an unrecognised value; expected "turso" or "vercel"`,
+  );
 }
 
 export function useRemoteBlobStore() {

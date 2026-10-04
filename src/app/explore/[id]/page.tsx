@@ -8,7 +8,8 @@ import { getPublicCatalog } from "@/lib/public-queries";
 import { WorkReminders } from "@/components/idea/WorkReminders";
 import { IdeaLifecycleRail } from "@/components/idea/IdeaLifecycleRail";
 import { IDEA_RELATION_KIND_LABEL } from "@/lib/idea-relations";
-import { formatDate } from "@/lib/format";
+import { ATTEMPT_STATUS_LABEL, formatDate } from "@/lib/format";
+import { TodoProgressBar } from "@/components/idea/TodoProgressBar";
 import { ArrowLeft, ArrowUpRight, GitBranch, Package, Sparkles } from "lucide-react";
 
 type Props = { params: Promise<{ id: string }> };
@@ -152,6 +153,46 @@ export default async function PublicIdeaPage({ params }: Props) {
             ))}
 
           {}
+          <section id="participants" className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+              <div>
+                <span className="font-mono text-[10.5px] font-semibold uppercase tracking-wider text-sky-700">WHO IS BUILDING</span>
+                <h2 className="mt-1 text-[22px] font-bold text-slate-900">谁在承接，做到哪一步</h2>
+              </div>
+              <span className="text-[12.5px] text-slate-500 font-mono">{participants.length} 人承接</span>
+            </div>
+            {participants.length ? (
+              <ul className="mt-5 divide-y divide-slate-100">
+                {participants.map((p, index) => (
+                  <li key={`${p.userId ?? "anon"}-${index}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3.5">
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white"
+                      style={{ background: p.accent ?? "#64748b" }}
+                      aria-hidden
+                    >
+                      {p.initials}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-semibold text-slate-900">
+                        {p.userId ? <Link href={`/explore/people/${p.userId}`} className="hover:underline">{p.displayName}</Link> : p.displayName}
+                        <span className="ml-2 rounded-md bg-slate-100 px-1.5 py-0.5 align-middle text-[11px] font-medium text-slate-600">{ATTEMPT_STATUS_LABEL[p.status as keyof typeof ATTEMPT_STATUS_LABEL] ?? p.status}</span>
+                      </span>
+                      <span className="mt-0.5 block truncate text-[12.5px] text-slate-500">{p.title}</span>
+                    </span>
+                    <span className="flex flex-col items-end gap-1">
+                      <TodoProgressBar done={p.todoDone} total={p.todoTotal} tone="public" />
+                      {p.lastActiveAt ? <span className="text-[11px] text-slate-400">最近更新 {formatDate(p.lastActiveAt)}</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-5 rounded-xl border border-dashed border-slate-200 p-5 text-center text-[13px] text-slate-500">
+                {isDeprecated ? "这个想法弃用前没有人公开承接。" : "还没有人公开承接。承接后，每个人的待办进度都会显示在这里。"}
+              </p>
+            )}
+          </section>
+
           <section id="works" className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
               <div>

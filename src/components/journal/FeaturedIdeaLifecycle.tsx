@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "@/components/ui/NavigationLink";
 import type { PublicIdea } from "@/lib/public-catalog";
+import { rankLifecycleShowcase } from "@/lib/lifecycle-showcase";
 import { ArrowUpRight, GitBranch, Sparkles, ExternalLink, MessageSquare, Terminal } from "lucide-react";
 
 interface FeaturedIdeaLifecycleProps {
@@ -11,15 +12,13 @@ interface FeaturedIdeaLifecycleProps {
 }
 
 export function FeaturedIdeaLifecycle({ ideas, className = "" }: { ideas: PublicIdea[]; className?: string }) {
-  // Find an idea that best shows the full lifecycle (has works and/or next ideas, or fall back to the first)
-  const fullCycleIdeaIndex = ideas.findIndex((i) => i.works.length > 0) !== -1
-    ? ideas.findIndex((i) => i.works.length > 0)
-    : 0;
+  // Most complete lifecycle first (idea → attempt → work → next idea), so the default case shows the whole loop.
+  const showcase = useMemo(() => rankLifecycleShowcase(ideas), [ideas]);
 
-  const [selectedIndex, setSelectedIndex] = useState(fullCycleIdeaIndex >= 0 ? fullCycleIdeaIndex : 0);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
-  const selectedIdea = ideas[selectedIndex] || ideas[0];
+  const selectedIdea = showcase[selectedIndex] || showcase[0];
   if (!selectedIdea) return null;
 
   // Find any child ideas derived from this idea's works
@@ -53,11 +52,11 @@ export function FeaturedIdeaLifecycle({ ideas, className = "" }: { ideas: Public
           </span>
         </div>
 
-        {ideas.length > 1 && (
+        {showcase.length > 1 && (
           <div className="flex items-center gap-1.5 text-[11.5px] text-slate-400">
             <span>观测案例：</span>
             <div className="flex items-center gap-1">
-              {ideas.slice(0, 3).map((idea, idx) => (
+              {showcase.slice(0, 3).map((idea, idx) => (
                 <button
                   key={idea.id}
                   onClick={() => {

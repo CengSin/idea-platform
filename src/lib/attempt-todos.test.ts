@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addTodo, deleteTodo, listTodos, TodoError, updateTodo } from "./attempt-todos.ts";
+import { addTodo, deleteTodo, listTodos, TodoError, todoProgress, updateTodo } from "./attempt-todos.ts";
 import { fixture } from "./agent-test-fixture.ts";
 import { scopeDatabaseForUser } from "./content-access.ts";
 
@@ -35,4 +35,22 @@ test("attempt todos stay private to the owner in scoped snapshots", () => {
   addTodo(db.attempts[0], { id: "secret-todo", title: "私有待办" }, at);
   assert.equal(scopeDatabaseForUser(db, "other").attempts[0].todos, undefined);
   assert.equal(scopeDatabaseForUser(db, "owner").attempts[0].todos?.length, 1);
+});
+
+test("todoProgress counts done and total without titles", () => {
+  assert.deepEqual(todoProgress(undefined), { done: 0, total: 0 });
+  assert.deepEqual(todoProgress([{ done: true }, { done: false }, { done: true }]), { done: 2, total: 3 });
+});
+
+test("non-owners see todo progress counts but never todo titles", () => {
+  const db = fixture();
+  const attempt = db.attempts[0];
+  attempt.ownerId = "owner";
+  addTodo(attempt, { id: "a", title: "私有标题 A" }, at);
+  addTodo(attempt, { id: "b", title: "私有标题 B" }, at);
+  updateTodo(attempt, { id: "a", done: true }, at);
+  const scoped = scopeDatabaseForUser(db, "other").attempts[0];
+  assert.equal(scoped.todos, undefined);
+  assert.deepEqual(scoped.todoProgress, { done: 1, total: 2 });
+  assert.equal(JSON.stringify(scoped).includes("私有标题"), false);
 });

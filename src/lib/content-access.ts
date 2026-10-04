@@ -24,8 +24,15 @@ export function canAccessIdea(idea: Idea, userId?: string) {
 
 export function attemptForViewer(attempt: Attempt, userId?: string): Attempt {
   if (attempt.ownerId === userId) return attempt;
-  const { todos: _privateTodos, ...visible } = attempt;
-  return visible;
+  const { todos: privateTodos, ...visible } = attempt;
+  if (!privateTodos?.length) return visible;
+  return {
+    ...visible,
+    todoProgress: {
+      done: privateTodos.filter((item) => item.done).length,
+      total: privateTodos.length,
+    },
+  };
 }
 
 export function workForViewer(db: Database, work: Work, userId?: string): Work {

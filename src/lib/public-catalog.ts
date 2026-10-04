@@ -24,6 +24,9 @@ export interface PublicParticipant {
   status: string;
   title: string;
   startedAt?: string;
+  lastActiveAt?: string;
+  todoDone: number;
+  todoTotal: number;
 }
 
 export interface PublicActivityItem {
@@ -98,6 +101,9 @@ export function buildPublicCatalog(db: Database) {
           status: attempt.status,
           title: isUserPublic ? attempt.title : "实现中",
           startedAt: attempt.startedAt,
+          lastActiveAt: attempt.lastActiveAt,
+          todoDone: (attempt.todos ?? []).filter((item) => item.done).length,
+          todoTotal: (attempt.todos ?? []).length,
         };
       });
 

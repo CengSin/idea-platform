@@ -5,6 +5,8 @@ import { ATTEMPT_STATUS_LABEL, effectiveAttemptStatus, userById } from "@/lib/fo
 import { visibleLineageAttempts } from "@/lib/idea-lineage";
 import type { Attempt, Database, Work } from "@/lib/types";
 import Link from "@/components/ui/NavigationLink";
+import { TodoProgressBar } from "@/components/idea/TodoProgressBar";
+import { todoProgress } from "@/lib/attempt-todos";
 
 export function Lineage({
   db,
@@ -42,6 +44,8 @@ export function Lineage({
           const status = effectiveAttemptStatus(attempt);
           const attemptWorks = works.filter((work) => work.attemptId === attempt.id);
           const dim = status === "stalled" || status === "paused";
+          // Owners get their own todo list; everyone else gets the title-free counts.
+          const progress = attempt.todos ? todoProgress(attempt.todos) : attempt.todoProgress ?? { done: 0, total: 0 };
 
           return (
             <article key={attempt.id} className={`lineage-tree-branch ${dim ? "is-dim" : ""}`}>
@@ -50,6 +54,7 @@ export function Lineage({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] tracking-[-0.02em]">{attempt.title}</span>
                   <span className="mt-1 block truncate text-[11px] text-muted">{owner?.displayName ?? "实现者"}</span>
+                  <TodoProgressBar done={progress.done} total={progress.total} className="mt-1.5" />
                 </span>
                 <span className="lineage-tree-status">{ATTEMPT_STATUS_LABEL[status]}</span>
               </Link>
