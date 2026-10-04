@@ -200,3 +200,26 @@ test("credited public works are included without exposing private profiles", () 
   assert.deepEqual(buildPublicWorksPage(db, "credit-user")?.works.map((item) => item.id), [work.id]);
   assert.equal(buildPublicWorksPage(db, "private-author"), null);
 });
+
+test("public participants use the same stalled status as the workspace lineage", async () => {
+  const { buildPublicCatalog } = await import("./public-catalog.ts");
+  const { fixture } = await import("./agent-test-fixture.ts");
+  const db = fixture();
+  const attempt = db.attempts[0];
+  const idea = db.ideas.find((item) => item.id === attempt.ideaId)!;
+  idea.visibility = "public";
+  idea.status = "published";
+  attempt.visibility = "public";
+  attempt.status = "prototyping";
+  attempt.lastActiveAt = "2020-01-01T00:00:00.000Z";
+  attempt.todos = [
+    { id: "a", title: "x", done: true, createdAt: attempt.lastActiveAt, updatedAt: attempt.lastActiveAt },
+    { id: "b", title: "y", done: false, createdAt: attempt.lastActiveAt, updatedAt: attempt.lastActiveAt },
+  ];
+  const entry = buildPublicCatalog(db).find((item) => item.id === idea.id)!;
+  const participant = entry.participants.find((p) => p.status);
+  assert.equal(participant?.status, "stalled");
+  assert.equal(participant?.todoDone, 1);
+  assert.equal(participant?.todoTotal, 2);
+  assert.equal(JSON.stringify(entry).includes('"title":"x"'), false);
+});

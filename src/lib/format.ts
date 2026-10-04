@@ -68,22 +68,8 @@ export function formatLicense(license: License): string {
   return parts.join(" · ");
 }
 
-export function daysBetween(iso: string, now = Date.now()): number {
-  return (now - new Date(iso).getTime()) / (1000 * 60 * 60 * 24);
-}
-
-export function effectiveAttemptStatus(
-  attempt: Attempt,
-  now = Date.now(),
-): AttemptStatus {
-  if (
-    ACTIVE_ATTEMPT_STATUSES.includes(attempt.status) &&
-    daysBetween(attempt.lastActiveAt, now) > STALL_AFTER_DAYS
-  ) {
-    return "stalled";
-  }
-  return attempt.status;
-}
+import { daysBetween, effectiveAttemptStatus } from "./attempt-status.ts";
+export { daysBetween, effectiveAttemptStatus };
 
 export function relativeTime(iso: string, now = Date.now()): string {
   const delta = Math.max(0, now - new Date(iso).getTime());

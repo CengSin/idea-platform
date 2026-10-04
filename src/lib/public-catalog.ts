@@ -1,5 +1,6 @@
 import { publicReminders } from "./content-access.ts";
 import { currentWorkRevision } from "./work-revisions.ts";
+import { effectiveAttemptStatus } from "./attempt-status.ts";
 import type { Database } from "./types";
 
 const visibleStatuses = new Set(["published", "evolving", "realized", "dormant", "deprecated"]);
@@ -98,7 +99,8 @@ export function buildPublicCatalog(db: Database) {
           displayName: isUserPublic ? user.displayName : "参与者",
           initials: isUserPublic ? (user.initials || user.displayName.slice(0, 1).toUpperCase()) : "参",
           accent: isUserPublic ? user.accent : undefined,
-          status: attempt.status,
+          // Same stall rule as the workspace lineage, so one attempt never shows two statuses.
+          status: effectiveAttemptStatus(attempt),
           title: isUserPublic ? attempt.title : "实现中",
           startedAt: attempt.startedAt,
           lastActiveAt: attempt.lastActiveAt,

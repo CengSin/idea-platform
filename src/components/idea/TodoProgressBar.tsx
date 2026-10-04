@@ -1,4 +1,4 @@
-/** Shared, title-free TODO progress for an attempt: "3/5 项待办" plus a thin bar. */
+/** Shared, title-free TODO progress for an attempt: "已完成 3/5" plus a thin bar. */
 export function TodoProgressBar({
   done,
   total,
@@ -25,7 +25,7 @@ export function TodoProgressBar({
         />
       </span>
       <span className={`whitespace-nowrap font-mono text-[11.5px] ${muted}`}>
-        {done}/{total} 项待办{finished ? " · 已全部完成" : ""}
+        {finished ? `待办已全部完成 ${done}/${total}` : `已完成 ${done}/${total}`}
       </span>
     </span>
   );
