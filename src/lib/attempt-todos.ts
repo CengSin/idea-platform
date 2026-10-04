@@ -27,6 +27,14 @@ function normalizeTitle(title: unknown) {
   return trimmed;
 }
 
+export type TodoProgress = { done: number; total: number };
+
+/** Counts only: todo titles stay private to the attempt owner, progress is shareable. */
+export function todoProgress(todos: Pick<AttemptTodo, "done">[] | undefined): TodoProgress {
+  const list = todos ?? [];
+  return { done: list.filter((item) => item.done).length, total: list.length };
+}
+
 export function listTodos(attempt: Attempt): AttemptTodo[] {
   return [...(attempt.todos ?? [])];
 }

@@ -10,6 +10,8 @@ import {
 import { getSnapshot } from "@/lib/queries";
 import Link from "@/components/ui/NavigationLink";
 
+export const metadata = { title: "承接中 · 想法共享" };
+
 export const dynamic = "force-dynamic";
 
 export default async function AttemptsPage() {
@@ -86,7 +88,7 @@ export default async function AttemptsPage() {
 
                   <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[12px]">
                     <span className="text-slate-400">
-                      {attempt.todos?.length ? `${attempt.todos.filter((t: { done: boolean }) => t.done).length}/${attempt.todos.length} 项任务` : "进行中"}
+                      {attempt.todos?.length ? `已完成 ${attempt.todos.filter((t: { done: boolean }) => t.done).length}/${attempt.todos.length}` : "进行中"}
                     </span>
                     <Link
                       href={`/attempts/${attempt.id}`}

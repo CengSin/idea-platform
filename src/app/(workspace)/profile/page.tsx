@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
 
+export const metadata = { title: "个人资料 · 想法共享" };
+
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
@@ -58,7 +60,7 @@ export default async function ProfilePage() {
               分享是一个起点，每一次动手都让想法更进一步。
             </p>
           </div>
-          <span className="text-[12px] text-muted">{total} 个连接</span>
+          <span className="shrink-0 whitespace-nowrap text-[12px] text-muted">{total} 个连接</span>
         </div>
 
         <div className="glass mt-5 rounded-3xl p-5">

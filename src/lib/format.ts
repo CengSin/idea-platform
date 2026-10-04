@@ -68,22 +68,8 @@ export function formatLicense(license: License): string {
   return parts.join(" · ");
 }
 
-export function daysBetween(iso: string, now = Date.now()): number {
-  return (now - new Date(iso).getTime()) / (1000 * 60 * 60 * 24);
-}
-
-export function effectiveAttemptStatus(
-  attempt: Attempt,
-  now = Date.now(),
-): AttemptStatus {
-  if (
-    ACTIVE_ATTEMPT_STATUSES.includes(attempt.status) &&
-    daysBetween(attempt.lastActiveAt, now) > STALL_AFTER_DAYS
-  ) {
-    return "stalled";
-  }
-  return attempt.status;
-}
+import { daysBetween, effectiveAttemptStatus } from "./attempt-status.ts";
+export { daysBetween, effectiveAttemptStatus };
 
 export function relativeTime(iso: string, now = Date.now()): string {
   const delta = Math.max(0, now - new Date(iso).getTime());
@@ -99,16 +85,33 @@ export function relativeTime(iso: string, now = Date.now()): string {
   return `${Math.floor(month / 12)} 年前`;
 }
 
+// 服务端（Vercel 跑在 UTC）和浏览器必须输出同一串文字，否则会触发 hydration mismatch（React #418），
+// 所以固定按北京时间格式化，不依赖运行环境的本地时区。
+const DISPLAY_TIME_ZONE = "Asia/Shanghai";
+const dateTimeParts = new Intl.DateTimeFormat("en-CA", {
+  timeZone: DISPLAY_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+function zonedParts(iso: string) {
+  const parts: Record<string, string> = {};
+  for (const p of dateTimeParts.formatToParts(new Date(iso))) parts[p.type] = p.value;
+  return parts;
+}
+
 export function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const p = zonedParts(iso);
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
 }
 
 export function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const p = zonedParts(iso);
+  return `${p.year}-${p.month}-${p.day}`;
 }
 
 export function ideaMetrics(db: Database, ideaId: string): IdeaMetrics {

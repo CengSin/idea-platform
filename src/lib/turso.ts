@@ -168,6 +168,9 @@ function tursoConfig() {
   if (!rawUrl || !authToken) {
     throw new Error("TURSO_DATABASE_URL and TURSO_AUTH_TOKEN are required when DATA_BACKEND=turso");
   }
+  if (!/^(libsql|https?|wss?|file):/i.test(rawUrl)) {
+    throw new Error("TURSO_DATABASE_URL is not a libsql:// or https:// URL (is it an encrypted placeholder?)");
+  }
   const url = rawUrl.startsWith("libsql://")
     ? `https://${rawUrl.slice("libsql://".length)}`
     : rawUrl;

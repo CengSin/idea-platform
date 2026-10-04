@@ -42,7 +42,7 @@ export function AttemptTodoPanel({ attempt }: { attempt: Attempt }) {
           </p>
         </div>
         <span className="shrink-0 text-[12px] text-muted">
-          {todos.length ? `${remaining}/${todos.length} 未完成` : "暂无待办"}
+          {todos.length ? `已完成 ${todos.length - remaining}/${todos.length}` : "暂无待办"}
         </span>
       </div>
 

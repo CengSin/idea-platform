@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  DataBackendConfigError,
+  dataBackend,
   emptyAuthDump,
   parseAuthDump,
   parseDatabaseDump,
@@ -97,4 +99,54 @@ test("JSON database round trip retains imported website metadata and accepts leg
   assert.equal(restored?.ideas[0]?.importedWorkId, "imported-work");
   assert.equal(restored?.works[0]?.originalPublishedAt, "2025-01-01");
   assert.equal(restored?.works[0]?.collaborationOpen, false);
+});
+
+function withEnv(vars: Record<string, string | undefined>, fn: () => void) {
+  const previous: Record<string, string | undefined> = {};
+  for (const key of Object.keys(vars)) previous[key] = process.env[key];
+  try {
+    for (const [key, value] of Object.entries(vars)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    fn();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
+test("production refuses to fall back to Blob when DATA_BACKEND is missing", () => {
+  withEnv({ VERCEL_ENV: "production", DATA_BACKEND: undefined }, () => {
+    assert.throws(() => dataBackend(), DataBackendConfigError);
+  });
+});
+
+test("production refuses an encrypted-looking DATA_BACKEND instead of silently using Blob", () => {
+  withEnv({ VERCEL_ENV: "production", DATA_BACKEND: "eyJ2IjoidjIiLCJjIjoi" }, () => {
+    assert.throws(() => dataBackend(), /must be "turso" in production/);
+  });
+  withEnv({ VERCEL_ENV: "production", DATA_BACKEND: "vercel" }, () => {
+    assert.throws(() => dataBackend(), DataBackendConfigError);
+  });
+});
+
+test("production accepts turso regardless of case and whitespace", () => {
+  withEnv({ VERCEL_ENV: "production", DATA_BACKEND: "  Turso " }, () => {
+    assert.equal(dataBackend(), "turso");
+  });
+});
+
+test("outside production an unknown value is an error, an empty value means local/blob", () => {
+  withEnv({ VERCEL_ENV: "preview", DATA_BACKEND: "eyJ2IjoidjIi" }, () => {
+    assert.throws(() => dataBackend(), DataBackendConfigError);
+  });
+  withEnv({ VERCEL_ENV: undefined, DATA_BACKEND: undefined }, () => {
+    assert.equal(dataBackend(), "vercel");
+  });
+  withEnv({ VERCEL_ENV: "preview", DATA_BACKEND: "turso" }, () => {
+    assert.equal(dataBackend(), "turso");
+  });
 });

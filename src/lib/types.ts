@@ -119,6 +119,8 @@ export interface Idea {
 
 export interface Attempt {
   todos?: import("./attempt-todos").AttemptTodo[];
+  /** Set on non-owner views where `todos` is stripped: progress counts without titles. */
+  todoProgress?: import("./attempt-todos").TodoProgress;
   id: string;
   ideaId: string;
   ownerId: string;
