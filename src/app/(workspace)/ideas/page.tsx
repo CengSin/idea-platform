@@ -5,7 +5,7 @@ import { IDEA_STATUS_LABEL, ideaMetrics, relativeTime } from "@/lib/format";
 import { getSnapshot } from "@/lib/queries";
 import Link from "@/components/ui/NavigationLink";
 
-export const metadata = { title: "我的想法 · 想法共享" };
+export const metadata = { title: "我的想法" };
 
 export const dynamic = "force-dynamic";
 

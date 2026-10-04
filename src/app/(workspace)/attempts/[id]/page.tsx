@@ -12,9 +12,20 @@ import { getAttemptBundle } from "@/lib/queries";
 import Link from "@/components/ui/NavigationLink";
 import { notFound } from "next/navigation";
 import { IdeaLifecycleRail } from "@/components/idea/IdeaLifecycleRail";
+import type { Metadata } from "next";
+import { getSnapshot } from "@/lib/queries";
+import { attemptById, ideaById } from "@/lib/format";
 
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const { db } = await getSnapshot();
+  const attempt = attemptById(db, id);
+  const idea = attempt ? ideaById(db, attempt.ideaId) : undefined;
+  return { title: idea ? `承接 · ${idea.title}` : "承接" };
+}
 
 export default async function AttemptPage({
   params,
@@ -103,7 +114,7 @@ export default async function AttemptPage({
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
             {works.map((work) => (
               <Link key={work.id} href={`/works/${work.id}`} className="glass lift media-zoom overflow-hidden rounded-2xl">
-                <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-28 w-full object-cover" />
+                <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} alt={work.title} className="h-28 w-full object-cover" />
                 <div className="p-3 text-[14px]">{work.title}</div>
               </Link>
             ))}

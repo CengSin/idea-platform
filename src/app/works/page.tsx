@@ -14,9 +14,9 @@ type Props = { searchParams: Promise<{ user?: string; all?: string; mine?: strin
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { user: userId } = await searchParams;
-  if (!userId) return { title: "作品 · 想法共享", alternates: { canonical: "/works" } };
+  if (!userId) return { title: "作品", alternates: { canonical: "/works" } };
   const page = await getPublicWorksPage(userId);
-  const title = page?.user ? `${page.user.displayName}的作品 · 想法共享` : "作品 · 想法共享";
+  const title = page?.user ? `${page.user.displayName}的作品` : "作品";
   const description = page?.user ? `看看${page.user.displayName}公开发布的作品。` : undefined;
   const url = `/works?user=${encodeURIComponent(userId)}`;
   return {

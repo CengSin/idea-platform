@@ -1,6 +1,10 @@
 import { IdeaJournal } from "@/components/journal/IdeaJournal";
 import { getPublicCatalog, getPublicActivities } from "@/lib/public-queries";
+
+export const metadata = { title: "想法共享" };
 export const dynamic = "force-dynamic";
+
+
 
 export default async function DiscoverPage() {
   const [ideas, activities] = await Promise.all([

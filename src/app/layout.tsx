@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://idea.z-agent.ccwu.cc";
+import { siteUrl } from "@/lib/site-url";
+
 const title = "Idea Platform — 让想法找到实现者";
 const description = "发现项目、明确目的、生成可执行的承接任务，并追踪一个想法如何长成作品。";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title,
+  metadataBase: new URL(siteUrl()),
+  title: { default: title, template: "%s · Idea Platform" },
   description,
   alternates: {
     canonical: "/",

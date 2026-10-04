@@ -12,8 +12,17 @@ import { notFound } from "next/navigation";
 import { sourceContext } from "@/lib/agent-context";
 import { IDEA_RELATION_KIND_LABEL, ideaRelationKind, isIterateIdea } from "@/lib/idea-relations";
 import { GitBranch } from "lucide-react";
+import type { Metadata } from "next";
+import { getSnapshot } from "@/lib/queries";
+import { ideaById } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const { db } = await getSnapshot();
+  return { title: ideaById(db, id)?.title ?? "想法" };
+}
 
 export default async function IdeaDetailPage({
   params,

@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "@/components/ui/NavigationLink";
 
-export const metadata = { title: "个人资料 · 想法共享" };
+export const metadata = { title: "个人资料" };
 
 export const dynamic = "force-dynamic";
 

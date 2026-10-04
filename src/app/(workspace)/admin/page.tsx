@@ -6,7 +6,11 @@ import { getAdminDashboard } from "@/lib/idea-agent-admin";
 import { formatDate, WORK_TYPE_LABEL } from "@/lib/format";
 import { Database, FolderGit2, HardDrive, Lightbulb, ShieldCheck, Sparkles, UserCheck, Users } from "lucide-react";
 
+export const metadata = { title: "管理后台" };
+
 export const dynamic = "force-dynamic";
+
+
 
 export default async function AdminPage() {
   const { account } = await requireAdminUser();

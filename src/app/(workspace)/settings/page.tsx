@@ -4,7 +4,7 @@ import { Chip } from "@/components/ui/Chip";
 import { getSnapshot } from "@/lib/queries";
 import Link from "@/components/ui/NavigationLink";
 
-export const metadata = { title: "设置 · 想法共享" };
+export const metadata = { title: "设置" };
 
 export const dynamic = "force-dynamic";
 

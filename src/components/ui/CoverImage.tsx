@@ -1,6 +1,7 @@
 "use client";
 
-import { coverCandidates, DEFAULT_COVER, isSiteMarkUrl } from "@/lib/cover";
+import { Sparkles } from "lucide-react";
+import { coverCandidates, DEFAULT_COVER, isDefaultCover, isSiteMarkUrl } from "@/lib/cover";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export function CoverImage({
@@ -33,6 +34,21 @@ export function CoverImage({
     if (img && img.complete && img.naturalWidth === 0) onError();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSrc]);
+
+  // 没有可用封面时不出坏图，也不放通用插画：浅色底 + 火花图标 + 作品名。
+  if (isDefaultCover(currentSrc)) {
+    const wrapperClass = [className?.replace(/\bobject-\S+/g, "").trim(), "flex flex-col items-center justify-center gap-2 overflow-hidden bg-[#f1f0eb] px-3 text-center"]
+      .filter(Boolean)
+      .join(" ");
+    return (
+      <span className={wrapperClass} role={alt ? "img" : undefined} aria-label={alt || undefined}>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white">
+          <Sparkles className="h-3.5 w-3.5 text-orange-400" />
+        </span>
+        {alt ? <span className="line-clamp-2 max-w-full text-[12px] font-medium leading-snug text-slate-600" aria-hidden>{alt}</span> : null}
+      </span>
+    );
+  }
 
   const mark = isSiteMarkUrl(currentSrc);
   if (mark) {

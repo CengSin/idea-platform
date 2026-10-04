@@ -17,7 +17,7 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const idea = (await getPublicCatalog()).find((i) => i.id === id);
-  return { title: idea ? `${idea.title} · 想法共享` : "想法未公开" };
+  return { title: idea ? `${idea.title}` : "想法未公开" };
 }
 
 export default async function PublicIdeaPage({ params }: Props) {

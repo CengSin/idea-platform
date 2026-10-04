@@ -64,7 +64,7 @@ export function Lineage({
                   {attemptWorks.map((work) => (
                     <div key={work.id} className="lineage-tree-work-row">
                       <Link href={`/works/${work.id}`} className="lineage-tree-work glass lift media-zoom">
-                        <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} className="h-[76px] w-[112px] shrink-0 object-cover" />
+                        <CoverImage src={work.coverUrl} pageUrl={work.externalUrl} alt={work.title} className="h-[76px] w-[112px] shrink-0 object-cover" />
                         <span className="min-w-0 py-2 pr-3">
                           <span className="block truncate text-[14px]">{work.title}</span>
                           <span className="mt-1 line-clamp-2 block text-[12px] leading-snug text-muted">{work.summary}</span>

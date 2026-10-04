@@ -2,7 +2,7 @@ import { getPublicCatalog, getPublicActivities } from "@/lib/public-queries";
 import { IdeaJournal } from "@/components/journal/IdeaJournal";
 
 export const metadata = {
-  title: "想法共享 · Idea Platform",
+  title: "探索想法",
   description: "这里的想法，不止用来收藏。分享一个还没实现的想法，让别人沿着自己的方向实现它，再把作品带回来。",
 };
 
