@@ -5,7 +5,9 @@ import Link from "@/components/ui/NavigationLink";
 import { CoverImage } from "@/components/ui/CoverImage";
 import { Author } from "@/components/journal/IdeaJournal";
 import { ShareIdea } from "@/components/journal/ShareIdea";
-import { getPublicCatalog } from "@/lib/public-queries";
+import { getPublicCatalog, getPublicIdeaDiscussion } from "@/lib/public-queries";
+import { getCurrentUser } from "@/lib/auth";
+import { IdeaDiscussion } from "@/components/idea/IdeaDiscussion";
 import { WorkReminders } from "@/components/idea/WorkReminders";
 import { IdeaLifecycleRail } from "@/components/idea/IdeaLifecycleRail";
 import { IDEA_RELATION_KIND_LABEL } from "@/lib/idea-relations";
@@ -35,6 +37,8 @@ export default async function PublicIdeaPage({ params }: Props) {
 
   const isDeprecated = idea.status === "deprecated";
   const participants = idea.participants || [];
+  const viewer = await getCurrentUser();
+  const discussion = await getPublicIdeaDiscussion(id, viewer?.id);
 
   return (
     <article className="journal-detail-container mx-auto max-w-[1080px] py-8 sm:py-12">
@@ -160,6 +164,8 @@ export default async function PublicIdeaPage({ params }: Props) {
             ))}
 
           {}
+          {discussion && <IdeaDiscussion ideaId={id} discussion={discussion} viewerId={viewer?.id} returnPath={`/explore/${id}`} />}
+
           <section id="participants" className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
               <div>
@@ -319,6 +325,10 @@ export default async function PublicIdeaPage({ params }: Props) {
                 {idea.isImportedProblem ? "当前仅展示，暂不接受新的承接。" : "已弃用，暂不接受新的承接。"}
               </div>
             )}
+
+            <a href="#discussion" className="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] font-semibold text-slate-700 hover:border-slate-300 hover:text-slate-950">
+              参与讨论 <span className="text-[11px] font-normal text-slate-400">{discussion?.count ?? 0} 条</span>
+            </a>
 
             <div className="mt-4">
               <ShareIdea />

@@ -15,6 +15,8 @@ import { GitBranch } from "lucide-react";
 import type { Metadata } from "next";
 import { getSnapshot } from "@/lib/queries";
 import { ideaById } from "@/lib/format";
+import { IdeaDiscussion } from "@/components/idea/IdeaDiscussion";
+import { buildIdeaDiscussion } from "@/lib/idea-discussion";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,7 @@ export default async function IdeaDetailPage({
   const source = sourceContext(db, idea, currentUserId);
   const isOwner = idea.author.userId === currentUserId;
   const importedWork = idea.importedWorkId ? works.find((work) => work.id === idea.importedWorkId) : undefined;
+  const discussion = buildIdeaDiscussion(db, id, currentUserId);
 
   return (
       <PageFrame
@@ -68,6 +71,8 @@ export default async function IdeaDetailPage({
           {idea.whyItMatters && <><h3 className="mt-6 text-[14px] font-medium">希望带来的改变</h3><p className="mt-2 whitespace-pre-wrap text-[14px] leading-7 text-muted">{idea.whyItMatters}</p></>}
           {(idea.desiredOutputs.length > 0 || (idea.stopConditions?.length ?? 0) > 0) && <div className="mt-6 grid gap-5 sm:grid-cols-2">{[{title:"验收标准",items:idea.desiredOutputs},{title:"停止条件",items:idea.stopConditions ?? []}].filter(s=>s.items.length).map(section=><div key={section.title}><h3 className="text-[13px] font-medium">{section.title}</h3><ul className="mt-2 list-disc pl-5 text-[13px] leading-7 text-muted">{section.items.map((item,index)=><li key={index}>{item}</li>)}</ul></div>)}</div>}
         </section>
+
+        {discussion && <div className="mt-8"><IdeaDiscussion ideaId={id} discussion={discussion} viewerId={currentUserId} returnPath={`/ideas/${id}`} /></div>}
 
         <Lineage
           db={db}

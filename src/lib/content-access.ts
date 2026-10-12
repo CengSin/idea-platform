@@ -59,11 +59,7 @@ export function workForViewer(db: Database, work: Work, userId?: string): Work {
   };
 }
 
-/**
- * Drafts are a publication boundary for the complete idea tree. A draft's
- * attempts, works and activity may exist and keep changing, but are only
- * included in the author's request-scoped snapshot until the idea is published.
- */
+
 export function scopeDatabaseForUser(db: Database, userId: string): Database {
   const { agentConfig: _privateAgentConfig, ...visibleDb } = db;
   const ideas = db.ideas.filter((idea) => canAccessIdea(idea, userId));
@@ -92,5 +88,9 @@ export function scopeDatabaseForUser(db: Database, userId: string): Database {
     follows: db.follows.filter(
       (follow) => follow.userId === userId && ideaIds.has(follow.ideaId),
     ),
+    comments: (db.comments ?? []).filter((comment) => {
+      const idea = ideas.find((item) => item.id === comment.ideaId);
+      return idea?.visibility === "public" && idea.status !== "draft" && idea.status !== "archived";
+    }),
   };
 }

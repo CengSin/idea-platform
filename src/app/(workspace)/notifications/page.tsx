@@ -15,7 +15,7 @@ export default async function NotificationsPage() {
         <div className="mb-6 flex items-end justify-between">
           <div>
             <h1 className="text-[28px] font-semibold tracking-[-0.04em]">通知</h1>
-            <p className="mt-1 text-[13.5px] text-muted">匹配、活性、阻塞和衍生，而不是点赞。</p>
+            <p className="mt-1 text-[13.5px] text-muted">查看讨论回复、作品发布和项目进展。</p>
           </div>
           <MarkRead />
         </div>

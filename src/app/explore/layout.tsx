@@ -1,3 +1,4 @@
+import { LiveDataRefresh } from "@/components/chrome/LiveDataRefresh";
 import { SiteHeader } from "@/components/chrome/SiteHeader";
 import { isAdminUser } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/auth";
@@ -17,6 +18,7 @@ export default async function ExploreLayout({ children }: { children: React.Reac
   }
   return (
     <div className="explore-shell relative z-10 min-h-dvh">
+      <LiveDataRefresh />
       <a href="#explore-content" className="skip-link">跳到主要内容</a>
       <SiteHeader user={me} unread={unread} isAdmin={isAdmin} />
       <main id="explore-content" className="mx-auto max-w-[1240px] px-5 sm:px-8">{children}</main>

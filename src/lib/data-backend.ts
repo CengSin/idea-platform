@@ -51,7 +51,7 @@ export function dataBackend(): DataBackend {
 
 export function useRemoteBlobStore() {
   if (dataBackend() === "turso") return false;
-  // `next dev` must not write the shared Blob store just because a migration token is in .env.local.
+
   if (process.env.NODE_ENV === "development" && process.env.VERCEL !== "1") return false;
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN) || process.env.VERCEL === "1";
 }
@@ -74,6 +74,7 @@ export function asDatabase(dump: DataDump): Database {
     events: dump.events ?? [],
     notifications: dump.notifications ?? [],
     follows: dump.follows ?? [],
+    comments: dump.comments ?? [],
     agentConfig: dump.agentConfig ?? {},
   };
 }

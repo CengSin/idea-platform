@@ -10,6 +10,7 @@ export function createSeed(): Database {
     events: [],
     notifications: [],
     follows: [],
+    comments: [],
     agentConfig: {},
   };
 }

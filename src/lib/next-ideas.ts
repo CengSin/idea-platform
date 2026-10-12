@@ -1,4 +1,5 @@
 import { ensureWorkRevision } from "./work-revisions.ts";
+import { removeIdeaDiscussion } from "./idea-discussion.ts";
 import type { Database, Idea, IdeaRelationKind } from "./types";
 
 export type NextIdeaInput = {
@@ -174,6 +175,7 @@ export function deleteNextIdeaRecord(db: Database, userId: string, ideaId: strin
 
   db.notifications = db.notifications.filter(n => n.href !== `/ideas/${ideaId}`);
   db.ideas = db.ideas.filter((item) => item.id !== ideaId);
+  removeIdeaDiscussion(db, ideaId);
   db.follows = db.follows.filter((follow) => follow.ideaId !== ideaId);
   db.events = db.events.filter((event) => event.ideaId !== ideaId);
   const sourceWork = db.works.find((work) => work.id === idea.sourceWorkId);

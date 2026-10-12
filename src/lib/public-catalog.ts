@@ -135,6 +135,7 @@ export function buildPublicCatalog(db: Database) {
         authorInitials: isAuthorPublic ? (author.initials || author.displayName.slice(0, 1).toUpperCase()) : "创",
         authorAccent: isAuthorPublic ? author.accent : undefined,
         attemptCount: participationAttempts.length,
+        commentCount: (db.comments ?? []).filter((comment) => comment.ideaId === idea.id && !comment.deletedAt).length,
         participants,
         works,
       };

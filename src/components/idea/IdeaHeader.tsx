@@ -9,6 +9,7 @@ import type { Idea, IdeaMetrics, User } from "@/lib/types";
 import { Users } from "lucide-react";
 import { useState, useTransition } from "react";
 import { IdeaLifecycleRail } from "@/components/idea/IdeaLifecycleRail";
+import { canDiscussIdea } from "@/lib/idea-discussion";
 
 
 export function IdeaHeader({
@@ -66,7 +67,8 @@ export function IdeaHeader({
           catch (error) { setStatusError(error instanceof Error ? error.message : "状态更新失败，请重试"); }
         })}>{pending ? "正在更新…" : idea.status === "deprecated" ? "恢复这个想法" : "标记为弃用"}</button>}
         {statusError && <p role="alert" className="text-sm text-blocked">{statusError}</p>}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
+          {canDiscussIdea(idea) && <a href="#discussion" className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-700 hover:border-slate-300">参与讨论</a>}
           <Button
             tone="idea"
             onClick={() => sheets.openAdopt(idea)}

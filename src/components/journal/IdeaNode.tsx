@@ -167,10 +167,10 @@ export function IdeaNode({
             </div>
 
             {}
-            <div className="flex items-center gap-1 text-slate-400 text-[11.5px]">
+            <Link href={`${workspace ? "/ideas" : "/explore"}/${idea.id}#discussion`} className="flex items-center gap-1 text-slate-400 text-[11.5px] hover:text-orange-700" aria-label={`参与讨论：${idea.title}，${idea.commentCount} 条留言`}>
               <MessageSquare className="h-3.5 w-3.5" />
-              <span>围绕 Idea 交流</span>
-            </div>
+              <span>{idea.commentCount ? `${idea.commentCount} 条讨论` : "参与讨论"}</span>
+            </Link>
           </div>
 
           {}

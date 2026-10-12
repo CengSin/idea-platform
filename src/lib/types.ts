@@ -35,7 +35,8 @@ export type NotificationKind =
   | "attempt"
   | "work"
   | "agent"
-  | "fork";
+  | "fork"
+  | "discussion";
 export type IdeaRelationKind = "iterate" | "derive";
 
 export const ACTIVE_ATTEMPT_STATUSES: AttemptStatus[] = [
@@ -255,6 +256,16 @@ export interface Follow {
   ideaId: string;
 }
 
+export interface IdeaComment {
+  id: string;
+  ideaId: string;
+  authorId: string;
+  body: string;
+  parentId?: string;
+  createdAt: string;
+  deletedAt?: string;
+}
+
 export interface AgentRuntimeConfig {
   openaiBaseUrl?: string;
   openaiModel?: string;
@@ -301,6 +312,7 @@ export interface Database {
   events: ActivityEvent[];
   notifications: Notification[];
   follows: Follow[];
+  comments?: IdeaComment[];
   agentConfig?: AgentRuntimeConfig;
 }
 
