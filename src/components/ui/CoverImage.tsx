@@ -42,10 +42,10 @@ export function CoverImage({
       .join(" ");
     return (
       <span className={wrapperClass} role={alt ? "img" : undefined} aria-label={alt || undefined}>
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white">
-          <Sparkles className="h-3.5 w-3.5 text-orange-400" />
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#292927] text-white">
+          <Sparkles className="h-3.5 w-3.5 text-[#e05b38]" />
         </span>
-        {alt ? <span className="line-clamp-2 max-w-full text-[12px] font-medium leading-snug text-slate-600" aria-hidden>{alt}</span> : null}
+        {alt ? <span className="line-clamp-2 max-w-full text-[12px] font-medium leading-snug text-[#777771]" aria-hidden>{alt}</span> : null}
       </span>
     );
   }

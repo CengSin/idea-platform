@@ -1,19 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #fafbfc;
-  --color-canvas-soft: #f1f5f9;
+  /* Unified light skin: warm paper + coral accent (visual only). */
+  --color-canvas: #faf9f6;
+  --color-canvas-soft: #f1f0eb;
   --color-surface: #ffffff;
   --color-surface-solid: #ffffff;
-  --color-idea: #ea580c;
-  --color-idea-deep: #c2410c;
-  --color-active: #4f46e5;
-  --color-active-deep: #4338ca;
-  --color-artifact: #0f172a;
-  --color-muted: #64748b;
-  --color-blocked: #ef4444;
-  --color-line: rgba(15, 23, 42, 0.08);
-  --color-line-strong: rgba(15, 23, 42, 0.16);
+  --color-idea: #e05b38;
+  --color-idea-deep: #bf4528;
+  --color-active: #54736b;
+  --color-active-deep: #3f5852;
+  --color-artifact: #292927;
+  --color-muted: #777771;
+  --color-blocked: #e11d48;
+  --color-line: rgba(40, 40, 36, 0.12);
+  --color-line-strong: rgba(40, 40, 36, 0.2);
   --font-sans: "SF Pro Display", "SF Pro Text", "PingFang SC", "Hiragino Sans GB",
     "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
 }
@@ -61,12 +62,12 @@ a {
 }
 
 :focus-visible {
-  outline: 2px solid rgba(232, 184, 106, 0.7);
+  outline: 2px solid rgba(224, 91, 56, 0.55);
   outline-offset: 3px;
 }
 
 ::selection {
-  background: rgba(232, 184, 106, 0.32);
+  background: rgba(224, 91, 56, 0.22);
   color: var(--color-artifact);
 }
 
@@ -92,10 +93,9 @@ a {
   z-index: 0;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 90% 70% at 12% 8%, rgba(232, 176, 110, 0.32), transparent 58%),
-    radial-gradient(ellipse 70% 55% at 92% 88%, rgba(111, 212, 203, 0.18), transparent 52%),
-    radial-gradient(ellipse 50% 40% at 48% 42%, rgba(255, 236, 210, 0.08), transparent 70%),
-    linear-gradient(165deg, #2a241e 0%, #f7f8f3 46%, #171410 100%);
+    radial-gradient(ellipse 70% 50% at 88% 0%, rgba(224, 91, 56, 0.06), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 8% 100%, rgba(84, 115, 107, 0.05), transparent 50%),
+    #faf9f6;
 }
 
 .atmosphere-blob {
@@ -151,23 +151,19 @@ a {
 }
 
 .glass {
-  background: rgba(42, 36, 30, 0.5);
-  backdrop-filter: blur(28px) saturate(170%);
-  -webkit-backdrop-filter: blur(28px) saturate(170%);
-  border: 1px solid rgba(255, 228, 196, 0.14);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 10px 36px rgba(20, 14, 8, 0.22);
+  background: rgba(255, 255, 252, 0.92);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 8px 28px rgba(41, 41, 39, 0.05);
 }
 
 .glass-heavy {
-  background: rgba(32, 27, 22, 0.72);
-  backdrop-filter: blur(36px) saturate(180%);
-  -webkit-backdrop-filter: blur(36px) saturate(180%);
-  border: 1px solid rgba(255, 228, 196, 0.15);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 16px 48px rgba(16, 12, 8, 0.28);
+  background: rgba(255, 255, 252, 0.96);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 14px 40px rgba(41, 41, 39, 0.07);
 }
 
 .pressable {
@@ -194,10 +190,10 @@ a {
 
 @media (hover: hover) and (pointer: fine) {
   .lift:hover {
-    transform: translateY(-3px);
-    border-color: rgba(255, 228, 196, 0.28);
+    transform: translateY(-2px);
+    border-color: rgba(40, 40, 36, 0.18);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
       0 18px 40px rgba(20, 14, 8, 0.28);
   }
 
@@ -381,7 +377,7 @@ button:active, .pressable:active { transition-duration: 60ms; }
 @media (prefers-reduced-transparency: reduce) {
   .glass,
   .glass-heavy {
-    background: #2a241e;
+    background: #fffefa;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
@@ -394,8 +390,8 @@ button:active, .pressable:active { transition-duration: 60ms; }
 @media (prefers-contrast: more) {
   .glass,
   .glass-heavy {
-    background: #241f1a;
-    border-color: rgba(255, 228, 196, 0.38);
+    background: #fff;
+    border-color: #6a7b69;
   }
 }
 
@@ -1752,3 +1748,15 @@ button:active, .pressable:active { transition-duration: 60ms; }
   }
 }
 
+
+
+/* Site chrome polish — keep one light header feel with the notebook skin. */
+.site-header.explore-header {
+  background: rgba(250, 249, 246, 0.86);
+  border-bottom-color: var(--color-line);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+.site-header .nav-pill-active {
+  background: #efeee8;
+  color: var(--color-artifact);
+}

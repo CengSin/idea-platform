@@ -28,8 +28,8 @@ const MEMBER_NAV: NavItem[] = [
 
 export function BrandMark({ className = "" }: { className?: string }) {
   return (
-    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white shadow-2xs ${className}`}>
-      <Sparkles className="h-4 w-4 text-orange-400" />
+    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#292927] text-white shadow-2xs ${className}`}>
+      <Sparkles className="h-4 w-4 text-[#e05b38]" />
     </span>
   );
 }
@@ -38,9 +38,9 @@ function Brand() {
   return (
     <Link href="/explore" className="flex shrink-0 items-center gap-2.5" aria-label="Idea Platform 首页">
       <BrandMark />
-      <span className="hidden whitespace-nowrap text-[17px] font-bold tracking-tight text-slate-950 sm:inline">
-        IDEA<span className="font-normal text-slate-500"> PLATFORM</span>
-        <span className="text-orange-500">.</span>
+      <span className="hidden whitespace-nowrap text-[17px] font-bold tracking-tight text-[#292927] sm:inline">
+        IDEA<span className="font-normal text-[#777771]"> PLATFORM</span>
+        <span className="text-[#e05b38]">.</span>
       </span>
     </Link>
   );
@@ -48,7 +48,7 @@ function Brand() {
 
 function navLinkClass(active: boolean) {
   return `shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-[13px] font-medium transition ${
-    active ? "bg-slate-100 text-slate-950" : "text-slate-600 hover:text-slate-950"
+    active ? "bg-[#efeee8] text-[#292927]" : "text-[#777771] hover:text-[#292927]"
   }`;
 }
 
@@ -57,7 +57,7 @@ function WriteIdeaButton({ href }: { href: string }) {
     <Link
       href={href}
       aria-label="写下想法"
-      className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-slate-950 px-2.5 py-2 text-[13px] font-semibold text-white shadow-2xs transition hover:bg-slate-800 sm:px-4"
+      className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#292927] px-2.5 py-2 text-[13px] font-semibold text-white shadow-2xs transition hover:bg-[#3d3d3a] sm:px-4"
     >
       <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
       <span className="hidden sm:inline">写下想法</span>
@@ -88,7 +88,7 @@ function AccountMenu({ user, isAdmin, path }: { user: User; isAdmin: boolean; pa
 
   const itemClass = (active: boolean) =>
     `block rounded-lg px-3 py-2 text-[13px] transition ${
-      active ? "bg-slate-100 font-medium text-slate-950" : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
+      active ? "bg-[#efeee8] font-medium text-[#292927]" : "text-[#4a4a45] hover:bg-[#f1f0eb] hover:text-[#292927]"
     }`;
   const accountItems = [
     { href: "/works", label: "我的作品" },
@@ -106,21 +106,21 @@ function AccountMenu({ user, isAdmin, path }: { user: User; isAdmin: boolean; pa
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`账户菜单：${user.displayName}`}
-        className="flex items-center gap-1 rounded-full p-0.5 ring-2 ring-transparent transition hover:ring-slate-200 focus-visible:ring-slate-300"
+        className="flex items-center gap-1 rounded-full p-0.5 ring-2 ring-transparent transition hover:ring-[#d8d7cf] focus-visible:ring-[#c9c8bf]"
       >
         <Avatar initials={user.initials} accent={user.accent} size={30} />
-        <ChevronDown className="hidden h-3.5 w-3.5 text-slate-400 sm:block" />
+        <ChevronDown className="hidden h-3.5 w-3.5 text-[#989890] sm:block" />
       </button>
       {open ? (
-        <div role="menu" className="absolute right-0 top-[calc(100%+8px)] z-50 w-52 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-lg">
-          <div className="truncate px-3 pb-2 pt-1.5 text-[12px] text-slate-500">{user.displayName}</div>
+        <div role="menu" className="absolute right-0 top-[calc(100%+8px)] z-50 w-52 rounded-2xl border border-[#e4e3db] bg-[#fffefb] p-1.5 shadow-[0_12px_40px_rgba(41,41,39,0.1)]">
+          <div className="truncate px-3 pb-2 pt-1.5 text-[12px] text-[#777771]">{user.displayName}</div>
           <div className="sm:hidden">
             {MEMBER_NAV.map((item) => (
               <Link key={item.href} role="menuitem" href={item.href} className={itemClass(item.match(path))}>
                 {item.label}
               </Link>
             ))}
-            <div className="my-1 border-t border-slate-100" />
+            <div className="my-1 border-t border-[#efeee8]" />
           </div>
           {accountItems.map((item) => (
             <Link
@@ -133,9 +133,9 @@ function AccountMenu({ user, isAdmin, path }: { user: User; isAdmin: boolean; pa
               {item.label}
             </Link>
           ))}
-          <div className="my-1 border-t border-slate-100" />
+          <div className="my-1 border-t border-[#efeee8]" />
           <form action={logoutAction}>
-            <button type="submit" role="menuitem" className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-slate-500 transition hover:bg-rose-50 hover:text-rose-600">
+            <button type="submit" role="menuitem" className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-[#777771] transition hover:bg-rose-50 hover:text-rose-600">
               退出登录
             </button>
           </form>
@@ -159,7 +159,7 @@ export function SiteHeader({
   const path = usePathname() ?? "";
 
   return (
-    <header className={`explore-header site-header sticky top-0 z-40 w-full border-b border-slate-200/80 backdrop-blur-md ${className}`}>
+    <header className={`explore-header site-header sticky top-0 z-40 w-full border-b border-[#e4e3db]/80 backdrop-blur-md ${className}`}>
       <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-3 px-4 sm:px-8">
         <div className="flex shrink-0 items-center gap-6">
           <Brand />
@@ -180,12 +180,12 @@ export function SiteHeader({
             <>
               <Link
                 href="/notifications"
-                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#777771] transition hover:bg-[#efeee8] hover:text-[#292927]"
                 aria-label={unread ? `通知，${unread} 条未读` : "通知"}
                 title="通知"
               >
                 <Bell size={17} />
-                {unread > 0 ? <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" /> : null}
+                {unread > 0 ? <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#e05b38] ring-2 ring-[#faf9f6]" /> : null}
               </Link>
               <WriteIdeaButton href="/ideas/new" />
               <AccountMenu user={user} isAdmin={isAdmin} path={path} />

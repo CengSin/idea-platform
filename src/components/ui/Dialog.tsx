@@ -34,7 +34,7 @@ export function Dialog({
           <motion.button
             type="button"
             aria-label="关闭"
-            className="absolute inset-0 bg-[#1a1410]/45"
+            className="absolute inset-0 bg-[#292927]/35"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -44,7 +44,7 @@ export function Dialog({
           <motion.div
             role="dialog"
             aria-modal
-            className={`glass-heavy relative max-h-[88vh] overflow-auto rounded-3xl p-6 shadow-[0_28px_90px_rgba(20,12,6,0.4)] ${wide ? "w-[min(760px,100%)]" : "w-[min(520px,100%)]"}`}
+            className={`glass-heavy relative max-h-[88vh] overflow-auto rounded-3xl p-6 shadow-[0_24px_80px_rgba(41,41,39,0.16)] ${wide ? "w-[min(760px,100%)]" : "w-[min(520px,100%)]"}`}
             initial={{ opacity: 0, scale: 0.96, y: 14, filter: "blur(8px)" }}
             animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, scale: 0.97, y: 10, filter: "blur(6px)" }}
