@@ -10,12 +10,12 @@ export function Button({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { tone?: Tone }) {
   const tones: Record<Tone, string> = {
-    idea: "bg-slate-900 text-white shadow-xs hover:bg-slate-800 border border-transparent",
+    idea: "bg-[#292927] text-white shadow-xs hover:bg-[#3d3d3a] border border-transparent",
     ghost:
-      "bg-white text-slate-700 border border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs",
-    active: "bg-indigo-50 text-indigo-700 border border-indigo-200/80 hover:bg-indigo-100/80",
+      "bg-[#fffefb] text-[#4a4a45] border border-[#e4e3db] hover:bg-[#f1f0eb] hover:border-[#d8d7cf] shadow-2xs",
+    active: "bg-[#eef3f1] text-[#3f5852] border border-[#c9d6d1] hover:bg-[#e4ece9]",
     danger: "bg-rose-50 text-rose-700 border border-rose-200/80 hover:bg-rose-100/80",
-    quiet: "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/80",
+    quiet: "bg-transparent text-[#777771] hover:text-[#292927] hover:bg-[#efeee8]",
   };
   return (
     <button
