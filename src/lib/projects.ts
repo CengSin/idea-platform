@@ -162,19 +162,35 @@ export function parseCurationOutput(text: string, expected: string[]): CurationR
   const wanted = new Map(expected.map((name) => [name.toLowerCase(), name]));
   const results = new Map<string, CurationResult>();
   for (const item of raw) {
-    if (!item || typeof item !== "object") continue;
-    const entry = item as Record<string, unknown>;
-    const repo = wanted.get(String(entry.repo ?? "").trim().toLowerCase());
-    const score = Number(entry.score);
-    if (!repo || !Number.isFinite(score)) continue;
-    results.set(repo, {
-      repo,
-      score: Math.round(Math.min(100, Math.max(0, score))),
-      pitch: String(entry.pitch ?? "").trim().slice(0, TAGLINE_MAX),
-      reason: String(entry.reason ?? "").trim().slice(0, 200),
-    });
+    const result = toCurationResult(item);
+    const repo = result && wanted.get(result.repo.toLowerCase());
+    if (result && repo) results.set(repo, { repo, score: result.score, pitch: result.pitch, reason: result.reason });
   }
   return [...results.values()];
+}
+
+/** Validate curation results that arrive over the wire (owner API). */
+export function sanitizeCurationResults(input: unknown): CurationResult[] {
+  if (!Array.isArray(input)) throw new Error("curations 必须是数组");
+  return input.map(toCurationResult).filter((result): result is CurationResult => result !== null);
+}
+
+function toCurationResult(item: unknown): CurationResult | null {
+  if (!item || typeof item !== "object") return null;
+  const entry = item as Record<string, unknown>;
+  const repo = String(entry.repo ?? "").trim();
+  const score = Number(entry.score);
+  if (!/^[^/\s]+\/[^/\s]+$/.test(repo) || !Number.isFinite(score)) return null;
+  const basedOn = typeof entry.basedOnPushedAt === "string" && !Number.isNaN(Date.parse(entry.basedOnPushedAt))
+    ? entry.basedOnPushedAt
+    : undefined;
+  return {
+    repo,
+    score: Math.round(Math.min(100, Math.max(0, score))),
+    pitch: String(entry.pitch ?? "").trim().slice(0, TAGLINE_MAX),
+    reason: String(entry.reason ?? "").trim().slice(0, 200),
+    ...(basedOn ? { basedOnPushedAt: basedOn } : {}),
+  };
 }
 
 export function applyCurations(

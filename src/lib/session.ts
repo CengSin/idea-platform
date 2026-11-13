@@ -40,6 +40,12 @@ export function checkPassword(input: string, env: SessionEnv = process.env) {
   return Boolean(password) && safeEqual(input, password);
 }
 
+/** `Authorization: Bearer <ADMIN_PASSWORD>`, for scripts acting as the owner. */
+export function checkBearer(header: string | null | undefined, env: SessionEnv = process.env) {
+  const match = /^Bearer (.+)$/.exec(header?.trim() ?? "");
+  return match ? checkPassword(match[1], env) : false;
+}
+
 export function issueSession(env: SessionEnv = process.env, now = Date.now()) {
   const key = secret(env);
   if (!key) throw new Error("未设置 ADMIN_PASSWORD");

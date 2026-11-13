@@ -6,9 +6,12 @@
  *   npm run curate -- --no-sync    skip the GitHub sync
  *   npm run curate -- --dry-run    print scores without saving
  *   npm run curate -- --model sonnet --limit 10
+ *   npm run curate -- --remote https://example.com
  *
- * Reads .env.local / .env, so pointing DATA_BACKEND=turso at production writes
- * straight into the live showcase. GitHub access uses GITHUB_TOKEN or `gh auth token`.
+ * Reads .env.local / .env. With SHOWCASE_URL (or --remote) and ADMIN_PASSWORD it
+ * reads and writes the live site through /api/owner/showcase; otherwise it uses
+ * the local store (data/showcase.json, or Turso when DATA_BACKEND=turso).
+ * GitHub access uses GITHUB_TOKEN or `gh auth token`.
  */
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -21,7 +24,7 @@ import {
 } from "../src/lib/projects.ts";
 import { mutateShowcase, readShowcase } from "../src/lib/store.ts";
 import { syncFromGitHub } from "../src/lib/sync.ts";
-import type { Project } from "../src/lib/types.ts";
+import type { Project, Showcase } from "../src/lib/types.ts";
 
 const BATCH_SIZE = 8;
 const README_CHARS = 3000;
@@ -46,6 +49,47 @@ function githubToken() {
   } catch {
     return undefined;
   }
+}
+
+const remote = (option("remote") ?? process.env.SHOWCASE_URL ?? "").trim().replace(/\/+$/, "");
+
+async function ownerApi<T>(init: RequestInit & { query?: string } = {}): Promise<T> {
+  const password = process.env.ADMIN_PASSWORD?.trim();
+  if (!password) throw new Error("远程模式需要 ADMIN_PASSWORD");
+  const response = await fetch(`${remote}/api/owner/showcase${init.query ?? ""}`, {
+    ...init,
+    headers: { authorization: `Bearer ${password}`, "content-type": "application/json" },
+  });
+  const body = (await response.json().catch(() => ({}))) as T & { error?: string };
+  if (!response.ok) throw new Error(`${remote} 返回 ${response.status}：${body.error ?? ""}`);
+  return body;
+}
+
+/** Sync (unless --no-sync) and return the showcase to curate. */
+async function loadShowcase(token: string | undefined): Promise<Showcase> {
+  const sync = !flag("no-sync");
+  if (sync) process.stdout.write(`同步 GitHub 仓库${remote ? `（经由 ${remote}）` : ""}… `);
+  if (remote) {
+    const body = await ownerApi<{ showcase: Showcase; sync?: { total: number; added: number } }>({
+      query: sync ? "?sync=1" : "",
+    });
+    if (body.sync) console.log(`${body.sync.total} 个（新增 ${body.sync.added}）`);
+    return body.showcase;
+  }
+  if (sync) {
+    const summary = await syncFromGitHub({ token });
+    console.log(`${summary.total} 个（新增 ${summary.added}）`);
+  }
+  return readShowcase();
+}
+
+async function saveCurations(results: CurationResult[]) {
+  if (remote) {
+    await ownerApi({ method: "POST", body: JSON.stringify({ curations: results }) });
+    return;
+  }
+  const curatedAt = new Date().toISOString();
+  await mutateShowcase((doc) => ({ ...doc, projects: applyCurations(doc.projects, results, curatedAt), curatedAt }));
 }
 
 const SYSTEM_PROMPT = `你是一位眼光挑剔的创意策展人，正在帮一位独立开发者从自己的 GitHub 仓库里挑出最有想象力的项目。
@@ -121,13 +165,7 @@ function askClaude(prompt: string, model?: string): Promise<string> {
 
 async function main() {
   const token = githubToken();
-  if (!flag("no-sync")) {
-    process.stdout.write("同步 GitHub 仓库… ");
-    const summary = await syncFromGitHub({ token });
-    console.log(`${summary.total} 个（新增 ${summary.added}）`);
-  }
-
-  const showcase = await readShowcase();
+  const showcase = await loadShowcase(token);
   let candidates = showcase.projects.filter((project) => needsCuration(project, { all: flag("all") }));
   const limit = Number(option("limit"));
   if (limit > 0) candidates = candidates.slice(0, limit);
@@ -184,8 +222,7 @@ async function main() {
     return;
   }
   if (results.length === 0) return;
-  const curatedAt = new Date().toISOString();
-  await mutateShowcase((doc) => ({ ...doc, projects: applyCurations(doc.projects, results, curatedAt), curatedAt }));
+  await saveCurations(results);
   console.log(`\n已保存 ${results.length} 个评选结果。公开页最多 10 分钟内刷新。`);
 }
 

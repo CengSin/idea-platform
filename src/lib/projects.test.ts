@@ -10,6 +10,7 @@ import {
   parseCurationOutput,
   projectStatus,
   publicSections,
+  sanitizeCurationResults,
 } from "./projects.ts";
 import type { Project, RepoActivity, RepoSnapshot } from "./types.ts";
 
@@ -145,4 +146,19 @@ test("parseCurationOutput tolerates fences, filters unknown repos and clamps", (
 test("applyCurations records which push it judged", () => {
   const [result] = applyCurations([project("a")], [{ repo: "me/a", score: 70, pitch: "p", reason: "r", basedOnPushedAt: "old" }], "now");
   assert.deepEqual(result.curation, { score: 70, pitch: "p", reason: "r", curatedAt: "now", basedOnPushedAt: "old" });
+});
+
+test("curation results from the owner API are validated", () => {
+  const results = sanitizeCurationResults([
+    { repo: "me/a", score: 140, pitch: " p ", reason: "r", basedOnPushedAt: "2026-01-01T00:00:00Z" },
+    { repo: "me/b", score: 40, basedOnPushedAt: "not a date" },
+    { repo: "no-slash", score: 50 },
+    { repo: "me/c", score: "x" },
+    null,
+  ]);
+  assert.deepEqual(results, [
+    { repo: "me/a", score: 100, pitch: "p", reason: "r", basedOnPushedAt: "2026-01-01T00:00:00Z" },
+    { repo: "me/b", score: 40, pitch: "", reason: "" },
+  ]);
+  assert.throws(() => sanitizeCurationResults({}));
 });

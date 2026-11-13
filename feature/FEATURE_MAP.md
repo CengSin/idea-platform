@@ -11,6 +11,7 @@
 | `/admin` | 已登录；否则跳 `/login` | 项目后台 |
 | `/api/v1/projects` | 任何人 | 公开项目 JSON |
 | `/api/cron/sync` | `Bearer $CRON_SECRET` | 每日同步 |
+| `/api/owner/showcase` | `Bearer $ADMIN_PASSWORD` | GET 读全部数据（`?sync=1` 先同步）；POST 保存评选结果，供远程 `npm run curate` 使用 |
 
 会话 Cookie 名为 `showcase_session`，是一个签名的过期时间戳，没有账号表。
 

@@ -32,7 +32,7 @@ npm run curate -- --dry-run    # 只打印，不保存
 npm run curate -- --model sonnet --limit 10
 ```
 
-想直接写进线上数据，在 `.env.local` 里配置 `DATA_BACKEND=turso` 和 Turso 凭证即可。公开页最多 10 分钟内刷新。
+想直接写进线上数据，在 `.env.local` 里设置 `SHOWCASE_URL=https://你的域名` 和 `ADMIN_PASSWORD`（与线上一致）：脚本会经由线上的 `/api/owner/showcase` 同步和保存，本机不需要数据库凭证。也可以临时用 `--remote https://你的域名`。公开页最多 10 分钟内刷新。
 
 ## 部署（Vercel）
 
@@ -49,6 +49,7 @@ npm run curate -- --model sonnet --limit 10
 
 - `GET /api/v1/projects`：公开页展示的内容（精选、推进中、其他），只包含公开字段，允许跨域，可供个人站点等使用。
 - `GET /api/cron/sync`：需要 `Authorization: Bearer $CRON_SECRET`。
+- `GET|POST /api/owner/showcase`：需要 `Authorization: Bearer $ADMIN_PASSWORD`，供本地 `npm run curate` 远程读写线上数据。
 
 ## 开发
 
