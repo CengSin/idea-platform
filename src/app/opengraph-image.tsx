@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 // 站点默认分享图（PNG）。微信、X 等平台不显示 SVG，所以用 Next 的 opengraph-image 约定生成位图。
 // 只用拉丁字符：ImageResponse 默认字体不含中文字形。
-export const alt = "Idea Platform";
+export const alt = "Projects";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -42,13 +42,12 @@ export default function OpenGraphImage() {
             </svg>
           </div>
           <div style={{ display: "flex", fontSize: 92, fontWeight: 800, letterSpacing: -2 }}>
-            <span>IDEA</span>
-            <span style={{ fontWeight: 400, color: "#64748b", marginLeft: 24 }}>PLATFORM</span>
+            <span>PROJECTS</span>
             <span style={{ color: "#f97316" }}>.</span>
           </div>
         </div>
         <div style={{ display: "flex", marginTop: 48, fontSize: 40, color: "#475569" }}>
-          Share an idea. Let builders make it real.
+          What I'm building, and the most imaginative ones.
         </div>
       </div>
     ),

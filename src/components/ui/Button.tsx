@@ -1,4 +1,4 @@
-import { clsxJoin } from "@/lib/format";
+import { cx as clsxJoin } from "@/lib/format";
 import type { ButtonHTMLAttributes } from "react";
 
 type Tone = "idea" | "ghost" | "active" | "danger" | "quiet";

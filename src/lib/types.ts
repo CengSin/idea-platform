@@ -1,319 +1,77 @@
-export type Visibility = "public" | "unlisted" | "invite_only" | "private";
-export type UserVisibility = "public" | "limited" | "private";
-export type IdeaStatus =
-  | "draft"
-  | "published"
-  | "evolving"
-  | "realized"
-  | "deprecated"
-  | "dormant"
-  | "archived";
-export type AttemptStatus =
-  | "considering"
-  | "understanding"
-  | "prototyping"
-  | "testing"
-  | "paused"
-  | "stalled"
-  | "abandoned"
-  | "published";
-export type WorkType =
-  | "website"
-  | "app"
-  | "video"
-  | "article"
-  | "research"
-  | "art"
-  | "hardware"
-  | "other";
-export type WorkStatus = "draft" | "published" | "archived";
-export type AgentSuggestionStatus = "pending" | "accepted" | "dismissed";
-export type AgentEmailStatus = "pending" | "sent" | "failed" | "skipped";
-export type ActorKind = "user" | "agent";
-export type CommercialUse = "yes" | "with_attribution" | "no";
-export type NotificationKind =
-  | "attempt"
-  | "work"
-  | "agent"
-  | "fork"
-  | "discussion";
-export type IdeaRelationKind = "iterate" | "derive";
-
-export const ACTIVE_ATTEMPT_STATUSES: AttemptStatus[] = [
-  "understanding",
-  "prototyping",
-  "testing",
-];
-
-export const ATTEMPT_STAGE_ORDER: AttemptStatus[] = [
-  "understanding",
-  "prototyping",
-  "testing",
-  "published",
-];
-
-export interface ActorRef {
-  kind: ActorKind;
-  userId: string;
-  displayName: string;
-}
-
-export interface License {
-  implementation: boolean;
-  derivatives: boolean;
-  commercialUse: CommercialUse;
-}
-
-export interface ProjectLink {
-  id: string;
-  title: string;
-  url: string;
-  note?: string;
-  createdAt: string;
-}
-
-export interface User {
-  id: string;
-  displayName: string;
-  initials: string;
-  accent: string;
-  bio: string;
-  skills: string[];
-  visibility: UserVisibility;
-  createdAt: string;
-  projectLinks: ProjectLink[];
-}
-
-export interface ExistingAttemptRef {
-  title: string;
-  url?: string;
-  note?: string;
-}
-
-export interface Idea {
-  id: string;
-  importedWorkId?: string;
-  title: string;
-  summary: string;
-  problem: string;
-  whyItMatters: string;
-  constraints: string[];
-  existingAttempts: ExistingAttemptRef[];
-  openQuestions: string[];
-  desiredOutputs: string[];
-  stopConditions?: string[];
-  tags: string[];
-  author: ActorRef;
-  license: License;
-  visibility: Visibility;
-  status: IdeaStatus;
-  parentIdeaId?: string;
-  sourceWorkId?: string;
-  sourceWorkRevisionId?: string;
-
-  relationKind?: IdeaRelationKind;
-  agentRequestId?: string;
-  graph: { x: number; y: number };
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Attempt {
-  todos?: import("./attempt-todos").AttemptTodo[];
-  /** Set on non-owner views where `todos` is stripped: progress counts without titles. */
-  todoProgress?: import("./attempt-todos").TodoProgress;
-  id: string;
-  ideaId: string;
-  ownerId: string;
-  title: string;
-  approach: string;
-  projectDescription?: string;
-  projectPurpose?: string;
-  status: AttemptStatus;
-  progressNote: string;
-  visibility: Visibility;
-  blockers: string[];
-  startedAt: string;
-  lastActiveAt: string;
-  createdAt: string;
-  targetDate?: string;
-  workIds: string[];
-  graph?: { x: number; y: number };
-}
-
-export interface Credit {
-  userId?: string;
-  role: string;
+/** Fields copied from GitHub on every sync. */
+export interface RepoSnapshot {
+  id: string; // lower-cased full name, stable across syncs
+  fullName: string;
   name: string;
-}
-
-export interface WorkRevision {
-  id: string;
-  number: number;
-  recordedAt: string;
-  title: string;
-  summary: string;
-  type: WorkType;
-  coverUrl: string;
-  externalUrl?: string;
-  repositoryUrl?: string;
-  license: License;
-}
-
-export interface Work {
-  revisions?: WorkRevision[];
-  id: string;
-  origin?: "imported_web";
-  originalPublishedAt?: string;
-  collaborationOpen?: boolean;
-  attemptId: string;
-  ideaId: string;
-  title: string;
-  summary: string;
-  type: WorkType;
-  coverUrl: string;
-  externalUrl?: string;
-  repositoryUrl?: string;
-  status: WorkStatus;
-  credits: Credit[];
-  license: License;
-  publishedAt?: string;
-  views: number;
-  saves: number;
-  citations: number;
-  graph?: { x: number; y: number };
-  iteration?: WorkIteration;
-}
-
-export interface AgentSuggestion {
-  kind?: "reminder";
-  id: string;
-  title: string;
-  summary: string;
-  problem: string;
-  whyItMatters: string;
-  status: AgentSuggestionStatus;
+  description: string;
+  url: string;
+  homepage?: string;
+  language?: string;
+  topics: string[];
+  stars: number;
+  isPrivate: boolean;
+  isFork: boolean;
+  isArchived: boolean;
   createdAt: string;
-  acceptedIdeaId?: string;
+  pushedAt: string;
 }
 
-export type AnalysisJob = {
-  id: string;
-  fingerprint: string;
-  status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
-  attempts: number;
-  queuedAt: string;
-  startedAt?: string;
-  finishedAt?: string;
-  leaseId?: string;
-  leaseUntil?: string;
-  nextAttemptAt?: string;
-  error?: string;
+export interface RepoActivity {
+  /** Commits per week on the default branch, oldest first; the last bucket is the current week. */
+  weekly: number[];
+  commits30d: number;
+  lastCommitAt?: string;
+  lastCommitMessage?: string;
+  fetchedAt: string;
+}
+
+/** Written by `npm run curate` (local Claude Code). */
+export interface Curation {
+  score: number; // 0-100 imagination score
+  pitch: string;
+  reason: string;
+  curatedAt: string;
+  /** pushedAt of the repo when it was curated; a newer push makes it stale. */
+  basedOnPushedAt: string;
+}
+
+export interface Project extends RepoSnapshot {
+  activity?: RepoActivity;
+  curation?: Curation;
+  // Owner-controlled; never overwritten by sync or curation.
+  pinned: boolean;
+  hidden: boolean;
+  /** Public one-liner that overrides the curated pitch. */
+  tagline: string;
+  /** Private notes: what this project is really about, what to do next. */
+  note: string;
+  /** Set when the repo no longer comes back from GitHub (deleted, renamed or transferred). */
+  removedAt?: string;
+}
+
+export interface OwnerProfile {
+  login: string;
+  name: string;
+  bio: string;
+  avatarUrl: string;
+  url: string;
+}
+
+export interface Showcase {
+  version: 1;
+  owner?: OwnerProfile;
+  projects: Project[];
+  syncedAt?: string;
+  curatedAt?: string;
+}
+
+export type ProjectStatus = "active" | "cooling" | "dormant" | "archived";
+
+export const STATUS_LABEL: Record<ProjectStatus, string> = {
+  active: "推进中",
+  cooling: "放缓",
+  dormant: "沉睡",
+  archived: "已归档",
 };
 
-export interface WorkIteration {
-  analysis?: AnalysisJob;
-  status: "open" | "closed";
-  suggestions: AgentSuggestion[];
-  scannedAt?: string;
-  email?: {
-    status: AgentEmailStatus;
-    lastAttemptAt?: string;
-    sentAt?: string;
-  };
-}
-
-export type PublicWorkReminder = {
-  id: string;
-  title: string;
-  summary: string;
-};
-
-export interface ActivityEvent {
-  id: string;
-  at: string;
-  actorId: string;
-  actorName: string;
-  text: string;
-  ideaId?: string;
-  attemptId?: string;
-  workId?: string;
-}
-
-export interface Notification {
-  id: string;
-  userId?: string;
-  at: string;
-  title: string;
-  body: string;
-  read: boolean;
-  href: string;
-  kind: NotificationKind;
-}
-
-export interface Follow {
-  userId: string;
-  ideaId: string;
-}
-
-export interface IdeaComment {
-  id: string;
-  ideaId: string;
-  authorId: string;
-  body: string;
-  parentId?: string;
-  createdAt: string;
-  deletedAt?: string;
-}
-
-export interface AgentRuntimeConfig {
-  openaiBaseUrl?: string;
-  openaiModel?: string;
-  openaiApiKey?: string;
-  cronSecret?: string;
-  resendApiKey?: string;
-  emailFrom?: string;
-}
-
-export interface IdeaMetrics {
-  watchingCount: number;
-  activeAttemptCount: number;
-  pausedAttemptCount: number;
-  workCount: number;
-  forkCount: number;
-  totalAttemptCount: number;
-}
-
-export interface IdeaContext {
-  idea_id: string;
-  title: string;
-  summary: string;
-  problem: string;
-  why_it_matters: string;
-  constraints: string[];
-  existing_attempts: ExistingAttemptRef[];
-  open_questions: string[];
-  desired_outputs: string[];
-  stop_conditions?: string[];
-  license: License;
-  tags: string[];
-  source: {
-    url: string;
-    author: string;
-  };
-}
-
-export interface Database {
-  version: number;
-  users: User[];
-  ideas: Idea[];
-  attempts: Attempt[];
-  works: Work[];
-  events: ActivityEvent[];
-  notifications: Notification[];
-  follows: Follow[];
-  comments?: IdeaComment[];
-  agentConfig?: AgentRuntimeConfig;
-}
-
-export const STALL_AFTER_DAYS = 21;
+export type OwnerPatch = Partial<Pick<Project, "pinned" | "hidden" | "tagline" | "note">>;

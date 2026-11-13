@@ -1,8 +1,8 @@
 node_modules
 .next
 out
-data/db.json
-data/auth.json
+data/showcase.json
+data/*.tmp
 .vercel
 .DS_Store
 *.log
