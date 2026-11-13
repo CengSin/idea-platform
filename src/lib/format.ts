@@ -1,241 +1,50 @@
-import {
-  ACTIVE_ATTEMPT_STATUSES,
-  STALL_AFTER_DAYS,
-  type Attempt,
-  type AttemptStatus,
-  type CommercialUse,
-  type Database,
-  type Idea,
-  type IdeaContext,
-  type IdeaMetrics,
-  type IdeaStatus,
-  type License,
-  type Visibility,
-  type WorkType,
-} from "./types";
-
-export const IDEA_STATUS_LABEL: Record<IdeaStatus, string> = {
-  draft: "草稿",
-  published: "已发布",
-  evolving: "生长中",
-  realized: "已实现",
-  deprecated: "已弃用",
-  dormant: "沉寂",
-  archived: "已归档",
-};
-
-export const ATTEMPT_STATUS_LABEL: Record<AttemptStatus, string> = {
-  considering: "关注中",
-  understanding: "理解中",
-  prototyping: "原型中",
-  testing: "公开测试",
-  paused: "已暂停",
-  stalled: "已沉寂",
-  abandoned: "已放弃",
-  published: "已发布",
-};
-
-export const VISIBILITY_LABEL: Record<Visibility, string> = {
-  public: "公开",
-  unlisted: "不公开列出",
-  invite_only: "仅邀请",
-  private: "私密",
-};
-
-export const WORK_TYPE_LABEL: Record<WorkType, string> = {
-  website: "Web",
-  app: "应用",
-  video: "影像",
-  article: "文章",
-  research: "研究",
-  art: "艺术",
-  hardware: "硬件",
-  other: "其他",
-};
-
-export const COMMERCIAL_LABEL: Record<CommercialUse, string> = {
-  yes: "允许商用",
-  with_attribution: "商用需署名",
-  no: "禁止商用",
-};
-
-export function formatLicense(license: License): string {
-  const parts = [
-    license.implementation ? "允许实现" : "禁止实现",
-    license.derivatives ? "允许衍生" : "禁止衍生",
-    COMMERCIAL_LABEL[license.commercialUse],
-  ];
-  return parts.join(" · ");
-}
-
-import { daysBetween, effectiveAttemptStatus } from "./attempt-status.ts";
-export { daysBetween, effectiveAttemptStatus };
-
-export function relativeTime(iso: string, now = Date.now()): string {
-  const delta = Math.max(0, now - new Date(iso).getTime());
-  const min = Math.floor(delta / 60000);
-  if (min < 1) return "刚刚";
-  if (min < 60) return `${min} 分钟前`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} 天前`;
-  const month = Math.floor(day / 30);
-  if (month < 12) return `${month} 个月前`;
-  return `${Math.floor(month / 12)} 年前`;
-}
-
-// 服务端（Vercel 跑在 UTC）和浏览器必须输出同一串文字，否则会触发 hydration mismatch（React #418），
-// 所以固定按北京时间格式化，不依赖运行环境的本地时区。
-const DISPLAY_TIME_ZONE = "Asia/Shanghai";
-const dateTimeParts = new Intl.DateTimeFormat("en-CA", {
-  timeZone: DISPLAY_TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
-
-function zonedParts(iso: string) {
-  const parts: Record<string, string> = {};
-  for (const p of dateTimeParts.formatToParts(new Date(iso))) parts[p.type] = p.value;
-  return parts;
-}
-
-export function formatDateTime(iso: string): string {
-  const p = zonedParts(iso);
-  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
-}
-
-export function formatDate(iso: string): string {
-  const p = zonedParts(iso);
-  return `${p.year}-${p.month}-${p.day}`;
-}
-
-export function ideaMetrics(db: Database, ideaId: string): IdeaMetrics {
-  const attempts = db.attempts.filter((a) => a.ideaId === ideaId);
-  const statuses = attempts.map((a) => effectiveAttemptStatus(a));
-  return {
-    watchingCount: statuses.filter((s) => s === "considering").length,
-    activeAttemptCount: statuses.filter((s) =>
-      ACTIVE_ATTEMPT_STATUSES.includes(s),
-    ).length,
-    pausedAttemptCount: statuses.filter((s) => s === "paused").length,
-    workCount: db.works.filter(
-      (w) => w.ideaId === ideaId && w.status === "published",
-    ).length,
-    forkCount: db.ideas.filter(
-      (i) => i.parentIdeaId === ideaId && i.status !== "draft" && i.relationKind !== "iterate",
-    ).length,
-    totalAttemptCount: attempts.filter((a) => a.status !== "abandoned").length,
-  };
-}
-
-export function buildIdeaContext(idea: Idea, origin = ""): IdeaContext {
-  return {
-    idea_id: idea.id,
-    title: idea.title,
-    summary: idea.summary,
-    problem: idea.problem,
-    why_it_matters: idea.whyItMatters,
-    constraints: idea.constraints,
-    existing_attempts: idea.existingAttempts,
-    open_questions: idea.openQuestions,
-    desired_outputs: idea.desiredOutputs,
-    stop_conditions: idea.stopConditions ?? [],
-    license: idea.license,
-    tags: idea.tags,
-    source: {
-      url: `${origin}/ideas/${idea.id}`,
-      author: idea.author.displayName,
-    },
-  };
-}
-
-export function buildAdoptionPrompt(
-  idea: Idea,
-  input?: {
-    projectDescription?: string;
-    projectPurpose?: string;
-    approach?: string;
-  },
-): string {
-  const projectDescription = input?.projectDescription?.trim() || idea.summary;
-  const projectPurpose = input?.projectPurpose?.trim() || idea.whyItMatters;
-  const approach = input?.approach?.trim();
-  const lines = [
-    `# 项目：${idea.title}`,
-    "",
-    "## 预期效果",
-    projectDescription,
-    "",
-        "## 核心问题",
-    idea.problem,
-  ];
-
-  if (projectPurpose && projectPurpose !== idea.problem) lines.push("", "## 补充价值", projectPurpose);
-  if (idea.stopConditions?.length) lines.push("", "## 用户设定的停止条件", ...idea.stopConditions.map(s => `- ${s}`));
-  if (approach) lines.push("", "## 本次承接方向", approach);
-  if (idea.desiredOutputs.length) {
-    lines.push("", "## 验收标准 / 期望产出", ...idea.desiredOutputs.map((item) => `- ${item}`));
-  }
-  if (idea.constraints.length) {
-    lines.push("", "## 约束条件", ...idea.constraints.map((item) => `- ${item}`));
-  }
-  if (idea.openQuestions.length) {
-    lines.push("", "## 需要探索的问题", ...idea.openQuestions.map((item) => `- ${item}`));
-  }
-  lines.push(
-    "",
-    "## 执行要求",
-    "结合已有代码推进本轮需求，记录验证结果和阻塞。验收与停止条件由用户决定；公开变更沿用现有确认流程。",
-  );
-  return lines.join("\n");
-}
-
-export function clsxJoin(...parts: Array<string | false | null | undefined>) {
+export function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
-export function displayHost(url: string) {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, "");
-    const path = new URL(url).pathname.replace(/\/$/, "");
-    return path && path !== "/" ? `${host}${path}` : host;
-  } catch {
-    return url;
-  }
+const DAY = 86_400_000;
+
+export function relativeTime(iso: string | undefined, now = Date.now()) {
+  if (!iso) return "未知";
+  const diff = now - new Date(iso).getTime();
+  if (diff < 60 * 60_000) return "刚刚";
+  if (diff < DAY) return `${Math.floor(diff / 3_600_000)} 小时前`;
+  const days = Math.floor(diff / DAY);
+  if (days < 30) return `${days} 天前`;
+  if (days < 365) return `${Math.floor(days / 30)} 个月前`;
+  return `${Math.floor(days / 365)} 年前`;
 }
 
-export function userById(db: Database, id: string) {
-  return db.users.find((u) => u.id === id);
+/** Fixed to Beijing time so server and client render the same string. */
+export function formatDateTime(iso: string | undefined) {
+  if (!iso) return "从未";
+  return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
 }
 
-export function ideaById(db: Database, id: string) {
-  return db.ideas.find((i) => i.id === id);
-}
+const LANGUAGE_COLORS: Record<string, string> = {
+  TypeScript: "#3178c6",
+  JavaScript: "#d4b830",
+  Python: "#3572a5",
+  Go: "#00add8",
+  Swift: "#f05138",
+  Java: "#b07219",
+  Rust: "#dea584",
+  HTML: "#e34c26",
+  CSS: "#563d7c",
+  Shell: "#89e051",
+  Kotlin: "#a97bff",
+  "C#": "#178600",
+  Vue: "#41b883",
+  Dart: "#00b4ab",
+};
 
-export function workById(db: Database, id: string) {
-  return db.works.find((w) => w.id === id);
-}
-
-export function attemptById(db: Database, id: string) {
-  return db.attempts.find((a) => a.id === id);
-}
-
-export function recomputeIdeaStatus(idea: Idea, db: Database): IdeaStatus {
-  if (idea.status === "deprecated" || idea.status === "draft" || idea.status === "archived") return idea.status;
-  const attempts = db.attempts.filter((a) => a.ideaId === idea.id);
-  const statuses = attempts.map((a) => effectiveAttemptStatus(a));
-  const hasWork = db.works.some(
-    (w) => w.ideaId === idea.id && w.status === "published",
-  );
-  const hasActive = statuses.some((s) => ACTIVE_ATTEMPT_STATUSES.includes(s));
-  const hasPublishedAttempt = statuses.includes("published");
-  if (hasWork || hasPublishedAttempt) return "realized";
-  if (hasActive) return "evolving";
-  if (attempts.length > 0) return "dormant";
-  return "published";
+export function languageColor(language?: string) {
+  return (language && LANGUAGE_COLORS[language]) || "#a8a79f";
 }

@@ -1,4 +1,4 @@
-import { clsxJoin } from "@/lib/format";
+import { cx as clsxJoin } from "@/lib/format";
 
 export function Chip({
   children,

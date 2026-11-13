@@ -1,14 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": [
-    "hnd1"
-  ],
-
-  "redirects": [
-    {
-      "source": "/og-image.jpg",
-      "destination": "/covers/notebook.svg",
-      "permanent": true
-    }
-  ]
+  "regions": ["hnd1"],
+  "crons": [{ "path": "/api/cron/sync", "schedule": "0 22 * * *" }]
 }
