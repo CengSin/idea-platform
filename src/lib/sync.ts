@@ -21,7 +21,9 @@ export async function syncFromGitHub(
   let removed = 0;
   await mutateShowcase((doc) => {
     const known = new Set(doc.projects.map((project) => project.id));
-    const projects = mergeRepos(doc.projects, listing.repos, listing.activity, syncedAt);
+    const projects = mergeRepos(doc.projects, listing.repos, listing.activity, syncedAt, {
+      includesPrivate: Boolean(token),
+    });
     added = listing.repos.filter((repo) => !known.has(repo.id)).length;
     removed = projects.filter((project) => project.removedAt === syncedAt).length;
     return { ...doc, owner: listing.owner, projects, syncedAt };

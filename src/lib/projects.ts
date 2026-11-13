@@ -45,7 +45,9 @@ export function mergeRepos(
   repos: RepoSnapshot[],
   activity: Map<string, RepoActivity>,
   now = new Date().toISOString(),
+  options: { includesPrivate?: boolean } = {},
 ): Project[] {
+  const includesPrivate = options.includesPrivate ?? true;
   const previous = new Map(existing.map((project) => [project.id, project]));
   const seen = new Set<string>();
   const merged: Project[] = repos.map((repo) => {
@@ -62,7 +64,10 @@ export function mergeRepos(
     };
   });
   for (const old of existing) {
-    if (!seen.has(old.id)) merged.push({ ...old, removedAt: old.removedAt ?? now });
+    if (seen.has(old.id)) continue;
+    // A public-only listing (no token) says nothing about private repos: keep them as they are.
+    if (old.isPrivate && !includesPrivate) merged.push(old);
+    else merged.push({ ...old, removedAt: old.removedAt ?? now });
   }
   return merged;
 }

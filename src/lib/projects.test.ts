@@ -72,6 +72,13 @@ test("sync keeps owner fields and curation, refreshes GitHub fields, marks vanis
   assert.equal(gone.note, "keep me");
 });
 
+test("a public-only sync keeps private repos it cannot see", () => {
+  const existing = [project("secret", { isPrivate: true, note: "n" }), project("gone")];
+  const merged = mergeRepos(existing, [], new Map(), "T", { includesPrivate: false });
+  assert.equal(merged.find((p) => p.name === "secret")!.removedAt, undefined);
+  assert.equal(merged.find((p) => p.name === "gone")!.removedAt, "T");
+});
+
 test("a repo that comes back clears removedAt", () => {
   const merged = mergeRepos([project("back", { removedAt: "earlier" })], [repo("back")], new Map());
   assert.equal(merged[0].removedAt, undefined);
